@@ -4,7 +4,7 @@
     "version": "0.1.0",
     "identifier": "com.kstewart.gui-tauri",
     "build": {
-        "devUrl": "http://localhost:38257",
+        "devUrl": "http://localhost:23173",
         "frontendDist": "../src"
     },
     "app": {

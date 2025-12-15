@@ -14,14 +14,28 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM EXIT
 
+# Cross-platform port check
+is_port_in_use() {
+    local port=$1
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        lsof -iTCP:$port -sTCP:LISTEN -P -n >/dev/null 2>&1
+    else
+        ss -lnt | grep -q ":$port "
+    fi
+}
+
 # Function to find a free port
 get_free_port() {
     local port
     while true; do
         # Generate a random port between 10000 and 65000
-        port=$(shuf -i 10000-65000 -n 1)
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            port=$((RANDOM % 55000 + 10000))
+        else
+            port=$(shuf -i 10000-65000 -n 1)
+        fi
         # Check if port is in use
-        if ! ss -lnt | grep -q ":$port "; then
+        if ! is_port_in_use $port; then
             echo "$port"
             return 0
         fi
@@ -45,14 +59,14 @@ cd ..
 
 echo "Waiting for backend on http://localhost:$PORT..."
 # Wait for server to respond
-# We retry for up to 30 seconds
-for i in {1..30}; do
+# We retry for up to 120 seconds (extended for first-time builds)
+for i in {1..120}; do
     if curl -s http://localhost:$PORT > /dev/null; then
         echo "Backend is up!"
         break
     fi
     sleep 1
-    if [ $i -eq 30 ]; then
+    if [ $i -eq 120 ]; then
         echo "Timed out waiting for backend."
         cleanup
     fi
