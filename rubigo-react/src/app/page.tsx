@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
   {
@@ -53,6 +54,7 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" size="sm">Documentation</Button>
+            <ThemeToggle />
             <Button size="sm">Sign In</Button>
           </nav>
         </div>
