@@ -62,6 +62,12 @@ Add to your MCP settings:
 }
 ```
 
+> [!WARNING]
+> **Known Issue**: The MCP server can cause crashes or agent errors in Antigravity, especially with Claude models (Gemini models are less affected). If you experience issues, instruct the agent to run the MCP client directly instead:
+> ```bash
+> uv run python mcp_client.py
+> ```
+
 ## Available Skills
 
 ### Fundamentals
