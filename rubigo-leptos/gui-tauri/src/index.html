@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Network Simulation</title>
+    <link rel="stylesheet" href="/app-144aed900a32d476.css" integrity="sha384-rre+xslwAxKrusar1/IkRIYXDzdruqils6z42amDkvpXP/Z2mkGibpsjxLCArAvJ"/>
+    <link rel="stylesheet" href="/components-419f6516763a41cf.css" integrity="sha384-LAgGSeWpHs+GVazG4XULx8426A5Ixmec1zYk/6Pm6Q5+hThHbFAclikJ38ZhCjdK"/>
+<link rel="modulepreload" href="/ui-app-31fc75ead3217cce.js" crossorigin="anonymous" integrity="sha384-E686t4vyMTz3NCgR6v8AYdzfzAmFww7tpQovbJnwwwTvNFeoZ5+/Jkp4KkVVcCWM"><link rel="preload" href="/ui-app-31fc75ead3217cce_bg.wasm" crossorigin="anonymous" integrity="sha384-3TCmWZAIFsNw0N6p6HX6Iy+OESXicS8wMvpxQN4NPJeaZYEIOVme/k+OhPro6suv" as="fetch" type="application/wasm"></head>
+
+<body>
+
+<script type="module">
+import init, * as bindings from '/ui-app-31fc75ead3217cce.js';
+const wasm = await init({ module_or_path: '/ui-app-31fc75ead3217cce_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+
+</html>

@@ -1,0 +1,23 @@
+/* Filter Dropdown Component Styles */
+
+.ui-filter_dropdown-6a8fe2d {
+    padding: 10px 12px;
+    font-size: 14px;
+    background: var(--bg-elevated, #232330);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    cursor: pointer;
+    min-width: 150px;
+    transition: border-color var(--duration-fast, 150ms);
+}
+
+.ui-filter_dropdown-6a8fe2d:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+}
+
+.ui-filter_dropdown-6a8fe2d option {
+    background: var(--bg-surface, #1a1a23);
+    color: var(--text-primary, #f0f0f4);
+}

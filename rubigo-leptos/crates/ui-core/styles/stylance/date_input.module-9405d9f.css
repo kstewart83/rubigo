@@ -1,0 +1,92 @@
+/* DateInput Component Styles - Dark Theme */
+
+.ui-date_input_wrapper-9405d9f {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ui-date_input_label-9405d9f {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary, #9898a6);
+}
+
+.ui-date_input_row-9405d9f {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.ui-date_input-9405d9f {
+    appearance: none;
+    flex: 1;
+    height: 40px;
+    padding: 0 0.75rem;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    transition: all var(--duration-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.ui-date_input-9405d9f:hover:not(:disabled) {
+    border-color: var(--text-secondary, #9898a6);
+}
+
+.ui-date_input-9405d9f:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: var(--glow-primary, 0 0 0 3px rgba(99, 102, 241, 0.15));
+}
+
+.ui-date_input-9405d9f:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-elevated, #232330);
+}
+
+/* Today Button */
+.ui-today_button-9405d9f {
+    height: 40px;
+    padding: 0 0.75rem;
+    background: var(--bg-elevated, #232330);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-secondary, #9898a6);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--duration-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    white-space: nowrap;
+}
+
+.ui-today_button-9405d9f:hover:not(:disabled) {
+    background: var(--bg-surface, #1a1a23);
+    border-color: var(--color-primary, #6366f1);
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-today_button-9405d9f:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Override browser date picker icon styling for dark theme */
+.ui-date_input-9405d9f::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0.7);
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.ui-date_input-9405d9f::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Firefox date picker */
+.ui-date_input-9405d9f::-moz-calendar-picker-indicator {
+    filter: invert(0.7);
+}

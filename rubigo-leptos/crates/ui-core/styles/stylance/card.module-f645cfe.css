@@ -1,0 +1,48 @@
+/* Card Component Styles */
+
+.ui-card-f645cfe {
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+}
+
+.ui-card_elevated-f645cfe {
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.3));
+    border-color: transparent;
+}
+
+.ui-card_outlined-f645cfe {
+    border-width: 2px;
+}
+
+.ui-card_header-f645cfe {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle, #2d2d3a);
+}
+
+.ui-card_title-f645cfe {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-card_subtitle-f645cfe {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-secondary, #9898a6);
+}
+
+.ui-card_content-f645cfe {
+    padding: 20px;
+}
+
+.ui-card_footer-f645cfe {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-subtle, #2d2d3a);
+    background: var(--bg-elevated, #232330);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}

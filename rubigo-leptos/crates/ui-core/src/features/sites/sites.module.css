@@ -1,0 +1,84 @@
+/* Sites Feature Styles */
+
+.sites_page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 24px;
+    gap: 24px;
+}
+
+.sites_header {
+    text-align: center;
+}
+
+.sites_header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f0f0f4;
+    margin: 0 0 8px 0;
+}
+
+.sites_subtitle {
+    font-size: 14px;
+    color: #9898a6;
+    margin: 0;
+}
+
+.globe_container {
+    flex: 1;
+    min-height: 400px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #0a0f1a 0%, #1a1f2e 100%);
+    border-radius: 16px;
+    border: 1px solid #3d3d4a;
+    overflow: hidden;
+}
+
+.globe_canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.globe_loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #9898a6;
+    z-index: 10;
+}
+
+.loading_spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #3d3d4a;
+    border-top-color: #FF8A65;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.sites_info {
+    text-align: center;
+    color: #9898a6;
+    font-size: 14px;
+}
+
+.sites_info p {
+    margin: 4px 0;
+}
+
+.info_hint {
+    font-size: 12px;
+    color: #6b6b78;
+}

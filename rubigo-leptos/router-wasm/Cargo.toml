@@ -1,0 +1,10 @@
+[package]
+name = "router-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nexosim-guest = { version = "0.1.0", path = "../nexosim-guest" }
+
+[lib]
+crate-type = ["cdylib"]

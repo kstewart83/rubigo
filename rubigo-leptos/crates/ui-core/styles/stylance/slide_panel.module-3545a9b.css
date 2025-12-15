@@ -1,0 +1,111 @@
+/* SlidePanel Component Styles */
+
+.ui-panel_backdrop-3545a9b {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1000;
+    animation: fadeIn 150ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.ui-panel-3545a9b {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-surface, #1a1a23);
+    border-left: 1px solid var(--border-default, #3d3d4a);
+    display: flex;
+    flex-direction: column;
+    z-index: 1001;
+    animation: slideIn 250ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Size variants */
+.ui-panel_sm-3545a9b {
+    max-width: 360px;
+}
+
+.ui-panel_lg-3545a9b {
+    max-width: 600px;
+}
+
+.ui-panel_xl-3545a9b {
+    max-width: 800px;
+}
+
+.ui-panel_header-3545a9b {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle, #2d2d3a);
+    flex-shrink: 0;
+}
+
+.ui-panel_title-3545a9b {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-panel_close-3545a9b {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    color: var(--text-secondary, #9898a6);
+    font-size: 20px;
+    cursor: pointer;
+    transition: all var(--duration-fast, 150ms);
+}
+
+.ui-panel_close-3545a9b:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-panel_content-3545a9b {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.ui-panel_footer-3545a9b {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-subtle, #2d2d3a);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}

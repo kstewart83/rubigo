@@ -1,0 +1,52 @@
+/* Badge Component Styles
+ * Following AGENTS.md design system
+ */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-full, 9999px);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Variants */
+.badge_default {
+    background: var(--bg-elevated, #232330);
+    color: var(--text-secondary, #9898a6);
+}
+
+.badge_primary {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--color-primary, #6366f1);
+}
+
+.badge_success {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success, #10b981);
+}
+
+.badge_warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--color-warning, #f59e0b);
+}
+
+.badge_error {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--color-error, #ef4444);
+}
+
+/* Sizes */
+.badge_sm {
+    padding: 1px 6px;
+    font-size: 11px;
+}
+
+.badge_lg {
+    padding: 4px 12px;
+    font-size: 14px;
+}

@@ -1,0 +1,31 @@
+# ============================================================================
+# Midwest Manufacturing Co. (MMC) Scenario Configuration
+# ============================================================================
+
+[scenario]
+name = "Midwest Manufacturing Co."
+short_name = "mmc"
+industry = "Manufacturing"
+
+# Company Overview
+description = """
+Midwest Manufacturing Co. (MMC) is a mid-sized industrial HVAC equipment 
+manufacturer founded in 1987, headquartered in Columbus, OH. The company 
+designs, manufactures, and services commercial and industrial heating, 
+ventilation, and air conditioning systems for factories, warehouses, and 
+large commercial buildings across the Midwest and Eastern United States.
+"""
+
+# See individual module files for detailed information:
+# - personnel.toml: Workforce details and key personnel
+# - sites.toml: Facilities and location information
+# - assets.toml: Network infrastructure and equipment
+
+# Module data files (relative paths from this file)
+[modules]
+personnel = "personnel.toml"
+sites = "sites.toml"
+infrastructure = "infrastructure.toml"
+components = "components.toml"
+assets = "assets.toml"
+events = "events.toml"

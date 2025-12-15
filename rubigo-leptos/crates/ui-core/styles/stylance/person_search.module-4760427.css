@@ -1,0 +1,145 @@
+/* Person Search Multi-Select */
+
+.ui-person_search_wrapper-4760427 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ui-person_search_label-4760427 {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary, #9898a6);
+}
+
+.ui-selected_chips-4760427 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ui-person_chip-4760427 {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 4px 12px;
+    background: var(--color-primary, #6366f1);
+    border-radius: var(--radius-full, 9999px);
+    font-size: 13px;
+    color: white;
+}
+
+.ui-chip_name-4760427 {
+    font-weight: 500;
+}
+
+.ui-chip_remove-4760427 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms);
+}
+
+.ui-chip_remove-4760427:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.ui-search_container-4760427 {
+    position: relative;
+}
+
+.ui-search_input-4760427 {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    outline: none;
+    transition: border-color var(--duration-fast, 150ms),
+                box-shadow var(--duration-fast, 150ms);
+}
+
+.ui-search_input-4760427::placeholder {
+    color: var(--text-tertiary, #6b6b7a);
+}
+
+.ui-search_input-4760427:focus {
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: 0 0 0 3px var(--glow-primary, rgba(99, 102, 241, 0.2));
+}
+
+.ui-dropdown-4760427 {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--bg-elevated, #232330);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.ui-dropdown_empty-4760427 {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-tertiary, #6b6b7a);
+    text-align: center;
+}
+
+.ui-dropdown_item-4760427 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms);
+}
+
+.ui-dropdown_item-4760427:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.ui-person_avatar-4760427 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary, #6366f1);
+    border-radius: var(--radius-full, 9999px);
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+}
+
+.ui-person_info-4760427 {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ui-person_name-4760427 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-person_title-4760427 {
+    font-size: 12px;
+    color: var(--text-tertiary, #6b6b7a);
+}

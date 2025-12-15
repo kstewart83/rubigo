@@ -1,0 +1,446 @@
+# ============================================================================
+# MMC Assets Data - Network Infrastructure
+# ============================================================================
+
+# Network assets define physical network and computing infrastructure.
+# Each asset tracks manufacturer, model, serial, and physical location.
+
+# NOTES:
+# - status: "storage" | "installed:active" | "installed:inactive"
+# - category: Network | Server | Storage | Endpoint
+# - Racked items use: rack, position_u (1=bottom), height_u
+# - Unracked items use: space, storage_location (free text)
+
+# =============================================================================
+# CORE NETWORK - Data Center (DC-Rack-A1, DC-Rack-A2, DC-Rack-B1)
+# =============================================================================
+
+# Core Switches (Cisco Catalyst 9500)
+[[assets]]
+name = "HQ-Core-SW-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Catalyst 9500-48X"
+serial_number = "FXS2345Q0AB"
+mac_address = "00:1A:2B:3C:4D:01"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 40
+height_u = 1
+
+[[assets]]
+name = "HQ-Core-SW-02"
+category = "Network"
+manufacturer = "Cisco"
+model = "Catalyst 9500-48X"
+serial_number = "FXS2345Q0AC"
+mac_address = "00:1A:2B:3C:4D:02"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 39
+height_u = 1
+
+# Firewall (Palo Alto)
+[[assets]]
+name = "HQ-FW-01"
+category = "Network"
+manufacturer = "Palo Alto"
+model = "PA-3220"
+serial_number = "PA3220-0012345"
+mac_address = "00:1B:17:00:01:A1"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 38
+height_u = 1
+
+[[assets]]
+name = "HQ-FW-02"
+category = "Network"
+manufacturer = "Palo Alto"
+model = "PA-3220"
+serial_number = "PA3220-0012346"
+mac_address = "00:1B:17:00:01:A2"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 37
+height_u = 1
+notes = "HA pair with HQ-FW-01"
+
+# =============================================================================
+# VIRTUALIZATION - ESXi Hosts (Dell PowerEdge)
+# =============================================================================
+
+[[assets]]
+name = "HQ-ESX-01"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M3"
+mac_address = "24:6E:96:AA:BB:01"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 38
+height_u = 2
+
+[[assets]]
+name = "HQ-ESX-02"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M4"
+mac_address = "24:6E:96:AA:BB:02"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 36
+height_u = 2
+
+[[assets]]
+name = "HQ-ESX-03"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M5"
+mac_address = "24:6E:96:AA:BB:03"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 34
+height_u = 2
+
+[[assets]]
+name = "HQ-ESX-04"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M6"
+mac_address = "24:6E:96:AA:BB:04"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 32
+height_u = 2
+
+[[assets]]
+name = "HQ-ESX-05"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M7"
+mac_address = "24:6E:96:AA:BB:05"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 30
+height_u = 2
+
+[[assets]]
+name = "HQ-ESX-06"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R750"
+serial_number = "DELL-7X8K2M8"
+mac_address = "24:6E:96:AA:BB:06"
+status = "installed:active"
+rack = "DC-Rack-A2"
+position_u = 28
+height_u = 2
+
+# =============================================================================
+# STORAGE - NetApp FAS
+# =============================================================================
+
+[[assets]]
+name = "HQ-NAS-01"
+category = "Storage"
+manufacturer = "NetApp"
+model = "FAS8200"
+serial_number = "NTA-8200-123456"
+mac_address = "02:0C:29:00:00:01"
+status = "installed:active"
+rack = "DC-Rack-B1"
+position_u = 36
+height_u = 4
+notes = "Primary storage - 50TB usable"
+
+[[assets]]
+name = "HQ-NAS-02"
+category = "Storage"
+manufacturer = "NetApp"
+model = "FAS8200"
+serial_number = "NTA-8200-123457"
+mac_address = "02:0C:29:00:00:02"
+status = "installed:active"
+rack = "DC-Rack-B1"
+position_u = 32
+height_u = 4
+notes = "DR replication target"
+
+# Veeam Backup Server
+[[assets]]
+name = "HQ-BKP-01"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R650"
+serial_number = "DELL-BKP0001"
+mac_address = "24:6E:96:CC:DD:01"
+status = "installed:active"
+rack = "DC-Rack-B1"
+position_u = 28
+height_u = 1
+notes = "Veeam Backup & Replication server"
+
+# =============================================================================
+# DOMAIN CONTROLLERS
+# =============================================================================
+
+[[assets]]
+name = "HQ-DC-01"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R450"
+serial_number = "DELL-DC001"
+mac_address = "24:6E:96:DD:EE:01"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 34
+height_u = 1
+notes = "Primary Domain Controller"
+
+[[assets]]
+name = "HQ-DC-02"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R450"
+serial_number = "DELL-DC002"
+mac_address = "24:6E:96:DD:EE:02"
+status = "installed:active"
+rack = "DC-Rack-A1"
+position_u = 33
+height_u = 1
+notes = "Secondary Domain Controller"
+
+# =============================================================================
+# HQ IDF - Floor Distribution (Network Closet B1)
+# =============================================================================
+
+[[assets]]
+name = "HQ-IDF-SW-B1"
+category = "Network"
+manufacturer = "Cisco"
+model = "Catalyst 9200-24P"
+serial_number = "FXS1234B1A1"
+mac_address = "00:1A:2B:3C:5D:01"
+status = "installed:active"
+rack = "IDF-HQ-B1"
+position_u = 20
+height_u = 1
+notes = "Basement floor access switch"
+
+# =============================================================================
+# REGIONAL OFFICE - Indianapolis
+# =============================================================================
+
+[[assets]]
+name = "INDY-RTR-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "ISR 4331"
+serial_number = "FTX2101ABCD"
+mac_address = "00:1A:2B:4C:01:01"
+status = "installed:active"
+rack = "IDF-Indy"
+position_u = 10
+height_u = 1
+notes = "WAN router - 100Mbps circuit"
+
+[[assets]]
+name = "INDY-SW-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MS120-24P"
+serial_number = "Q2QN-1234-ABCD"
+mac_address = "00:18:0A:11:22:01"
+status = "installed:active"
+rack = "IDF-Indy"
+position_u = 8
+height_u = 1
+
+[[assets]]
+name = "INDY-AP-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MR46"
+serial_number = "Q2MD-2345-BCDE"
+mac_address = "00:18:0A:AA:11:01"
+status = "installed:active"
+space = "Indy Open Office"
+storage_location = "Ceiling mount - main area"
+
+# =============================================================================
+# REGIONAL OFFICE - Detroit
+# =============================================================================
+
+[[assets]]
+name = "DET-RTR-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "ISR 4331"
+serial_number = "FTX2102EFGH"
+mac_address = "00:1A:2B:4C:02:01"
+status = "installed:active"
+rack = "IDF-Detroit"
+position_u = 10
+height_u = 1
+
+[[assets]]
+name = "DET-SW-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MS120-24P"
+serial_number = "Q2QN-2345-EFGH"
+mac_address = "00:18:0A:22:33:01"
+status = "installed:active"
+rack = "IDF-Detroit"
+position_u = 8
+height_u = 1
+
+[[assets]]
+name = "DET-AP-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MR46"
+serial_number = "Q2MD-3456-CDEF"
+mac_address = "00:18:0A:BB:22:01"
+status = "installed:active"
+space = "Detroit Open Office"
+storage_location = "Ceiling mount - main area"
+
+# =============================================================================
+# REGIONAL OFFICE - Pittsburgh
+# =============================================================================
+
+[[assets]]
+name = "PIT-RTR-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "ISR 4331"
+serial_number = "FTX2103IJKL"
+mac_address = "00:1A:2B:4C:03:01"
+status = "installed:active"
+rack = "IDF-Pittsburgh"
+position_u = 10
+height_u = 1
+
+[[assets]]
+name = "PIT-SW-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MS120-24P"
+serial_number = "Q2QN-3456-IJKL"
+mac_address = "00:18:0A:33:44:01"
+status = "installed:active"
+rack = "IDF-Pittsburgh"
+position_u = 8
+height_u = 1
+
+[[assets]]
+name = "PIT-AP-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Meraki MR46"
+serial_number = "Q2MD-4567-DEFG"
+mac_address = "00:18:0A:CC:33:01"
+status = "installed:active"
+space = "Pittsburgh Open Office"
+storage_location = "Ceiling mount - main area"
+
+# =============================================================================
+# HQ WIRELESS ACCESS POINTS
+# =============================================================================
+
+[[assets]]
+name = "HQ-AP-LOBBY"
+category = "Network"
+manufacturer = "Cisco"
+model = "Aironet 9120AX"
+serial_number = "FCW2433L001"
+mac_address = "00:3A:7D:01:01:01"
+status = "installed:active"
+space = "Reception Area"
+storage_location = "Ceiling mount - lobby entrance"
+
+[[assets]]
+name = "HQ-AP-ENG"
+category = "Network"
+manufacturer = "Cisco"
+model = "Aironet 9120AX"
+serial_number = "FCW2433L002"
+mac_address = "00:3A:7D:01:01:02"
+status = "installed:active"
+space = "Engineering Open Plan"
+storage_location = "Ceiling mount - center"
+
+[[assets]]
+name = "HQ-AP-EXEC"
+category = "Network"
+manufacturer = "Cisco"
+model = "Aironet 9120AX"
+serial_number = "FCW2433L003"
+mac_address = "00:3A:7D:01:01:03"
+status = "installed:active"
+space = "Executive Suite"
+storage_location = "Ceiling mount - conference area"
+
+# =============================================================================
+# SPARE EQUIPMENT (In Storage)
+# =============================================================================
+
+[[assets]]
+name = "SPARE-SW-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Catalyst 9200-24P"
+serial_number = "FXS9999SP01"
+mac_address = "00:1A:2B:99:99:01"
+status = "storage"
+space = "Data Center"
+storage_location = "Spare parts shelf A"
+notes = "Cold spare for IDF switches"
+
+[[assets]]
+name = "SPARE-AP-01"
+category = "Network"
+manufacturer = "Cisco"
+model = "Aironet 9120AX"
+serial_number = "FCW9999SP01"
+mac_address = "00:3A:7D:99:99:01"
+status = "storage"
+space = "Data Center"
+storage_location = "Spare parts shelf A"
+notes = "Cold spare for wireless APs"
+
+[[assets]]
+name = "SPARE-SRV-01"
+category = "Server"
+manufacturer = "Dell"
+model = "PowerEdge R450"
+serial_number = "DELL-SP001"
+mac_address = "24:6E:96:99:99:01"
+status = "storage"
+space = "Data Center"
+storage_location = "Spare parts shelf B"
+notes = "Emergency replacement server"
+
+# =============================================================================
+# DECOMMISSIONED EQUIPMENT (Inactive)
+# =============================================================================
+
+[[assets]]
+name = "OLD-FW-01"
+category = "Network"
+manufacturer = "Palo Alto"
+model = "PA-850"
+serial_number = "PA850-OLD001"
+mac_address = "00:1B:17:OLD:01:A1"
+status = "installed:inactive"
+rack = "DC-Rack-B1"
+position_u = 5
+height_u = 1
+notes = "Replaced by PA-3220 pair - pending decommission"

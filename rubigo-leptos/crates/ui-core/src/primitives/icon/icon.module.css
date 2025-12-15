@@ -1,0 +1,37 @@
+/* Icon Component Styles
+ * Following AGENTS.md design system
+ */
+
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: currentColor;
+}
+
+.icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Sizes */
+.icon_sm {
+    width: 16px;
+    height: 16px;
+}
+
+.icon_md {
+    width: 20px;
+    height: 20px;
+}
+
+.icon_lg {
+    width: 24px;
+    height: 24px;
+}
+
+.icon_xl {
+    width: 32px;
+    height: 32px;
+}

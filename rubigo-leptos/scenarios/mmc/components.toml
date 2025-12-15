@@ -1,0 +1,472 @@
+# ============================================================================
+# MMC Network Components and Connections
+# ============================================================================
+
+# --- HQ Core Network (Data Center) ---
+
+[[components]]
+id = 1001
+name = "HQ-Edge-Router"
+type = "Router"
+placement_type = "Rack"
+rack = "DC-Rack-A1"
+u_position = 40
+
+[[components]]
+id = 1002
+name = "HQ-Core-Switch"
+type = "Switch"
+placement_type = "Rack"
+rack = "DC-Rack-A1"
+u_position = 38
+
+[[components]]
+id = 1003
+name = "HQ-Firewall"
+type = "Firewall"
+placement_type = "Rack"
+rack = "DC-Rack-A1"
+u_position = 36
+
+[[components]]
+id = 1004
+name = "HQ-WAN-Router"
+type = "Router"
+placement_type = "Rack"
+rack = "DC-Rack-A1"
+u_position = 34
+
+# --- HQ Servers ---
+
+[[components]]
+id = 2001
+name = "DC1-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-A2"
+u_position = 40
+
+[[components]]
+id = 2002
+name = "DC2-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-A2"
+u_position = 38
+
+[[components]]
+id = 2003
+name = "File-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-A2"
+u_position = 36
+
+[[components]]
+id = 2004
+name = "SQL-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-A2"
+u_position = 34
+
+[[components]]
+id = 2005
+name = "Backup-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-A2"
+u_position = 32
+
+[[components]]
+id = 2006
+name = "SAP-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-B1"
+u_position = 40
+
+[[components]]
+id = 2007
+name = "CallManager-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-B1"
+u_position = 38
+
+[[components]]
+id = 2008
+name = "Splunk-Server"
+type = "Server"
+placement_type = "Rack"
+rack = "DC-Rack-B1"
+u_position = 36
+
+# --- HQ Distribution & Access ---
+
+[[components]]
+id = 3001
+name = "HQ-Dist-SW-1"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-HQ-B1"
+u_position = 22
+
+[[components]]
+id = 3002
+name = "HQ-Dist-SW-2"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-HQ-B1"
+u_position = 20
+
+[[components]]
+id = 3003
+name = "HQ-Access-SW-1"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-HQ-B1"
+u_position = 18
+
+[[components]]
+id = 3004
+name = "HQ-Access-SW-2"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-HQ-B1"
+u_position = 16
+
+# --- HQ Wireless ---
+
+[[components]]
+id = 3101
+name = "HQ-AP-Lobby"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+[[components]]
+id = 3102
+name = "HQ-AP-Eng"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+[[components]]
+id = 3103
+name = "HQ-AP-Exec"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+# --- HQ Workstations ---
+
+[[components]]
+id = 4001
+name = "WS-IT-MikeChen"
+type = "Workstation"
+placement_type = "Desk"
+desk = "IT-Desk-1"
+
+[[components]]
+id = 4002
+name = "WS-IT-SarahKim"
+type = "Workstation"
+placement_type = "Desk"
+desk = "IT-Desk-2"
+
+[[components]]
+id = 4003
+name = "WS-HR-PatriciaMartinez"
+type = "Workstation"
+placement_type = "Desk"
+desk = "HR-Desk-1"
+
+[[components]]
+id = 4004
+name = "WS-ENG-DavidPark"
+type = "Workstation"
+placement_type = "Desk"
+desk = "ENG-Desk-1"
+
+[[components]]
+id = 4005
+name = "WS-ENG-JenniferAdams"
+type = "Workstation"
+placement_type = "Desk"
+desk = "ENG-Desk-2"
+
+[[components]]
+id = 4006
+name = "WS-CAD-LisaChen"
+type = "Workstation"
+placement_type = "Desk"
+desk = "CAD-Desk-1"
+
+[[components]]
+id = 4007
+name = "WS-CEO-ThomasAnderson"
+type = "Workstation"
+placement_type = "Desk"
+desk = "CEO-Desk"
+
+[[components]]
+id = 4008
+name = "WS-CFO-MargaretSullivan"
+type = "Workstation"
+placement_type = "Desk"
+desk = "CFO-Desk"
+
+[[components]]
+id = 4009
+name = "WS-FIN-EmilyRodriguez"
+type = "Workstation"
+placement_type = "Desk"
+desk = "FIN-Desk-1"
+
+# --- HQ Printers ---
+
+[[components]]
+id = 5001
+name = "PRN-HQ-Floor1"
+type = "Printer"
+placement_type = "Standalone"
+
+[[components]]
+id = 5002
+name = "PRN-HQ-Engineering"
+type = "Printer"
+placement_type = "Standalone"
+
+[[components]]
+id = 5003
+name = "PRN-HQ-Executive"
+type = "Printer"
+placement_type = "Standalone"
+
+# --- Indianapolis Satellite ---
+
+[[components]]
+id = 6001
+name = "INDY-Router"
+type = "Router"
+placement_type = "Rack"
+rack = "IDF-Indy"
+u_position = 10
+
+[[components]]
+id = 6002
+name = "INDY-Switch-1"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-Indy"
+u_position = 8
+
+[[components]]
+id = 6003
+name = "INDY-AP"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+[[components]]
+id = 6004
+name = "WS-INDY-ChrisMiller"
+type = "Workstation"
+placement_type = "Desk"
+desk = "INDY-Desk-1"
+
+[[components]]
+id = 6005
+name = "WS-INDY-AmandaJohnson"
+type = "Workstation"
+placement_type = "Desk"
+desk = "INDY-Desk-2"
+
+[[components]]
+id = 6006
+name = "PRN-INDY"
+type = "Printer"
+placement_type = "Standalone"
+
+# --- Detroit Satellite ---
+
+[[components]]
+id = 7001
+name = "DET-Router"
+type = "Router"
+placement_type = "Rack"
+rack = "IDF-Detroit"
+u_position = 10
+
+[[components]]
+id = 7002
+name = "DET-Switch-1"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-Detroit"
+u_position = 8
+
+[[components]]
+id = 7003
+name = "DET-AP"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+[[components]]
+id = 7004
+name = "WS-DET-KevinOBrien"
+type = "Workstation"
+placement_type = "Desk"
+desk = "DET-Desk-1"
+
+[[components]]
+id = 7005
+name = "PRN-DET"
+type = "Printer"
+placement_type = "Standalone"
+
+# --- Pittsburgh Satellite ---
+
+[[components]]
+id = 8001
+name = "PIT-Router"
+type = "Router"
+placement_type = "Rack"
+rack = "IDF-Pittsburgh"
+u_position = 10
+
+[[components]]
+id = 8002
+name = "PIT-Switch-1"
+type = "Switch"
+placement_type = "Rack"
+rack = "IDF-Pittsburgh"
+u_position = 8
+
+[[components]]
+id = 8003
+name = "PIT-AP"
+type = "AccessPoint"
+placement_type = "Standalone"
+
+[[components]]
+id = 8004
+name = "WS-PIT-NicoleTaylor"
+type = "Workstation"
+placement_type = "Desk"
+desk = "PIT-Desk-1"
+
+[[components]]
+id = 8005
+name = "PRN-PIT"
+type = "Printer"
+placement_type = "Standalone"
+
+# ============================================================================
+# CONNECTIONS
+# ============================================================================
+
+# HQ Core Fabric
+[[connections]]
+from = 1001
+to = 1003
+
+[[connections]]
+from = 1003
+to = 1002
+
+[[connections]]
+from = 1002
+to = 1004
+
+# Core to Distribution
+[[connections]]
+from = 1002
+to = 3001
+
+[[connections]]
+from = 1002
+to = 3002
+
+# Distribution to Access
+[[connections]]
+from = 3001
+to = 3003
+
+[[connections]]
+from = 3002
+to = 3004
+
+# Servers to Core
+[[connections]]
+from = 2001
+to = 1002
+
+[[connections]]
+from = 2002
+to = 1002
+
+[[connections]]
+from = 2003
+to = 1002
+
+[[connections]]
+from = 2004
+to = 1002
+
+[[connections]]
+from = 2005
+to = 1002
+
+[[connections]]
+from = 2006
+to = 1002
+
+[[connections]]
+from = 2007
+to = 1002
+
+[[connections]]
+from = 2008
+to = 1002
+
+# WAN Connections (HQ to Satellites via MPLS)
+[[connections]]
+from = 1004
+to = 6001
+
+[[connections]]
+from = 1004
+to = 7001
+
+[[connections]]
+from = 1004
+to = 8001
+
+# Indianapolis Internal
+[[connections]]
+from = 6001
+to = 6002
+
+[[connections]]
+from = 6002
+to = 6004
+
+[[connections]]
+from = 6002
+to = 6005
+
+# Detroit Internal
+[[connections]]
+from = 7001
+to = 7002
+
+[[connections]]
+from = 7002
+to = 7004
+
+# Pittsburgh Internal
+[[connections]]
+from = 8001
+to = 8002
+
+[[connections]]
+from = 8002
+to = 8004

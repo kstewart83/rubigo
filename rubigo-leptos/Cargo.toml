@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "nexosim-hybrid",
+    "nexosim-guest",
+    "router-wasm",
+    "gui-tauri/src-tauri",
+    "crates/ui-core",
+    "crates/actions",
+    "crates/ui-showcase",
+    "crates/ui-app",
+    "crates/scenario-loader",
+    "crates/db",
+    "crates/action-handlers",
+    "crates/bevy-viewer",
+]
+exclude = ["gui-server", "earth-viewer"]
+resolver = "2"

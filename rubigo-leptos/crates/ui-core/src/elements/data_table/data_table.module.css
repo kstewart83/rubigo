@@ -1,0 +1,43 @@
+/* Data Table Component Styles */
+
+.table_container {
+    overflow-x: auto;
+    background: var(--bg-surface, #1a1a23);
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid var(--border-default, #3d3d4a);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary, #9898a6);
+    background: var(--bg-elevated, #232330);
+    border-bottom: 1px solid var(--border-default, #3d3d4a);
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 14px 16px;
+    color: var(--text-primary, #f0f0f4);
+    border-bottom: 1px solid var(--border-subtle, #2d2d3a);
+}
+
+.table_row {
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms);
+}
+
+.table_row:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}

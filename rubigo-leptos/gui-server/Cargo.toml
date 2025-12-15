@@ -1,0 +1,29 @@
+[package]
+name = "gui-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros"] }
+leptos = { version = "0.8", features = ["ssr"] }
+leptos_axum = "0.8"
+leptos_meta = "0.8"
+leptos_router = "0.8"
+tokio = { version = "1", features = ["full"] }
+nexosim-hybrid = { path = "../nexosim-hybrid" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+wasmtime = "39.0.1"
+nexosim = "0.3.4"
+tokio-stream = { version = "0.1.17", features = ["net"] }
+futures = "0.3.31"
+toml = "0.9.8"
+surrealdb = { version = "2.4.0", features = ["kv-mem"] }
+serde_json = "1.0.145"
+tower-http = { version = "0.6.7", features = ["fs"] }
+chrono = "0.4.42"
+uuid = { version = "1.19.0", features = ["v4"] }
+reqwest = { version = "0.12.24", features = ["json"] }
+base64 = "0.22.1"

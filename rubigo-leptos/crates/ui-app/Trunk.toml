@@ -1,0 +1,31 @@
+[build]
+target = "index.html"
+# Use separate target dir to avoid cargo lock conflicts
+target_dir = "../target-trunk"
+
+[watch]
+ignore = ["styles/components.css"]
+# Debounce file changes to reduce rebuilds during rapid edits
+debounce_ms = 500
+# Watch all relevant crates and styles for changes
+watch = [
+    "src",
+    "styles",
+    "../ui-core/src",
+    "../scenario-loader/src",
+    "../bevy-viewer/src",
+]
+
+[[hooks]]
+stage = "pre_build"
+command = "bash"
+command_arguments = [
+    "-c",
+    "stylance ../ui-core && cat ../ui-core/styles/stylance/*.css > styles/components.css",
+]
+
+# Copy assets folder to dist
+[[hooks]]
+stage = "post_build"
+command = "bash"
+command_arguments = ["-c", "cp -r assets dist/"]

@@ -1,0 +1,652 @@
+# ============================================================================
+# MMC Calendar Events Data
+# ============================================================================
+# This file contains seed data for calendar events from January 2025 through
+# June 2026, including recurring and one-time events.
+# Note: organizer_id and participant_ids reference personnel IDs from personnel.toml
+
+[description]
+overview = """
+EVENTS OVERVIEW
+- Weekly recurring: Team standups, department meetings
+- Monthly recurring: All-hands, board meetings, reviews
+- One-time events: Training sessions, conferences, holidays
+- Date range: January 2025 - June 2026
+"""
+
+# ============================================================================
+# RECURRING EVENTS - Weekly
+# ============================================================================
+
+# Engineering Standup - Every weekday at 9:00 AM
+[[events]]
+title = "Engineering Daily Standup"
+description = "Daily sync for the engineering team to discuss progress and blockers"
+start_time = "2025-01-06T09:00:00"
+end_time = "2025-01-06T09:15:00"
+event_type = "standup"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+recurrence_until = "2026-06-30"
+organizer_id = "d827cb" # David Park
+participant_ids = [
+    "f9c8d7",
+    "8a0c57",
+    "8f3a18",
+] # Jennifer Adams, Robert Thompson, Lisa Chen
+location = "Conference Room 2A"
+timezone = "America/New_York"
+
+# IT Team Weekly Meeting
+[[events]]
+title = "IT Team Weekly"
+description = "Weekly status updates and planning for IT department"
+start_time = "2025-01-07T10:00:00"
+end_time = "2025-01-07T11:00:00"
+event_type = "meeting"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Tue"]
+recurrence_until = "2026-06-30"
+organizer_id = "1ea074"                                              # Mike Chen
+participant_ids = ["7aa0d4", "d62d4d"]                               # Sarah Kim, Jason Wright
+location = "IT Help Desk"
+timezone = "America/New_York"
+
+# Sales Team Weekly Sync
+[[events]]
+title = "Sales Region Sync"
+description = "Weekly sync across all regional sales managers"
+start_time = "2025-01-08T14:00:00"
+end_time = "2025-01-08T15:00:00"
+event_type = "meeting"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Wed"]
+recurrence_until = "2026-06-30"
+organizer_id = "1e4e5c" # Chris Miller
+participant_ids = [
+    "e8a466",
+    "4d9154",
+    "5eedf9",
+] # Amanda Johnson, Kevin O'Brien, Nicole Taylor
+virtual_url = "https://meet.mmc.com/sales-sync"
+timezone = "America/New_York"
+
+# HR Office Hours
+[[events]]
+title = "HR Office Hours"
+description = "Open door hours for employee questions and concerns"
+start_time = "2025-01-09T13:00:00"
+end_time = "2025-01-09T14:00:00"
+event_type = "meeting"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Thu"]
+recurrence_until = "2026-06-30"
+organizer_id = "4f6f43"                                             # Patricia Martinez
+participant_ids = ["f73c1c"]                                        # James Wilson
+location = "HR Suite"
+timezone = "America/New_York"
+
+# ============================================================================
+# RECURRING EVENTS - Bi-Weekly
+# ============================================================================
+
+# Executive Leadership Team
+[[events]]
+title = "Executive Leadership Meeting"
+description = "Bi-weekly leadership sync on company strategy and operations"
+start_time = "2025-01-13T09:00:00"
+end_time = "2025-01-13T10:30:00"
+event_type = "planning"
+recurrence = "weekly"
+recurrence_interval = 2
+recurrence_days = ["Mon"]
+recurrence_until = "2026-06-30"
+organizer_id = "241a6d"                                                      # Thomas Anderson
+participant_ids = ["cdb964", "714fd4"]                                       # Margaret Sullivan, Richard Nakamura
+location = "Board Room"
+timezone = "America/New_York"
+
+# Engineering Sprint Review
+[[events]]
+title = "Engineering Sprint Review"
+description = "Bi-weekly review of completed work and demo of new features"
+start_time = "2025-01-17T15:00:00"
+end_time = "2025-01-17T16:30:00"
+event_type = "review"
+recurrence = "weekly"
+recurrence_interval = 2
+recurrence_days = ["Fri"]
+recurrence_until = "2026-06-30"
+organizer_id = "d827cb" # David Park
+participant_ids = [
+    "f9c8d7",
+    "8a0c57",
+    "8f3a18",
+    "714fd4",
+] # Jennifer Adams, Robert Thompson, Lisa Chen, Richard Nakamura
+location = "Engineering Open Plan"
+timezone = "America/New_York"
+
+# ============================================================================
+# RECURRING EVENTS - Monthly
+# ============================================================================
+
+# Company All-Hands
+[[events]]
+title = "MMC All-Hands Meeting"
+description = "Monthly company-wide meeting with updates from leadership"
+start_time = "2025-01-15T16:00:00"
+end_time = "2025-01-15T17:00:00"
+event_type = "all-hands"
+recurrence = "monthly"
+recurrence_interval = 1
+recurrence_until = "2026-06-30"
+organizer_id = "241a6d" # Thomas Anderson
+participant_ids = [
+    "cdb964",
+    "714fd4",
+    "1ea074",
+    "4f6f43",
+    "d827cb",
+] # Margaret Sullivan, Richard Nakamura, Mike Chen, Patricia Martinez, David Park
+virtual_url = "https://meet.mmc.com/all-hands"
+timezone = "America/New_York"
+
+# Finance Month-End Review
+[[events]]
+title = "Finance Month-End Review"
+description = "Monthly financial close review and analysis"
+start_time = "2025-01-31T10:00:00"
+end_time = "2025-01-31T11:30:00"
+event_type = "review"
+recurrence = "monthly"
+recurrence_interval = 1
+recurrence_until = "2026-06-30"
+organizer_id = "cdb964"                                     # Margaret Sullivan
+participant_ids = ["4fcdf6", "c1eddc"]                      # Emily Rodriguez, Daniel Foster
+location = "Finance Department"
+timezone = "America/New_York"
+
+# Board of Directors Meeting
+[[events]]
+title = "Board of Directors Meeting"
+description = "Quarterly board meeting (occurs monthly in seed for demo)"
+start_time = "2025-01-20T09:00:00"
+end_time = "2025-01-20T12:00:00"
+event_type = "meeting"
+recurrence = "monthly"
+recurrence_interval = 3
+recurrence_until = "2026-06-30"
+organizer_id = "241a6d"                                                   # Thomas Anderson
+participant_ids = ["cdb964", "714fd4"]                                    # Margaret Sullivan, Richard Nakamura
+location = "Board Room"
+timezone = "America/New_York"
+
+# ============================================================================
+# ONE-ON-ONE MEETINGS
+# ============================================================================
+
+# CTO 1:1 with IT Director
+[[events]]
+title = "Richard / Mike 1:1"
+description = "Weekly one-on-one between CTO and IT Director"
+start_time = "2025-01-06T14:00:00"
+end_time = "2025-01-06T14:30:00"
+event_type = "1:1"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Mon"]
+recurrence_until = "2026-06-30"
+organizer_id = "714fd4"                                       # Richard Nakamura
+participant_ids = ["1ea074"]                                  # Mike Chen
+location = "Executive Suite"
+timezone = "America/New_York"
+
+# Engineering Manager 1:1 with Senior Engineer
+[[events]]
+title = "David / Jennifer 1:1"
+description = "Weekly one-on-one for career development and project updates"
+start_time = "2025-01-07T11:00:00"
+end_time = "2025-01-07T11:30:00"
+event_type = "1:1"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Tue"]
+recurrence_until = "2026-06-30"
+organizer_id = "d827cb"                                                      # David Park
+participant_ids = ["f9c8d7"]                                                 # Jennifer Adams
+timezone = "America/New_York"
+
+# ============================================================================
+# ONE-TIME EVENTS - Training & Development
+# ============================================================================
+
+[[events]]
+title = "New Employee Orientation"
+description = "Orientation session for Q1 2025 new hires"
+start_time = "2025-01-20T09:00:00"
+end_time = "2025-01-20T12:00:00"
+event_type = "training"
+organizer_id = "4f6f43"                                   # Patricia Martinez
+participant_ids = ["f73c1c"]                              # James Wilson
+location = "HR Suite"
+timezone = "America/New_York"
+
+[[events]]
+title = "Cybersecurity Awareness Training"
+description = "Annual security training for all employees"
+start_time = "2025-02-15T13:00:00"
+end_time = "2025-02-15T15:00:00"
+event_type = "training"
+organizer_id = "1ea074"                                    # Mike Chen
+participant_ids = ["7aa0d4", "d62d4d"]                     # Sarah Kim, Jason Wright
+virtual_url = "https://training.mmc.com/security-2025"
+timezone = "America/New_York"
+
+[[events]]
+title = "Product Design Workshop"
+description = "Collaborative workshop on next-gen HVAC product design"
+start_time = "2025-03-10T09:00:00"
+end_time = "2025-03-10T16:00:00"
+event_type = "training"
+organizer_id = "d827cb" # David Park
+participant_ids = [
+    "f9c8d7",
+    "8a0c57",
+    "8f3a18",
+] # Jennifer Adams, Robert Thompson, Lisa Chen
+location = "CAD Lab"
+timezone = "America/New_York"
+
+[[events]]
+title = "Leadership Development Program - Session 1"
+description = "First session of 2025 leadership development series"
+start_time = "2025-04-05T09:00:00"
+end_time = "2025-04-05T17:00:00"
+event_type = "training"
+organizer_id = "4f6f43" # Patricia Martinez
+participant_ids = [
+    "1ea074",
+    "d827cb",
+    "4fcdf6",
+] # Mike Chen, David Park, Emily Rodriguez
+location = "Board Room"
+timezone = "America/New_York"
+
+# ============================================================================
+# ONE-TIME EVENTS - Conferences & External
+# ============================================================================
+
+[[events]]
+title = "HVAC Industry Conference"
+description = "Annual industry conference in Chicago"
+start_time = "2025-05-12T08:00:00"
+end_time = "2025-05-14T18:00:00"
+all_day = true
+event_type = "conference"
+organizer_id = "714fd4"                               # Richard Nakamura
+participant_ids = ["d827cb", "f9c8d7"]                # David Park, Jennifer Adams
+timezone = "America/Chicago"
+
+[[events]]
+title = "Customer Summit 2025"
+description = "Annual customer appreciation and product showcase event"
+start_time = "2025-09-18T09:00:00"
+end_time = "2025-09-19T17:00:00"
+all_day = true
+event_type = "conference"
+organizer_id = "241a6d" # Thomas Anderson
+participant_ids = [
+    "1e4e5c",
+    "4d9154",
+    "5eedf9",
+] # Chris Miller, Kevin O'Brien, Nicole Taylor
+location = "Reception Area"
+timezone = "America/New_York"
+
+# ============================================================================
+# HOLIDAYS & COMPANY EVENTS
+# ============================================================================
+
+[[events]]
+title = "New Year's Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-01-01T00:00:00"
+end_time = "2025-01-01T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Martin Luther King Jr. Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-01-20T00:00:00"
+end_time = "2025-01-20T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Presidents Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-02-17T00:00:00"
+end_time = "2025-02-17T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Memorial Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-05-26T00:00:00"
+end_time = "2025-05-26T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Independence Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-07-04T00:00:00"
+end_time = "2025-07-04T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Labor Day"
+description = "Company Holiday - Office Closed"
+start_time = "2025-09-01T00:00:00"
+end_time = "2025-09-01T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Thanksgiving"
+description = "Company Holiday - Office Closed"
+start_time = "2025-11-27T00:00:00"
+end_time = "2025-11-28T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "Christmas Holiday"
+description = "Company Holiday - Office Closed"
+start_time = "2025-12-24T00:00:00"
+end_time = "2025-12-26T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+[[events]]
+title = "New Year's Day 2026"
+description = "Company Holiday - Office Closed"
+start_time = "2026-01-01T00:00:00"
+end_time = "2026-01-01T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"
+
+# ============================================================================
+# SPECIAL PROJECT MEETINGS
+# ============================================================================
+
+[[events]]
+title = "ERP System Upgrade Kickoff"
+description = "Kickoff meeting for the 2025 ERP system upgrade project"
+start_time = "2025-02-03T10:00:00"
+end_time = "2025-02-03T12:00:00"
+event_type = "planning"
+organizer_id = "1ea074" # Mike Chen
+participant_ids = [
+    "714fd4",
+    "cdb964",
+    "c1eddc",
+] # Richard Nakamura, Margaret Sullivan, Daniel Foster
+location = "IT Help Desk"
+timezone = "America/New_York"
+
+[[events]]
+title = "Q1 2025 Business Review"
+description = "Quarterly business review and planning session"
+start_time = "2025-04-07T09:00:00"
+end_time = "2025-04-07T16:00:00"
+event_type = "review"
+organizer_id = "241a6d" # Thomas Anderson
+participant_ids = [
+    "cdb964",
+    "714fd4",
+    "4fcdf6",
+] # Margaret Sullivan, Richard Nakamura, Emily Rodriguez
+location = "Board Room"
+timezone = "America/New_York"
+
+[[events]]
+title = "Q2 2025 Business Review"
+description = "Quarterly business review and planning session"
+start_time = "2025-07-07T09:00:00"
+end_time = "2025-07-07T16:00:00"
+event_type = "review"
+organizer_id = "241a6d" # Thomas Anderson
+participant_ids = [
+    "cdb964",
+    "714fd4",
+    "4fcdf6",
+] # Margaret Sullivan, Richard Nakamura, Emily Rodriguez
+location = "Board Room"
+timezone = "America/New_York"
+
+[[events]]
+title = "2026 Strategic Planning Session"
+description = "Annual strategic planning workshop for 2026"
+start_time = "2025-11-10T09:00:00"
+end_time = "2025-11-11T17:00:00"
+all_day = true
+event_type = "planning"
+organizer_id = "241a6d" # Thomas Anderson
+participant_ids = [
+    "cdb964",
+    "714fd4",
+    "4f6f43",
+    "d827cb",
+    "1ea074",
+] # Margaret Sullivan, Richard Nakamura, Patricia Martinez, David Park, Mike Chen
+location = "Board Room"
+timezone = "America/New_York"
+
+# ============================================================================
+# INTERVIEW SLOTS (Recurring blocks)
+# ============================================================================
+
+[[events]]
+title = "Interview Block - Engineering"
+description = "Reserved time for engineering candidate interviews"
+start_time = "2025-01-10T14:00:00"
+end_time = "2025-01-10T16:00:00"
+event_type = "interview"
+recurrence = "weekly"
+recurrence_interval = 2
+recurrence_days = ["Fri"]
+recurrence_until = "2026-06-30"
+organizer_id = "d827cb"                                            # David Park
+participant_ids = ["f9c8d7"]                                       # Jennifer Adams
+location = "Conference Room 2A"
+timezone = "America/New_York"
+
+# ============================================================================
+# APPOINTMENTS
+# ============================================================================
+
+[[events]]
+title = "Benefits Enrollment Meeting"
+description = "One-on-one meeting to review and select 2025 benefits"
+start_time = "2025-01-14T10:00:00"
+end_time = "2025-01-14T10:30:00"
+event_type = "appointment"
+organizer_id = "4f6f43"                                               # Patricia Martinez
+participant_ids = ["f9c8d7"]                                          # Jennifer Adams
+location = "HR Suite"
+timezone = "America/New_York"
+
+[[events]]
+title = "Annual Physical - Company Wellness"
+description = "Annual health screening as part of company wellness program"
+start_time = "2025-02-20T08:30:00"
+end_time = "2025-02-20T09:30:00"
+event_type = "appointment"
+organizer_id = "4f6f43"                                                     # Patricia Martinez
+location = "Medical Wing"
+timezone = "America/New_York"
+
+[[events]]
+title = "Performance Review - Lisa Chen"
+description = "Annual performance review meeting"
+start_time = "2025-03-17T14:00:00"
+end_time = "2025-03-17T15:00:00"
+event_type = "appointment"
+organizer_id = "d827cb"                           # David Park
+participant_ids = ["8f3a18"]                      # Lisa Chen
+location = "Conference Room 2A"
+timezone = "America/New_York"
+
+# ============================================================================
+# REMINDERS
+# ============================================================================
+
+[[events]]
+title = "Submit Expense Reports"
+description = "Reminder: Monthly expense reports due by end of day"
+start_time = "2025-01-31T09:00:00"
+end_time = "2025-01-31T09:30:00"
+event_type = "reminder"
+recurrence = "monthly"
+recurrence_interval = 1
+recurrence_until = "2026-06-30"
+timezone = "America/New_York"
+
+[[events]]
+title = "401k Contribution Review"
+description = "Reminder to review and update 401k contribution elections"
+start_time = "2025-04-01T09:00:00"
+end_time = "2025-04-01T09:30:00"
+event_type = "reminder"
+timezone = "America/New_York"
+
+[[events]]
+title = "Q1 Goals Check-in"
+description = "Reminder: Review Q1 goals progress before monthly review"
+start_time = "2025-03-25T09:00:00"
+end_time = "2025-03-25T09:30:00"
+event_type = "reminder"
+timezone = "America/New_York"
+
+# ============================================================================
+# OUT OF OFFICE
+# ============================================================================
+
+[[events]]
+title = "David Park - PTO"
+description = "Vacation - Will return January 8th"
+start_time = "2025-01-02T00:00:00"
+end_time = "2025-01-07T23:59:59"
+all_day = true
+event_type = "out-of-office"
+organizer_id = "d827cb"                            # David Park
+timezone = "America/New_York"
+
+[[events]]
+title = "Jennifer Adams - Conference Travel"
+description = "Attending HVAC Industry Conference in Chicago"
+start_time = "2025-05-11T00:00:00"
+end_time = "2025-05-15T23:59:59"
+all_day = true
+event_type = "out-of-office"
+organizer_id = "f9c8d7"                                       # Jennifer Adams
+timezone = "America/New_York"
+
+[[events]]
+title = "Mike Chen - Working Remote"
+description = "Working from home - Available via Slack/Teams"
+start_time = "2025-02-24T00:00:00"
+end_time = "2025-02-28T23:59:59"
+all_day = true
+event_type = "out-of-office"
+organizer_id = "1ea074"                                       # Mike Chen
+timezone = "America/New_York"
+
+[[events]]
+title = "Margaret Sullivan - Board Meeting Travel"
+description = "Traveling for quarterly board meeting in NYC"
+start_time = "2025-04-14T00:00:00"
+end_time = "2025-04-16T23:59:59"
+all_day = true
+event_type = "out-of-office"
+organizer_id = "cdb964"                                      # Margaret Sullivan
+timezone = "America/New_York"
+
+# ============================================================================
+# DECEMBER 2024 EVENTS (for testing during current time period)
+# ============================================================================
+
+[[events]]
+title = "Year-End Team Celebration"
+description = "Holiday party and team celebration for 2024"
+start_time = "2024-12-13T15:00:00"
+end_time = "2024-12-13T18:00:00"
+event_type = "meeting"
+organizer_id = "241a6d"                                              # Thomas Anderson
+participant_ids = ["cdb964", "714fd4", "d827cb", "1ea074", "4f6f43"]
+location = "Reception Area"
+timezone = "America/New_York"
+
+[[events]]
+title = "Engineering Standup"
+description = "Daily sync for the engineering team"
+start_time = "2024-12-12T09:00:00"
+end_time = "2024-12-12T09:15:00"
+event_type = "standup"
+recurrence = "weekly"
+recurrence_interval = 1
+recurrence_days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+recurrence_until = "2024-12-31"
+organizer_id = "d827cb"                               # David Park
+participant_ids = ["f9c8d7", "8a0c57", "8f3a18"]
+location = "Conference Room 2A"
+timezone = "America/New_York"
+
+[[events]]
+title = "Q4 2024 Business Review"
+description = "Final quarterly business review for 2024"
+start_time = "2024-12-16T09:00:00"
+end_time = "2024-12-16T16:00:00"
+event_type = "review"
+organizer_id = "241a6d"                                  # Thomas Anderson
+participant_ids = ["cdb964", "714fd4", "4fcdf6"]
+location = "Board Room"
+timezone = "America/New_York"
+
+[[events]]
+title = "IT Year-End Security Audit"
+description = "Annual security compliance review before year end"
+start_time = "2024-12-18T10:00:00"
+end_time = "2024-12-18T12:00:00"
+event_type = "review"
+organizer_id = "1ea074"                                           # Mike Chen
+participant_ids = ["7aa0d4", "d62d4d"]
+location = "IT Help Desk"
+timezone = "America/New_York"
+
+[[events]]
+title = "Holiday Office Closure"
+description = "Office closed for winter holidays"
+start_time = "2024-12-23T00:00:00"
+end_time = "2024-12-31T23:59:59"
+all_day = true
+event_type = "holiday"
+timezone = "America/New_York"

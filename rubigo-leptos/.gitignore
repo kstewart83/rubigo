@@ -1,0 +1,57 @@
+# === Build Artifacts ===
+target/
+**/target/
+dist/
+**/dist/
+
+# === Trunk Build ===
+crates/target-trunk/
+
+# === Node.js ===
+node_modules/
+**/node_modules/
+package-lock.json
+
+# === Playwright / Test Artifacts ===
+playwright-report/
+**/playwright-report/
+test-results/
+**/test-results/
+*.log
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.idea/
+*.swp
+*.swo
+
+# === Blender Backup Files ===
+*.blend1
+
+# === Large Data Files (excluded per user decision) ===
+# GeoJSON files - will refactor to use external natural earth repo
+countries_10m.geo.json
+countries_110m.geo.json
+us_states_20m.geo.json
+us_states_5m.geo.json
+*.geo.json
+
+# CSV data files (keeping worldcities_dev.csv)
+worldcities.csv
+
+# Large GLB models (can be regenerated)
+geoviz_final.glb
+
+# === Compiled Binaries ===
+gui-tauri/src-tauri/gui-server-*
+*.wasm
+
+# === Large GLB assets in gui-server (can be regenerated from Blender) ===
+gui-server/assets/geo/geoviz_earth.glb
+
+# === Cargo Lock in subcrates (keep workspace Cargo.lock) ===
+gui-server/Cargo.lock
+earth-viewer/Cargo.lock

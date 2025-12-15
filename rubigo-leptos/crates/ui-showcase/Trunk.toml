@@ -1,0 +1,14 @@
+[build]
+target = "index.html"
+
+[watch]
+# Ignore generated files to prevent infinite rebuild loop
+ignore = ["styles/components.css"]
+
+[[hooks]]
+stage = "pre_build"
+command = "bash"
+command_arguments = [
+    "-c",
+    "stylance ../ui-core && cat ../ui-core/styles/stylance/*.css > styles/components.css",
+]

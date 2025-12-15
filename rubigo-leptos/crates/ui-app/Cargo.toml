@@ -1,0 +1,42 @@
+[package]
+name = "ui-app"
+version = "0.1.0"
+edition = "2021"
+description = "New refactored Leptos application"
+
+[dependencies]
+ui-core = { path = "../ui-core" }
+actions = { path = "../actions" }
+scenario-loader = { path = "../scenario-loader", features = ["embed-mmc"] }
+bevy-viewer = { path = "../bevy-viewer" }
+leptos = { version = "0.8", features = ["csr"] }
+leptos_router = "0.8"
+leptos-bevy-canvas = "0.4"
+bevy = { version = "0.17", default-features = false, features = [
+    "bevy_asset",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_gltf",
+    "bevy_scene",
+    "bevy_render",
+    "bevy_winit",
+    "bevy_window",
+    "bevy_state",
+    "bevy_mesh",
+    "bevy_image",
+    "bevy_light",
+    "bevy_camera",
+    "bevy_shader",
+    "webgl2",
+    "png",
+    "std",
+    "x11",
+    "tonemapping_luts",
+    "zstd_rust",
+] }
+console_error_panic_hook = "0.1"
+console_log = "1"
+log = "0.4"
+chrono = "0.4"
+web-sys = { version = "0.3", features = ["Window", "Storage"] }
+bevy_embedded_assets = "0.14"

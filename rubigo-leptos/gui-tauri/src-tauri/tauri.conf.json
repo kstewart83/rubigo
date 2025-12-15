@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "gui-tauri",
+  "version": "0.1.0",
+  "identifier": "com.kstewart.gui-tauri",
+  "build": {
+    "devUrl": "http://localhost:8080",
+    "frontendDist": "../dist",
+    "beforeDevCommand": "cd ../crates/ui-app && trunk serve --port 8080",
+    "beforeBuildCommand": "cd ../crates/ui-app && trunk build --release && cp -r dist ../../gui-tauri/"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "NexoSim Hybrid",
+        "width": 1024,
+        "height": 768
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "externalBin": [
+      "gui-server"
+    ],
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

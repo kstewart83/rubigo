@@ -1,0 +1,87 @@
+/* TimeInput Component Styles - Dark Theme */
+
+.ui-time_input_wrapper-3475bc4 {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ui-time_input_label-3475bc4 {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary, #9898a6);
+}
+
+.ui-time_selects-3475bc4 {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Shared select styles */
+.ui-time_select_hour-3475bc4,
+.ui-time_select_minute-3475bc4,
+.ui-time_select_period-3475bc4 {
+    appearance: none;
+    height: 40px;
+    padding: 0 0.5rem;
+    text-align: center;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color var(--duration-fast, 150ms);
+}
+
+.ui-time_select_hour-3475bc4 {
+    width: 50px;
+}
+
+.ui-time_select_minute-3475bc4 {
+    width: 50px;
+}
+
+.ui-time_select_period-3475bc4 {
+    width: 55px;
+    font-weight: 500;
+}
+
+/* Hover, focus, disabled states */
+.ui-time_select_hour-3475bc4:hover:not(:disabled),
+.ui-time_select_minute-3475bc4:hover:not(:disabled),
+.ui-time_select_period-3475bc4:hover:not(:disabled) {
+    border-color: var(--text-secondary, #9898a6);
+}
+
+.ui-time_select_hour-3475bc4:focus,
+.ui-time_select_minute-3475bc4:focus,
+.ui-time_select_period-3475bc4:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: var(--glow-primary, 0 0 0 3px rgba(99, 102, 241, 0.15));
+}
+
+.ui-time_select_hour-3475bc4:disabled,
+.ui-time_select_minute-3475bc4:disabled,
+.ui-time_select_period-3475bc4:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-elevated, #232330);
+}
+
+.ui-time_select_hour-3475bc4 option,
+.ui-time_select_minute-3475bc4 option,
+.ui-time_select_period-3475bc4 option {
+    background: var(--bg-elevated, #232330);
+    color: var(--text-primary, #f0f0f4);
+}
+
+.ui-time_separator-3475bc4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary, #9898a6);
+    padding: 0 0.125rem;
+}

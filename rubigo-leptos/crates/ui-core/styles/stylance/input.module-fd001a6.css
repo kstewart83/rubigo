@@ -1,0 +1,83 @@
+/* Input Component Styles
+ * Following AGENTS.md design system
+ */
+
+.ui-input-fd001a6 {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    transition: all var(--duration-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.ui-input-fd001a6::placeholder {
+    color: var(--text-tertiary, #6b6b7a);
+}
+
+.ui-input-fd001a6:hover:not(:disabled) {
+    border-color: var(--text-secondary, #9898a6);
+}
+
+.ui-input-fd001a6:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: var(--glow-primary, 0 0 0 3px rgba(99, 102, 241, 0.15));
+}
+
+.ui-input-fd001a6:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-elevated, #232330);
+}
+
+/* Error state */
+.ui-input_error-fd001a6 {
+    border-color: var(--color-error, #ef4444);
+}
+
+.ui-input_error-fd001a6:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* Sizes */
+.ui-input_sm-fd001a6 {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
+}
+
+.ui-input_lg-fd001a6 {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 16px;
+}
+
+/* Input wrapper for icons/addons */
+.ui-input_wrapper-fd001a6 {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ui-input_icon-fd001a6 {
+    position: absolute;
+    left: 12px;
+    color: var(--text-tertiary, #6b6b7a);
+    pointer-events: none;
+}
+
+.ui-input_with_icon-fd001a6 {
+    padding-left: 40px;
+}
+
+/* Error message */
+.ui-error_message-fd001a6 {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-error, #ef4444);
+}

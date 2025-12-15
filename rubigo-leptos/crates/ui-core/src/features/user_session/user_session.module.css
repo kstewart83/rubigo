@@ -1,0 +1,390 @@
+/* ============================================================================
+   User Session Module Styles
+   ============================================================================ */
+
+/* ============================================================================
+   Sign In Screen
+   ============================================================================ */
+
+.sign_in_screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a23 0%, #0f0f14 50%, #1a1820 100%);
+    z-index: 2000;
+}
+
+.sign_in_content {
+    text-align: center;
+    max-width: 400px;
+    padding: 48px;
+}
+
+.sign_in_logo {
+    margin-bottom: 32px;
+}
+
+.sign_in_title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f0f0f4;
+    margin: 0 0 12px 0;
+}
+
+.sign_in_subtitle {
+    font-size: 16px;
+    color: #9898a6;
+    margin: 0 0 40px 0;
+}
+
+.sign_in_btn {
+    display: inline-block;
+    padding: 14px 48px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sign_in_btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(191, 54, 12, 0.4);
+}
+
+.sign_in_btn:active {
+    transform: translateY(0);
+}
+
+.sign_in_hint {
+    font-size: 13px;
+    color: #6b6b78;
+    margin-top: 32px;
+}
+
+/* ============================================================================
+   Persona Switcher Overlay
+   ============================================================================ */
+
+.dev_overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+/* Use :global for state class */
+.dev_overlay:global(.open) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dev_overlay_content {
+    background: #1a1a23;
+    border: 1px solid #3d3d4a;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.dev_overlay_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #3d3d4a;
+}
+
+.dev_overlay_header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #f0f0f4;
+}
+
+.dev_overlay_close {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #9898a6;
+    font-size: 24px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dev_overlay_close:hover {
+    background: #2d2d3a;
+    color: #f0f0f4;
+}
+
+.dev_overlay_section {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.dev_overlay_current {
+    font-size: 14px;
+    color: #9898a6;
+    margin: 0 0 16px 0;
+}
+
+.dev_overlay_current strong {
+    color: #f0f0f4;
+}
+
+.persona_search {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #f0f0f4;
+    background: #0f0f14;
+    border: 1px solid #3d3d4a;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.persona_search:focus {
+    outline: none;
+    border-color: #FF8A65;
+}
+
+.persona_search::placeholder {
+    color: #6b6b78;
+}
+
+.persona_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.persona_card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #0f0f14;
+    border: 1px solid #3d3d4a;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.persona_card:hover {
+    background: #1a1a23;
+    border-color: #FF8A65;
+    transform: translateY(-1px);
+}
+
+.persona_card:global(.current) {
+    background: rgba(255, 138, 101, 0.1);
+    border-color: #FF8A65;
+    cursor: default;
+}
+
+.persona_card:global(.current):hover {
+    transform: none;
+}
+
+.persona_avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.avatar_initials {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.persona_info {
+    flex: 1;
+    min-width: 0;
+}
+
+.persona_name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0f0f4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.persona_title {
+    font-size: 12px;
+    color: #9898a6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.persona_dept {
+    font-size: 11px;
+    color: #6b6b78;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.persona_current_badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #FF8A65;
+    background: rgba(255, 138, 101, 0.15);
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+/* ============================================================================
+   User Session Widget
+   ============================================================================ */
+
+.user_session_widget {
+    position: relative;
+}
+
+.user_session_trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px 6px 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.user_session_trigger:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #3d3d4a;
+}
+
+.user_avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user_avatar_initials {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.user_name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f0f0f4;
+}
+
+.dropdown_arrow {
+    font-size: 8px;
+    color: #9898a6;
+    transition: transform 0.2s;
+}
+
+.user_dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 180px;
+    background: #1a1a23;
+    border: 1px solid #3d3d4a;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    z-index: 100;
+    margin-top: 4px;
+}
+
+.user_dropdown:global(.open) {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown_item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #f0f0f4;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.dropdown_item:first-child {
+    border-radius: 7px 7px 0 0;
+}
+
+.dropdown_item:last-child {
+    border-radius: 0 0 7px 7px;
+}
+
+.dropdown_item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown_item_danger {
+    color: #ef4444;
+}
+
+.dropdown_item_danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.dropdown_divider {
+    height: 1px;
+    background: #3d3d4a;
+    margin: 4px 0;
+}

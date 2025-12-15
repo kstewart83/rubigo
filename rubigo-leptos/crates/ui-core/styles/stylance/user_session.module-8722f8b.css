@@ -1,0 +1,390 @@
+/* ============================================================================
+   User Session Module Styles
+   ============================================================================ */
+
+/* ============================================================================
+   Sign In Screen
+   ============================================================================ */
+
+.ui-sign_in_screen-8722f8b {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a23 0%, #0f0f14 50%, #1a1820 100%);
+    z-index: 2000;
+}
+
+.ui-sign_in_content-8722f8b {
+    text-align: center;
+    max-width: 400px;
+    padding: 48px;
+}
+
+.ui-sign_in_logo-8722f8b {
+    margin-bottom: 32px;
+}
+
+.ui-sign_in_title-8722f8b {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f0f0f4;
+    margin: 0 0 12px 0;
+}
+
+.ui-sign_in_subtitle-8722f8b {
+    font-size: 16px;
+    color: #9898a6;
+    margin: 0 0 40px 0;
+}
+
+.ui-sign_in_btn-8722f8b {
+    display: inline-block;
+    padding: 14px 48px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ui-sign_in_btn-8722f8b:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(191, 54, 12, 0.4);
+}
+
+.ui-sign_in_btn-8722f8b:active {
+    transform: translateY(0);
+}
+
+.ui-sign_in_hint-8722f8b {
+    font-size: 13px;
+    color: #6b6b78;
+    margin-top: 32px;
+}
+
+/* ============================================================================
+   Persona Switcher Overlay
+   ============================================================================ */
+
+.ui-dev_overlay-8722f8b {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+/* Use :global for state class */
+.ui-dev_overlay-8722f8b.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ui-dev_overlay_content-8722f8b {
+    background: #1a1a23;
+    border: 1px solid #3d3d4a;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.ui-dev_overlay_header-8722f8b {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #3d3d4a;
+}
+
+.ui-dev_overlay_header-8722f8b h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #f0f0f4;
+}
+
+.ui-dev_overlay_close-8722f8b {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #9898a6;
+    font-size: 24px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.ui-dev_overlay_close-8722f8b:hover {
+    background: #2d2d3a;
+    color: #f0f0f4;
+}
+
+.ui-dev_overlay_section-8722f8b {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.ui-dev_overlay_current-8722f8b {
+    font-size: 14px;
+    color: #9898a6;
+    margin: 0 0 16px 0;
+}
+
+.ui-dev_overlay_current-8722f8b strong {
+    color: #f0f0f4;
+}
+
+.ui-persona_search-8722f8b {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #f0f0f4;
+    background: #0f0f14;
+    border: 1px solid #3d3d4a;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.ui-persona_search-8722f8b:focus {
+    outline: none;
+    border-color: #FF8A65;
+}
+
+.ui-persona_search-8722f8b::placeholder {
+    color: #6b6b78;
+}
+
+.ui-persona_grid-8722f8b {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.ui-persona_card-8722f8b {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #0f0f14;
+    border: 1px solid #3d3d4a;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.ui-persona_card-8722f8b:hover {
+    background: #1a1a23;
+    border-color: #FF8A65;
+    transform: translateY(-1px);
+}
+
+.ui-persona_card-8722f8b.current {
+    background: rgba(255, 138, 101, 0.1);
+    border-color: #FF8A65;
+    cursor: default;
+}
+
+.ui-persona_card-8722f8b.current:hover {
+    transform: none;
+}
+
+.ui-persona_avatar-8722f8b {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ui-avatar_initials-8722f8b {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.ui-persona_info-8722f8b {
+    flex: 1;
+    min-width: 0;
+}
+
+.ui-persona_name-8722f8b {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0f0f4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ui-persona_title-8722f8b {
+    font-size: 12px;
+    color: #9898a6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.ui-persona_dept-8722f8b {
+    font-size: 11px;
+    color: #6b6b78;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.ui-persona_current_badge-8722f8b {
+    font-size: 10px;
+    font-weight: 600;
+    color: #FF8A65;
+    background: rgba(255, 138, 101, 0.15);
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+/* ============================================================================
+   User Session Widget
+   ============================================================================ */
+
+.ui-user_session_widget-8722f8b {
+    position: relative;
+}
+
+.ui-user_session_trigger-8722f8b {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px 6px 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.ui-user_session_trigger-8722f8b:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #3d3d4a;
+}
+
+.ui-user_avatar-8722f8b {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF8A65 0%, #BF360C 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ui-user_avatar_initials-8722f8b {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.ui-user_name-8722f8b {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f0f0f4;
+}
+
+.ui-dropdown_arrow-8722f8b {
+    font-size: 8px;
+    color: #9898a6;
+    transition: transform 0.2s;
+}
+
+.ui-user_dropdown-8722f8b {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 180px;
+    background: #1a1a23;
+    border: 1px solid #3d3d4a;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    z-index: 100;
+    margin-top: 4px;
+}
+
+.ui-user_dropdown-8722f8b.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.ui-dropdown_item-8722f8b {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #f0f0f4;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.ui-dropdown_item-8722f8b:first-child {
+    border-radius: 7px 7px 0 0;
+}
+
+.ui-dropdown_item-8722f8b:last-child {
+    border-radius: 0 0 7px 7px;
+}
+
+.ui-dropdown_item-8722f8b:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ui-dropdown_item_danger-8722f8b {
+    color: #ef4444;
+}
+
+.ui-dropdown_item_danger-8722f8b:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.ui-dropdown_divider-8722f8b {
+    height: 1px;
+    background: #3d3d4a;
+    margin: 4px 0;
+}

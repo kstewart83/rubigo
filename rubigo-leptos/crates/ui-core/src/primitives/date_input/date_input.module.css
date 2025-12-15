@@ -1,0 +1,92 @@
+/* DateInput Component Styles - Dark Theme */
+
+.date_input_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.date_input_label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary, #9898a6);
+}
+
+.date_input_row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.date_input {
+    appearance: none;
+    flex: 1;
+    height: 40px;
+    padding: 0 0.75rem;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    transition: all var(--duration-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.date_input:hover:not(:disabled) {
+    border-color: var(--text-secondary, #9898a6);
+}
+
+.date_input:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: var(--glow-primary, 0 0 0 3px rgba(99, 102, 241, 0.15));
+}
+
+.date_input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-elevated, #232330);
+}
+
+/* Today Button */
+.today_button {
+    height: 40px;
+    padding: 0 0.75rem;
+    background: var(--bg-elevated, #232330);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-secondary, #9898a6);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--duration-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    white-space: nowrap;
+}
+
+.today_button:hover:not(:disabled) {
+    background: var(--bg-surface, #1a1a23);
+    border-color: var(--color-primary, #6366f1);
+    color: var(--text-primary, #f0f0f4);
+}
+
+.today_button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Override browser date picker icon styling for dark theme */
+.date_input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0.7);
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.date_input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Firefox date picker */
+.date_input::-moz-calendar-picker-indicator {
+    filter: invert(0.7);
+}

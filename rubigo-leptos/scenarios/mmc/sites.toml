@@ -1,0 +1,237 @@
+# ============================================================================
+# MMC Sites Data - Regions, Sites, Buildings, Floors, Spaces
+# ============================================================================
+
+[description]
+overview = """
+FACILITIES
+- Columbus HQ: Main 3-story office building + single-story Annex
+  - Manufacturing floor, engineering labs, executive offices, data center
+- Indianapolis: Regional sales & service office
+- Detroit: Regional sales & service office  
+- Pittsburgh: Regional sales & service office
+
+All facilities are owned or leased by MMC. The Columbus headquarters serves
+as the primary manufacturing, engineering, and administrative center. Regional
+offices support sales, field service technicians, and customer support staff.
+"""
+
+# NOTES:
+# 1. Floor Numbering: Floors are zero-indexed conceptually but floor 0 is skipped.
+#    - Negative numbers are basement/underground levels.
+#    - Level 1 is the first above-ground floor.
+# 2. Floor Ranges: Defined as { min = <int>, max = <int> } (inclusive).
+#    - Example: { min = -1, max = 3 } includes floors -1, 1, 2, 3 (skipping 0).
+# 3. Floor Names: 'floor_names' array corresponds exactly to the valid floors in the range.
+
+# REGIONS
+[[regions]]
+name = "Columbus HQ"
+city = "Columbus"
+country = "United States"
+lat = 39.9612
+lon = -82.9988
+
+[[regions]]
+name = "Indianapolis"
+city = "Indianapolis"
+country = "United States"
+lat = 39.7684
+lon = -86.1581
+
+[[regions]]
+name = "Detroit"
+city = "Detroit"
+country = "United States"
+lat = 42.3314
+lon = -83.0458
+
+[[regions]]
+name = "Pittsburgh"
+city = "Pittsburgh"
+country = "United States"
+lat = 40.4406
+lon = -79.9959
+
+# SITES
+[[sites]]
+name = "MMC Headquarters"
+region = "Columbus HQ"
+status = "active"
+
+[[sites]]
+name = "Indianapolis Regional Office"
+region = "Indianapolis"
+status = "active"
+
+[[sites]]
+name = "Detroit Regional Office"
+region = "Detroit"
+status = "active"
+
+[[sites]]
+name = "Pittsburgh Regional Office"
+region = "Pittsburgh"
+status = "active"
+
+# BUILDINGS
+[[buildings]]
+name = "HQ Main Building"
+site = "MMC Headquarters"
+address = "1000 Industrial Parkway, Columbus, OH 43215"
+floors = { min = -1, max = 3 }
+floor_names = [
+    "Basement Services",
+    "Reception & Services",
+    "Engineering",
+    "Executive & Finance",
+]
+
+[[buildings]]
+name = "HQ Annex"
+site = "MMC Headquarters"
+address = "1010 Industrial Parkway, Columbus, OH 43215"
+floors = { min = 1, max = 1 }
+floor_names = ["Main Floor"]
+
+[[buildings]]
+name = "Indy Office Building"
+site = "Indianapolis Regional Office"
+address = "500 Commerce Drive, Indianapolis, IN 46204"
+floors = { min = 1, max = 1 }
+floor_names = ["Main Floor"]
+
+[[buildings]]
+name = "Detroit Office Building"
+site = "Detroit Regional Office"
+address = "200 Tech Center Drive, Detroit, MI 48226"
+floors = { min = 1, max = 1 }
+floor_names = ["Main Floor"]
+
+[[buildings]]
+name = "Pittsburgh Office Building"
+site = "Pittsburgh Regional Office"
+address = "300 Steel Plaza, Pittsburgh, PA 15222"
+floors = { min = 1, max = 1 }
+floor_names = ["Main Floor"]
+
+
+# SPACES
+[[spaces]]
+name = "Data Center"
+locator = "B01"
+building = "HQ Main Building"
+level = -1
+type = "Data Center"
+
+[[spaces]]
+name = "Network Closet B1"
+locator = "B02"
+building = "HQ Main Building"
+level = -1
+type = "Closet"
+
+[[spaces]]
+name = "Reception Area"
+locator = "100"
+building = "HQ Main Building"
+level = 1
+type = "Common Area"
+
+[[spaces]]
+name = "HR Suite"
+locator = "101"
+building = "HQ Main Building"
+level = 1
+type = "Office"
+
+[[spaces]]
+name = "IT Help Desk"
+locator = "102"
+building = "HQ Main Building"
+level = 1
+type = "Office"
+
+[[spaces]]
+name = "Engineering Open Plan"
+locator = "201-OP"
+building = "HQ Main Building"
+level = 2
+type = "Office"
+
+[[spaces]]
+name = "CAD Lab"
+locator = "202"
+building = "HQ Main Building"
+level = 2
+type = "Office"
+
+[[spaces]]
+name = "Conference Room 2A"
+locator = "2A"
+building = "HQ Main Building"
+level = 2
+type = "Meeting Room"
+
+[[spaces]]
+name = "Executive Suite"
+locator = "300"
+building = "HQ Main Building"
+level = 3
+type = "Office"
+
+[[spaces]]
+name = "Finance Department"
+locator = "301"
+building = "HQ Main Building"
+level = 3
+type = "Office"
+
+[[spaces]]
+name = "Board Room"
+locator = "302"
+building = "HQ Main Building"
+level = 3
+type = "Meeting Room"
+
+[[spaces]]
+name = "Indy Open Office"
+locator = "101"
+building = "Indy Office Building"
+level = 1
+type = "Office"
+
+[[spaces]]
+name = "Indy Network Closet"
+locator = "102"
+building = "Indy Office Building"
+level = 1
+type = "Closet"
+
+[[spaces]]
+name = "Detroit Open Office"
+locator = "101"
+building = "Detroit Office Building"
+level = 1
+type = "Office"
+
+[[spaces]]
+name = "Detroit Network Closet"
+locator = "102"
+building = "Detroit Office Building"
+level = 1
+type = "Closet"
+
+[[spaces]]
+name = "Pittsburgh Open Office"
+locator = "101"
+building = "Pittsburgh Office Building"
+level = 1
+type = "Office"
+
+[[spaces]]
+name = "Pittsburgh Network Closet"
+locator = "102"
+building = "Pittsburgh Office Building"
+level = 1
+type = "Closet"

@@ -1,0 +1,305 @@
+# ============================================================================
+# MMC Personnel Data
+# ============================================================================
+
+[description]
+overview = """
+WORKFORCE
+- Total Employees: ~500
+- HQ Staff: ~350 (executive, engineering, IT, HR, finance, operations)
+- Regional Offices: ~150 (sales, field service, customer support)
+- Key Personnel Modeled: 18 across all departments
+
+The personnel data below represents key leadership and staff members who 
+are modeled in detail for simulation purposes. The full workforce includes 
+approximately 500 employees across all locations.
+"""
+
+# Executive Team
+[[people]]
+id = "241a6d"
+name = "Thomas Anderson"
+email = "tanderson@mmc.com"
+title = "Chief Executive Officer"
+department = "Executive"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "300"
+photo = "headshots/thomas_anderson_241a6d.png"
+desk_phone = "614-555-1001"
+cell_phone = "614-555-8001"
+bio = "Thomas founded MMC in 1998 after 15 years in industrial manufacturing. He holds an MBA from Ohio State and is known for his hands-on leadership style. Outside work, he volunteers with Junior Achievement and enjoys restoring classic cars."
+
+[[people]]
+id = "cdb964"
+name = "Margaret Sullivan"
+email = "msullivan@mmc.com"
+title = "Chief Financial Officer"
+department = "Executive"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "300"
+manager = "Thomas Anderson"
+photo = "headshots/margaret_sullivan_cdb964.png"
+desk_phone = "614-555-1002"
+cell_phone = "614-555-8002"
+bio = "Margaret joined MMC in 2008 from Deloitte, bringing 20 years of financial expertise. A CPA with a focus on manufacturing operations, she led the company's successful ERP implementation."
+
+[[people]]
+id = "714fd4"
+name = "Richard Nakamura"
+email = "rnakamura@mmc.com"
+title = "Chief Technology Officer"
+department = "Executive"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "300"
+manager = "Thomas Anderson"
+photo = "headshots/richard_nakamura_714fd4.png"
+desk_phone = "614-555-1003"
+cell_phone = "614-555-8003"
+bio = "Richard oversees all technology initiatives and digital transformation at MMC. Previously at Rockwell Automation, he specializes in industrial IoT and smart manufacturing."
+
+# IT Department
+[[people]]
+id = "1ea074"
+name = "Mike Chen"
+email = "mchen@mmc.com"
+title = "IT Director"
+department = "IT"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "102"
+manager = "Richard Nakamura"
+photo = "headshots/mike_chen_1ea074.png"
+desk_phone = "614-555-2001"
+cell_phone = "614-555-8201"
+bio = "Mike manages the IT infrastructure across all MMC locations. With 12 years at the company, he led the network modernization project. Certified in Cisco and Microsoft technologies."
+
+[[people]]
+id = "7aa0d4"
+name = "Sarah Kim"
+email = "skim@mmc.com"
+title = "Network Administrator"
+department = "IT"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "102"
+manager = "Mike Chen"
+photo = "headshots/sarah_kim_7aa0d4.png"
+desk_phone = "614-555-2002"
+cell_phone = "614-555-8202"
+bio = "Sarah maintains the company's network infrastructure and security systems. She joined MMC after graduating from Purdue and is passionate about cybersecurity."
+
+[[people]]
+id = "d62d4d"
+name = "Jason Wright"
+email = "jwright@mmc.com"
+title = "Systems Administrator"
+department = "IT"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "102"
+manager = "Mike Chen"
+photo = "headshots/jason_wright_d62d4d.png"
+desk_phone = "614-555-2003"
+cell_phone = "614-555-8203"
+bio = "Jason handles server management and cloud operations with expertise in Windows Server, VMware, and Azure. He's working toward his CISSP certification."
+
+# HR Department
+[[people]]
+id = "4f6f43"
+name = "Patricia Martinez"
+email = "pmartinez@mmc.com"
+title = "HR Director"
+department = "HR"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "101"
+manager = "Thomas Anderson"
+photo = "headshots/patricia_martinez_4f6f43.png"
+desk_phone = "614-555-3001"
+cell_phone = "614-555-8301"
+bio = "Patricia leads all human resources functions including talent acquisition and employee development. With 18 years in HR, she implemented MMC's apprenticeship program."
+
+[[people]]
+id = "f73c1c"
+name = "James Wilson"
+email = "jwilson@mmc.com"
+title = "HR Specialist"
+department = "HR"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "101"
+manager = "Patricia Martinez"
+photo = "headshots/james_wilson_f73c1c.png"
+desk_phone = "614-555-3002"
+bio = "James focuses on employee relations and benefits administration. He's been with MMC for 5 years and is known for his approachable manner."
+
+# Engineering Department
+[[people]]
+id = "d827cb"
+name = "David Park"
+email = "dpark@mmc.com"
+title = "Engineering Manager"
+department = "Engineering"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 2
+space = "201-OP"
+manager = "Richard Nakamura"
+photo = "headshots/david_park_d827cb.png"
+desk_phone = "614-555-4001"
+cell_phone = "614-555-8401"
+bio = "David leads the mechanical engineering team developing HVAC systems. A licensed PE with 15 years of experience, he holds multiple patents."
+
+[[people]]
+id = "f9c8d7"
+name = "Jennifer Adams"
+email = "jadams@mmc.com"
+title = "Senior Mechanical Engineer"
+department = "Engineering"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 2
+space = "201-OP"
+manager = "David Park"
+photo = "headshots/jennifer_adams_f9c8d7.png"
+desk_phone = "614-555-4002"
+cell_phone = "614-555-8402"
+bio = "Jennifer specializes in thermal systems and energy efficiency. She's led several product development projects that reduced energy consumption by 30%."
+
+[[people]]
+id = "8a0c57"
+name = "Robert Thompson"
+email = "rthompson@mmc.com"
+title = "Mechanical Engineer"
+department = "Engineering"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 2
+space = "201-OP"
+manager = "David Park"
+photo = "headshots/robert_thompson_8a0c57.png"
+desk_phone = "614-555-4003"
+bio = "Robert focuses on product testing and quality assurance. He joined MMC after completing his master's at University of Michigan."
+
+[[people]]
+id = "8f3a18"
+name = "Lisa Chen"
+email = "lchen@mmc.com"
+title = "CAD Designer"
+department = "Engineering"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 2
+space = "202"
+manager = "David Park"
+photo = "headshots/lisa_chen_8f3a18.png"
+desk_phone = "614-555-4004"
+bio = "Lisa creates technical drawings and 3D models for HVAC components. Expert in SolidWorks and AutoCAD with an eye for both form and function."
+
+# Finance Department
+[[people]]
+id = "4fcdf6"
+name = "Emily Rodriguez"
+email = "erodriguez@mmc.com"
+title = "Finance Manager"
+department = "Finance"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "301"
+manager = "Margaret Sullivan"
+photo = "headshots/emily_rodriguez_4fcdf6.png"
+desk_phone = "614-555-5001"
+cell_phone = "614-555-8501"
+bio = "Emily manages day-to-day financial operations and reporting. A CPA who streamlined the monthly close process from 10 days to 3."
+
+[[people]]
+id = "c1eddc"
+name = "Daniel Foster"
+email = "dfoster@mmc.com"
+title = "Senior Accountant"
+department = "Finance"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "301"
+manager = "Emily Rodriguez"
+photo = "headshots/daniel_foster_c1eddc.png"
+desk_phone = "614-555-5002"
+bio = "Daniel handles accounts payable, receivable, and cost accounting. He's been with MMC for 7 years and is the go-to person for SAP questions."
+
+# Sales - Regional
+[[people]]
+id = "1e4e5c"
+name = "Chris Miller"
+email = "cmiller@mmc.com"
+title = "Regional Sales Manager - Midwest"
+department = "Sales"
+site = "Indianapolis Regional Office"
+building = "Indy Office Building"
+level = 1
+space = "101"
+manager = "Thomas Anderson"
+photo = "headshots/chris_miller_1e4e5c.png"
+desk_phone = "317-555-6001"
+cell_phone = "317-555-8601"
+bio = "Chris leads sales across Indiana, Illinois, and Wisconsin. A 10-year MMC veteran, he's grown the Midwest territory by 40%."
+
+[[people]]
+id = "e8a466"
+name = "Amanda Johnson"
+email = "ajohnson@mmc.com"
+title = "Sales Representative"
+department = "Sales"
+site = "Indianapolis Regional Office"
+building = "Indy Office Building"
+level = 1
+space = "101"
+manager = "Chris Miller"
+photo = "headshots/amanda_johnson_e8a466.png"
+desk_phone = "317-555-6002"
+cell_phone = "317-555-8602"
+bio = "Amanda handles inside sales and customer support for the Midwest region. She recently earned President's Club recognition."
+
+[[people]]
+id = "4d9154"
+name = "Kevin O'Brien"
+email = "kobrien@mmc.com"
+title = "Regional Sales Manager - North"
+department = "Sales"
+site = "Detroit Regional Office"
+building = "Detroit Office Building"
+level = 1
+space = "101"
+manager = "Thomas Anderson"
+photo = "headshots/kevin_obrien_4d9154.png"
+desk_phone = "313-555-7001"
+cell_phone = "313-555-8701"
+bio = "Kevin manages sales in Michigan, Minnesota, and the Great Lakes region. With 15 years in industrial sales, he's developed key automotive accounts."
+
+[[people]]
+id = "5eedf9"
+name = "Nicole Taylor"
+email = "ntaylor@mmc.com"
+title = "Regional Sales Manager - East"
+department = "Sales"
+site = "Pittsburgh Regional Office"
+building = "Pittsburgh Office Building"
+level = 1
+space = "101"
+manager = "Thomas Anderson"
+photo = "headshots/nicole_taylor_5eedf9.png"
+desk_phone = "412-555-7101"
+cell_phone = "412-555-8711"
+bio = "Nicole covers Pennsylvania, New York, and the Eastern seaboard. She has an engineering background that helps her consult on complex projects."

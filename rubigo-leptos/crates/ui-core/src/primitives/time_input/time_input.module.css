@@ -1,0 +1,87 @@
+/* TimeInput Component Styles - Dark Theme */
+
+.time_input_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.time_input_label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary, #9898a6);
+}
+
+.time_selects {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Shared select styles */
+.time_select_hour,
+.time_select_minute,
+.time_select_period {
+    appearance: none;
+    height: 40px;
+    padding: 0 0.5rem;
+    text-align: center;
+    background: var(--bg-surface, #1a1a23);
+    border: 1px solid var(--border-default, #3d3d4a);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #f0f0f4);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color var(--duration-fast, 150ms);
+}
+
+.time_select_hour {
+    width: 50px;
+}
+
+.time_select_minute {
+    width: 50px;
+}
+
+.time_select_period {
+    width: 55px;
+    font-weight: 500;
+}
+
+/* Hover, focus, disabled states */
+.time_select_hour:hover:not(:disabled),
+.time_select_minute:hover:not(:disabled),
+.time_select_period:hover:not(:disabled) {
+    border-color: var(--text-secondary, #9898a6);
+}
+
+.time_select_hour:focus,
+.time_select_minute:focus,
+.time_select_period:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: var(--glow-primary, 0 0 0 3px rgba(99, 102, 241, 0.15));
+}
+
+.time_select_hour:disabled,
+.time_select_minute:disabled,
+.time_select_period:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-elevated, #232330);
+}
+
+.time_select_hour option,
+.time_select_minute option,
+.time_select_period option {
+    background: var(--bg-elevated, #232330);
+    color: var(--text-primary, #f0f0f4);
+}
+
+.time_separator {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary, #9898a6);
+    padding: 0 0.125rem;
+}
