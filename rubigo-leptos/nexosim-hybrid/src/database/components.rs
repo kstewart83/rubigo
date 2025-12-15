@@ -357,9 +357,9 @@ impl ComponentRepository {
 
         // Try multiple possible paths for personnel.toml
         let possible_paths = [
-            config_parent.join("scenarios/mmc/personnel.toml"),
-            std::path::PathBuf::from("scenarios/mmc/personnel.toml"),
-            std::path::PathBuf::from("../scenarios/mmc/personnel.toml"),
+            config_parent.join("../common/scenarios/mmc/personnel.toml"),
+            std::path::PathBuf::from("../common/scenarios/mmc/personnel.toml"),
+            std::path::PathBuf::from("../../common/scenarios/mmc/personnel.toml"),
         ];
 
         tracing::info!(
@@ -373,7 +373,7 @@ impl ComponentRepository {
         let personnel_path = possible_paths
             .into_iter()
             .find(|p| p.exists())
-            .unwrap_or_else(|| std::path::PathBuf::from("scenarios/mmc/personnel.toml"));
+            .unwrap_or_else(|| std::path::PathBuf::from("../common/scenarios/mmc/personnel.toml"));
 
         let people_to_seed: Vec<crate::config::PersonConfig> = if personnel_path.exists() {
             tracing::info!("Loading personnel from {:?}", personnel_path);
@@ -429,7 +429,8 @@ impl ComponentRepository {
 
                 // Load photo file if specified
                 let photo_data = if let Some(photo_filename) = &person.photo {
-                    let photo_path = std::path::Path::new("../scenarios/mmc").join(photo_filename);
+                    let photo_path =
+                        std::path::Path::new("../../common/scenarios/mmc").join(photo_filename);
                     match std::fs::read(&photo_path) {
                         Ok(bytes) => {
                             use base64::Engine;

@@ -13,7 +13,7 @@ async fn test_personnel_space_assignment() -> anyhow::Result<()> {
     db.use_ns("test").use_db("test").await?;
 
     // Seed from scenario.toml (the new config structure)
-    ComponentRepository::seed_from_toml(&db, "../scenarios/mmc/scenario.toml").await?;
+    ComponentRepository::seed_from_toml(&db, "../../common/scenarios/mmc/scenario.toml").await?;
 
     // Verify people were created
     let people: Vec<nexosim_hybrid::database::geo::Person> = db.select("person").await?;

@@ -8,85 +8,85 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use std::sync::OnceLock;
 
 // Embed TOML files at compile time
-const SCENARIO_TOML: &str = include_str!("../../../scenarios/mmc/scenario.toml");
-const PERSONNEL_TOML: &str = include_str!("../../../scenarios/mmc/personnel.toml");
-const SITES_TOML: &str = include_str!("../../../scenarios/mmc/sites.toml");
-const ASSETS_TOML: &str = include_str!("../../../scenarios/mmc/assets.toml");
-const EVENTS_TOML: &str = include_str!("../../../scenarios/mmc/events.toml");
+const SCENARIO_TOML: &str = include_str!("../../../../common/scenarios/mmc/scenario.toml");
+const PERSONNEL_TOML: &str = include_str!("../../../../common/scenarios/mmc/personnel.toml");
+const SITES_TOML: &str = include_str!("../../../../common/scenarios/mmc/sites.toml");
+const ASSETS_TOML: &str = include_str!("../../../../common/scenarios/mmc/assets.toml");
+const EVENTS_TOML: &str = include_str!("../../../../common/scenarios/mmc/events.toml");
 
 // Embed headshot images at compile time (PNG files as bytes)
 const HEADSHOTS: &[(&str, &[u8])] = &[
     (
         "thomas_anderson_241a6d",
-        include_bytes!("../../../scenarios/mmc/headshots/thomas_anderson_241a6d.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/thomas_anderson_241a6d.png"),
     ),
     (
         "margaret_sullivan_cdb964",
-        include_bytes!("../../../scenarios/mmc/headshots/margaret_sullivan_cdb964.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/margaret_sullivan_cdb964.png"),
     ),
     (
         "richard_nakamura_714fd4",
-        include_bytes!("../../../scenarios/mmc/headshots/richard_nakamura_714fd4.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/richard_nakamura_714fd4.png"),
     ),
     (
         "sarah_kim_7aa0d4",
-        include_bytes!("../../../scenarios/mmc/headshots/sarah_kim_7aa0d4.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/sarah_kim_7aa0d4.png"),
     ),
     (
         "james_wilson_f73c1c",
-        include_bytes!("../../../scenarios/mmc/headshots/james_wilson_f73c1c.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/james_wilson_f73c1c.png"),
     ),
     (
         "lisa_chen_8f3a18",
-        include_bytes!("../../../scenarios/mmc/headshots/lisa_chen_8f3a18.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/lisa_chen_8f3a18.png"),
     ),
     (
         "mike_chen_1ea074",
-        include_bytes!("../../../scenarios/mmc/headshots/mike_chen_1ea074.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/mike_chen_1ea074.png"),
     ),
     (
         "patricia_martinez_4f6f43",
-        include_bytes!("../../../scenarios/mmc/headshots/patricia_martinez_4f6f43.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/patricia_martinez_4f6f43.png"),
     ),
     (
         "david_park_d827cb",
-        include_bytes!("../../../scenarios/mmc/headshots/david_park_d827cb.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/david_park_d827cb.png"),
     ),
     (
         "emily_rodriguez_4fcdf6",
-        include_bytes!("../../../scenarios/mmc/headshots/emily_rodriguez_4fcdf6.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/emily_rodriguez_4fcdf6.png"),
     ),
     (
         "robert_thompson_8a0c57",
-        include_bytes!("../../../scenarios/mmc/headshots/robert_thompson_8a0c57.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/robert_thompson_8a0c57.png"),
     ),
     (
         "jennifer_adams_f9c8d7",
-        include_bytes!("../../../scenarios/mmc/headshots/jennifer_adams_f9c8d7.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/jennifer_adams_f9c8d7.png"),
     ),
     (
         "kevin_obrien_4d9154",
-        include_bytes!("../../../scenarios/mmc/headshots/kevin_obrien_4d9154.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/kevin_obrien_4d9154.png"),
     ),
     (
         "nicole_taylor_5eedf9",
-        include_bytes!("../../../scenarios/mmc/headshots/nicole_taylor_5eedf9.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/nicole_taylor_5eedf9.png"),
     ),
     (
         "amanda_johnson_e8a466",
-        include_bytes!("../../../scenarios/mmc/headshots/amanda_johnson_e8a466.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/amanda_johnson_e8a466.png"),
     ),
     (
         "chris_miller_1e4e5c",
-        include_bytes!("../../../scenarios/mmc/headshots/chris_miller_1e4e5c.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/chris_miller_1e4e5c.png"),
     ),
     (
         "daniel_foster_c1eddc",
-        include_bytes!("../../../scenarios/mmc/headshots/daniel_foster_c1eddc.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/daniel_foster_c1eddc.png"),
     ),
     (
         "jason_wright_d62d4d",
-        include_bytes!("../../../scenarios/mmc/headshots/jason_wright_d62d4d.png"),
+        include_bytes!("../../../../common/scenarios/mmc/headshots/jason_wright_d62d4d.png"),
     ),
 ];
 

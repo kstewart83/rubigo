@@ -212,7 +212,7 @@ mod tests {
     #[tokio::test]
     async fn seed_from_scenario_path() {
         let db = Database::init().await.unwrap();
-        let result = from_path(&db.client, "../../scenarios/mmc").await;
+        let result = from_path(&db.client, "../../../common/scenarios/mmc").await;
 
         // This may fail if test runs from wrong directory, which is OK
         if let Ok(stats) = result {

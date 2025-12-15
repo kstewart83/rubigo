@@ -600,10 +600,11 @@ fn MonthView(
     }
 }
 
+#[allow(unused_variables)]
 #[component]
 fn WeekView(
     current_date: DateTime<Utc>,
-    _events: Vec<CalendarEvent>,
+    events: Vec<CalendarEvent>,
     meetings: Vec<Meeting>,
     #[prop(default = false)] work_week: bool,
 ) -> impl IntoView {

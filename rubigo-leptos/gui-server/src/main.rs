@@ -70,7 +70,7 @@ async fn main() {
     
     // Seed from scenario config
     let scenario_path = std::env::var("SCENARIO_PATH")
-        .unwrap_or_else(|_| "../scenarios/mmc/scenario.toml".to_string());
+        .unwrap_or_else(|_| "../../common/scenarios/mmc/scenario.toml".to_string());
     if let Err(e) = nexosim_hybrid::database::components::ComponentRepository::seed_from_toml(
         &db.client,
         &scenario_path,
