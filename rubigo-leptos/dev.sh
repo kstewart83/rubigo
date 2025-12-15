@@ -71,4 +71,5 @@ export SKIP_SERVER_BUILD=1
 rm -f src-tauri/gui-server-*-*-*
 
 echo "Launching Tauri..."
+export BEVY_ASSET_PATH="$(pwd)/../crates/ui-app/assets"
 cargo tauri dev --config src-tauri/tauri.dev.tmp.json

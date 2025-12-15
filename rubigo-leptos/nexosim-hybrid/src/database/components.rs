@@ -426,8 +426,7 @@ impl ComponentRepository {
 
                 // Load photo file if specified
                 let photo_data = if let Some(photo_filename) = &person.photo {
-                    let photo_path =
-                        std::path::Path::new("../scenarios/mmc/headshots").join(photo_filename);
+                    let photo_path = std::path::Path::new("../scenarios/mmc").join(photo_filename);
                     match std::fs::read(&photo_path) {
                         Ok(bytes) => {
                             use base64::Engine;
