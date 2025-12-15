@@ -1,0 +1,6 @@
+[test]
+coverage = true
+coverageDir = "coverage"
+
+# Test file patterns
+preload = ["./src/__tests__/setup.ts"]
