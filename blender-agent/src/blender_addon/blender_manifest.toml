@@ -1,0 +1,38 @@
+schema_version = "1.0.0"
+
+# Extension identification
+id = "blender_agent"
+name = "Blender Agent Socket Server"
+version = "0.1.45"
+tagline = "Socket server enabling AI agent control via MCP"
+
+# Author information
+maintainer = "Blender Agent Project"
+website = "https://github.com/blender-agent/blender-agent"
+
+# Extension type
+type = "add-on"
+
+# Licensing
+license = ["SPDX:MIT"]
+
+# Blender version compatibility (targeting Blender 5.0+)
+blender_version_min = "5.0.0"
+
+# Categorization for the Extensions Platform
+tags = ["Development", "System"]
+
+# Supported platforms (all platforms)
+# Omitting this field means all platforms are supported
+
+# Permissions needed by this extension
+[permissions]
+network = "Listens on TCP port 9876 for AI agent connections"
+
+# Build configuration
+[build]
+paths_exclude_pattern = [
+    "__pycache__/",
+    "*.pyc",
+    ".git/",
+]
