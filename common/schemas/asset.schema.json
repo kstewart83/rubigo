@@ -1,0 +1,108 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubigo.dev/schemas/asset.schema.json",
+    "title": "Network Asset Configuration",
+    "description": "Schema for network infrastructure assets",
+    "type": "object",
+    "properties": {
+        "assets": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/NetworkAsset"
+            }
+        }
+    },
+    "$defs": {
+        "AssetCategory": {
+            "type": "string",
+            "description": "High-level asset category",
+            "enum": [
+                "Network",
+                "Server",
+                "Storage",
+                "Endpoint"
+            ]
+        },
+        "AssetStatus": {
+            "type": "string",
+            "description": "Physical installation status",
+            "enum": [
+                "storage",
+                "installed:active",
+                "installed:inactive"
+            ]
+        },
+        "NetworkAsset": {
+            "type": "object",
+            "description": "Network infrastructure asset (switches, servers, storage, etc.)",
+            "required": [
+                "name",
+                "category",
+                "manufacturer",
+                "model",
+                "serial_number",
+                "status"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Asset hostname or name"
+                },
+                "asset_tag": {
+                    "type": "string",
+                    "description": "Internal asset tracking number"
+                },
+                "category": {
+                    "$ref": "#/$defs/AssetCategory"
+                },
+                "manufacturer": {
+                    "type": "string",
+                    "description": "Hardware manufacturer"
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Model number"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "description": "Manufacturer serial number"
+                },
+                "mac_address": {
+                    "type": "string",
+                    "description": "Primary MAC address",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                },
+                "status": {
+                    "$ref": "#/$defs/AssetStatus"
+                },
+                "rack": {
+                    "type": "string",
+                    "description": "Reference to rack name (for racked equipment)"
+                },
+                "position_u": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Rack position (1 = bottom)"
+                },
+                "height_u": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "Height in rack units"
+                },
+                "space": {
+                    "type": "string",
+                    "description": "Reference to space name (for non-racked equipment)"
+                },
+                "storage_location": {
+                    "type": "string",
+                    "description": "Free-text location description"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Additional notes"
+                }
+            }
+        }
+    }
+}

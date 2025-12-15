@@ -1,0 +1,193 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubigo.dev/schemas/site.schema.json",
+    "title": "Site Configuration",
+    "description": "Schema for geographic site data including regions, sites, buildings, floors, and spaces",
+    "type": "object",
+    "properties": {
+        "description": {
+            "type": "object",
+            "properties": {
+                "overview": {
+                    "type": "string",
+                    "description": "Human-readable overview of the facilities"
+                }
+            }
+        },
+        "regions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Region"
+            }
+        },
+        "sites": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Site"
+            }
+        },
+        "buildings": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Building"
+            }
+        },
+        "spaces": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Space"
+            }
+        }
+    },
+    "$defs": {
+        "Region": {
+            "type": "object",
+            "description": "Geographic region containing one or more sites",
+            "required": [
+                "name",
+                "city",
+                "country"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Display name for the region"
+                },
+                "city": {
+                    "type": "string",
+                    "description": "City name"
+                },
+                "country": {
+                    "type": "string",
+                    "description": "Country name"
+                },
+                "lat": {
+                    "type": "number",
+                    "description": "Latitude coordinate"
+                },
+                "lon": {
+                    "type": "number",
+                    "description": "Longitude coordinate"
+                }
+            }
+        },
+        "Site": {
+            "type": "object",
+            "description": "Physical site/campus within a region",
+            "required": [
+                "name",
+                "region"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Site name"
+                },
+                "region": {
+                    "type": "string",
+                    "description": "Reference to parent region name"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive",
+                        "planned"
+                    ],
+                    "default": "active"
+                }
+            }
+        },
+        "Building": {
+            "type": "object",
+            "description": "Building within a site",
+            "required": [
+                "name",
+                "site"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Building name"
+                },
+                "site": {
+                    "type": "string",
+                    "description": "Reference to parent site name"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Street address"
+                },
+                "floors": {
+                    "type": "object",
+                    "description": "Floor range (min/max, where 0 is skipped)",
+                    "properties": {
+                        "min": {
+                            "type": "integer",
+                            "description": "Lowest floor (negative for basements)"
+                        },
+                        "max": {
+                            "type": "integer",
+                            "description": "Highest floor"
+                        }
+                    },
+                    "required": [
+                        "min",
+                        "max"
+                    ]
+                },
+                "floor_names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Human-readable names for each floor in order"
+                }
+            }
+        },
+        "Space": {
+            "type": "object",
+            "description": "Room or area within a building floor",
+            "required": [
+                "name",
+                "locator",
+                "building",
+                "level"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Space name"
+                },
+                "locator": {
+                    "type": "string",
+                    "description": "Room number or identifier"
+                },
+                "building": {
+                    "type": "string",
+                    "description": "Reference to parent building name"
+                },
+                "level": {
+                    "type": "integer",
+                    "description": "Floor level number"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Space classification",
+                    "enum": [
+                        "Office",
+                        "Meeting Room",
+                        "Common Area",
+                        "Data Center",
+                        "Closet",
+                        "Lab"
+                    ]
+                },
+                "capacity": {
+                    "type": "integer",
+                    "description": "Maximum occupancy"
+                }
+            }
+        }
+    }
+}

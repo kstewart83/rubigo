@@ -1,0 +1,143 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubigo.dev/schemas/calendar.schema.json",
+    "title": "Calendar Event Configuration",
+    "description": "Schema for calendar meetings and events",
+    "type": "object",
+    "properties": {
+        "events": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Meeting"
+            }
+        }
+    },
+    "$defs": {
+        "RecurrenceFrequency": {
+            "type": "string",
+            "description": "How often the event repeats",
+            "enum": [
+                "none",
+                "daily",
+                "weekly",
+                "monthly",
+                "yearly"
+            ],
+            "default": "none"
+        },
+        "MeetingType": {
+            "type": "string",
+            "description": "Type/category of meeting for styling",
+            "enum": [
+                "meeting",
+                "standup",
+                "all-hands",
+                "1:1",
+                "training",
+                "interview",
+                "holiday",
+                "conference",
+                "review",
+                "planning"
+            ],
+            "default": "meeting"
+        },
+        "Meeting": {
+            "type": "object",
+            "description": "Calendar meeting or event",
+            "required": [
+                "title",
+                "start_time",
+                "end_time"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Event title"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Event description"
+                },
+                "start_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Start date/time in ISO 8601 format"
+                },
+                "end_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "End date/time in ISO 8601 format"
+                },
+                "all_day": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "All-day event flag"
+                },
+                "meeting_type": {
+                    "$ref": "#/$defs/MeetingType"
+                },
+                "recurrence": {
+                    "$ref": "#/$defs/RecurrenceFrequency"
+                },
+                "recurrence_interval": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1,
+                    "description": "Interval for recurrence (e.g., every 2 weeks)"
+                },
+                "recurrence_days": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "Mon",
+                            "Tue",
+                            "Wed",
+                            "Thu",
+                            "Fri",
+                            "Sat",
+                            "Sun"
+                        ]
+                    },
+                    "description": "Days of week for weekly recurrence"
+                },
+                "recurrence_until": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "End date for recurrence series"
+                },
+                "recurrence_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of occurrences (alternative to until)"
+                },
+                "location": {
+                    "type": "string",
+                    "description": "Reference to space locator"
+                },
+                "virtual_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Virtual meeting URL"
+                },
+                "organizer": {
+                    "type": "string",
+                    "description": "Organizer person name"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of participant names"
+                },
+                "timezone": {
+                    "type": "string",
+                    "default": "America/New_York",
+                    "description": "IANA timezone identifier"
+                }
+            }
+        }
+    }
+}

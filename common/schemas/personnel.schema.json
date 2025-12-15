@@ -1,0 +1,106 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubigo.dev/schemas/personnel.schema.json",
+    "title": "Personnel Configuration",
+    "description": "Schema for personnel/employee data",
+    "type": "object",
+    "properties": {
+        "description": {
+            "type": "object",
+            "properties": {
+                "overview": {
+                    "type": "string",
+                    "description": "Overview of the workforce"
+                }
+            }
+        },
+        "people": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Person"
+            }
+        }
+    },
+    "$defs": {
+        "Person": {
+            "type": "object",
+            "description": "Individual employee record",
+            "required": [
+                "id",
+                "name",
+                "email",
+                "title",
+                "department"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique short identifier (6 hex chars)",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Full name"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Work email address"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Job title"
+                },
+                "department": {
+                    "type": "string",
+                    "description": "Department name",
+                    "enum": [
+                        "Executive",
+                        "IT",
+                        "HR",
+                        "Engineering",
+                        "Finance",
+                        "Sales",
+                        "Operations"
+                    ]
+                },
+                "site": {
+                    "type": "string",
+                    "description": "Reference to site name"
+                },
+                "building": {
+                    "type": "string",
+                    "description": "Reference to building name"
+                },
+                "level": {
+                    "type": "integer",
+                    "description": "Floor level"
+                },
+                "space": {
+                    "type": "string",
+                    "description": "Room locator"
+                },
+                "manager": {
+                    "type": "string",
+                    "description": "Manager's full name"
+                },
+                "photo": {
+                    "type": "string",
+                    "description": "Relative path to headshot image"
+                },
+                "desk_phone": {
+                    "type": "string",
+                    "description": "Desk phone number"
+                },
+                "cell_phone": {
+                    "type": "string",
+                    "description": "Mobile phone number"
+                },
+                "bio": {
+                    "type": "string",
+                    "description": "Brief biography"
+                }
+            }
+        }
+    }
+}
