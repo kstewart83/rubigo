@@ -80,7 +80,7 @@ async fn main() {
 
     // Import cities
     let cities_path = std::env::var("CITIES_DB_PATH")
-        .unwrap_or_else(|_| "../worldcities_dev.csv".to_string());
+        .unwrap_or_else(|_| "../../common/geo/worldcities_dev.csv".to_string());
     tracing::info!("Importing cities from {:?}", cities_path);
     match nexosim_hybrid::database::geo::GeoRepository::import_cities(&db.client, std::path::Path::new(&cities_path)).await {
         Ok(count) => tracing::info!("Imported {} cities from CSV.", count),
@@ -94,7 +94,7 @@ async fn main() {
             // Countries
             match nexosim_hybrid::database::geo::GeoRepository::import_geojson(
                 &db.client,
-                std::path::Path::new("assets/geo/countries_110m.geo.json"),
+                std::path::Path::new("../../common/geo/countries_110m.geo.json"),
                 "country",
             ).await {
                 Ok(count) => tracing::info!("Imported {} countries.", count),
@@ -104,7 +104,7 @@ async fn main() {
             // US States
             match nexosim_hybrid::database::geo::GeoRepository::import_geojson(
                 &db.client,
-                std::path::Path::new("assets/geo/us_states_20m.geo.json"),
+                std::path::Path::new("../../common/geo/us_states_20m.geo.json"),
                 "state",
             ).await {
                 Ok(count) => tracing::info!("Imported {} US states.", count),
@@ -124,7 +124,7 @@ async fn main() {
             // High-fidelity cities (~48K)
             match nexosim_hybrid::database::geo::GeoRepository::import_cities_full(
                 &db.client,
-                std::path::Path::new("../worldcities.csv"),
+                std::path::Path::new("../../common/geo/worldcities.csv"),
             ).await {
                 Ok(count) => tracing::info!("High-fidelity city import complete: {} cities.", count),
                 Err(e) => tracing::warn!("Failed high-fidelity city import: {}", e),
@@ -133,7 +133,7 @@ async fn main() {
             // High-fidelity countries (10m detail)
             match nexosim_hybrid::database::geo::GeoRepository::import_geojson_high_fidelity(
                 &db.client,
-                std::path::Path::new("../countries_10m.geo.json"),
+                std::path::Path::new("../../common/geo/countries_10m.geo.json"),
                 "country",
             ).await {
                 Ok(count) => tracing::info!("High-fidelity country import complete: {} countries.", count),
@@ -143,7 +143,7 @@ async fn main() {
             // High-fidelity US states (5m detail)
             match nexosim_hybrid::database::geo::GeoRepository::import_geojson_high_fidelity(
                 &db.client,
-                std::path::Path::new("../us_states_5m.geo.json"),
+                std::path::Path::new("../../common/geo/us_states_5m.geo.json"),
                 "state",
             ).await {
                 Ok(count) => tracing::info!("High-fidelity US state import complete: {} states.", count),
