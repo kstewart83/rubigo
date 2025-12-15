@@ -1,0 +1,55 @@
+name: Deploy rubigo-react
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rubigo-react/**'
+      - 'common/**'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    env:
+      BASE: ${{ github.workspace }}/production/rubigo-react
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build in new directory
+        run: |
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          mkdir -p "$BUILD_DIR" "$BASE/data"
+          
+          # Copy app source
+          cp -r rubigo-react/* "$BUILD_DIR/"
+          
+          # Install and build
+          cd "$BUILD_DIR"
+          bun install --frozen-lockfile
+          bun run build
+          
+          echo "Build complete in $BUILD_DIR"
+
+      - name: Deploy (stop, swap, start)
+        run: |
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          
+          # Stop current service
+          sudo systemctl stop rubigo-react || true
+          
+          # Swap symlink to new build
+          ln -sfn "$BUILD_DIR" "$BASE/current"
+          
+          # Start service
+          sudo systemctl start rubigo-react
+          
+          echo "Deployed: $(readlink $BASE/current)"
+
+      - name: Cleanup old builds
+        run: |
+          # Keep last 3 builds
+          cd "$BASE/builds"
+          ls -dt */ 2>/dev/null | tail -n +4 | xargs rm -rf || true
+          echo "Remaining builds: $(ls -d */ 2>/dev/null | wc -l)"
