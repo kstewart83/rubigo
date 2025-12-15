@@ -5,3 +5,4 @@ Thumbs.db
 # Runner
 runner
 production
+*.service
