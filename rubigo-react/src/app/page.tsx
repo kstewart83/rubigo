@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getVersion } from "@/lib/config";
 
 const modules = [
   {
@@ -43,6 +44,8 @@ const modules = [
 ];
 
 export default function Home() {
+  const version = getVersion();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
       {/* Header */}
@@ -105,6 +108,7 @@ export default function Home() {
       <footer className="border-t border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div className="container mx-auto px-4 py-8 text-center text-sm text-zinc-500">
           <p>© {new Date().getFullYear()} Rubigo ERM Platform. Built with Next.js, ShadCN/UI, and Bun.</p>
+          <p className="mt-1 text-xs text-zinc-400">v{version}</p>
         </div>
       </footer>
     </div>
