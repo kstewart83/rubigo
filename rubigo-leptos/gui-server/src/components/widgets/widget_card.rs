@@ -8,6 +8,7 @@ use leptos::IntoView;
 
 /// Widget size variants for bento box grid
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum WidgetSize {
     /// Small widget (1x1 grid cell)
     Small,

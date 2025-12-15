@@ -13,6 +13,7 @@ use uuid::Uuid;
 // -----------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[allow(dead_code)]
 pub enum EventType {
     #[default]
     Meeting,
@@ -33,6 +34,7 @@ impl EventType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub struct CalendarEvent {
     pub id: Uuid,
     pub title: String,
@@ -49,6 +51,7 @@ pub struct CalendarEvent {
     pub recurrence_id: Option<DateTime<Utc>>,
 }
 
+#[allow(dead_code)]
 impl CalendarEvent {
     pub fn new(title: String, start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
         Self {
@@ -600,7 +603,7 @@ fn MonthView(
 #[component]
 fn WeekView(
     current_date: DateTime<Utc>,
-    events: Vec<CalendarEvent>,
+    _events: Vec<CalendarEvent>,
     meetings: Vec<Meeting>,
     #[prop(default = false)] work_week: bool,
 ) -> impl IntoView {

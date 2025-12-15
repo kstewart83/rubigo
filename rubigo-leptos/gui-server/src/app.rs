@@ -202,6 +202,7 @@ fn HomePage(data: PageData) -> impl IntoView {
     }
 }
 
+#[allow(dead_code, unused)]
 #[component]
 fn TabLink(tab: &'static str, active: String, label: &'static str) -> impl IntoView {
     let is_active = active == tab;

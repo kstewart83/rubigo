@@ -26,6 +26,7 @@ impl ComponentRepository {
         // Check if this is a scenario file (has modules section) or a direct config
         // Try to parse as scenario file first
         #[derive(serde::Deserialize)]
+        #[allow(dead_code)]
         struct ScenarioFile {
             #[serde(default)]
             scenario: Option<ScenarioMeta>,
@@ -33,11 +34,13 @@ impl ComponentRepository {
             modules: Option<ModuleRefs>,
         }
         #[derive(serde::Deserialize)]
+        #[allow(dead_code)]
         struct ScenarioMeta {
             #[serde(default)]
             name: String,
         }
         #[derive(serde::Deserialize)]
+        #[allow(dead_code)]
         struct ModuleRefs {
             #[serde(default)]
             personnel: Option<String>,
@@ -537,6 +540,7 @@ impl ComponentRepository {
             tracing::info!("Loading meetings from {:?}", meetings_path);
             if let Ok(meetings_content) = fs::read_to_string(&meetings_path).await {
                 #[derive(serde::Deserialize)]
+                #[allow(dead_code)]
                 struct MeetingConfig {
                     title: String,
                     #[serde(default)]

@@ -14,6 +14,7 @@ fn main() {
 }
 
 /// Component metadata for documentation
+#[allow(dead_code)]
 struct ComponentMeta {
     name: &'static str,
     description: &'static str,
@@ -359,7 +360,7 @@ fn ButtonDocs() -> impl IntoView {
 fn InputDocs() -> impl IntoView {
     let value = RwSignal::new(String::new());
     let input_type = RwSignal::new("Text".to_string());
-    let placeholder = RwSignal::new("Enter text...".to_string());
+    let _placeholder = RwSignal::new("Enter text...".to_string());
     let disabled = RwSignal::new(false);
     let has_error = RwSignal::new(false);
 

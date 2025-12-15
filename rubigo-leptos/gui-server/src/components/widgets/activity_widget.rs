@@ -7,6 +7,7 @@ use leptos::IntoView;
 
 /// A single activity item
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct ActivityItem {
     pub icon: String,
     pub message: String,

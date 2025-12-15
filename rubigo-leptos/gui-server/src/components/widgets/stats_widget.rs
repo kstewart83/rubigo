@@ -48,6 +48,7 @@ pub fn StatsWidget(
 }
 
 /// A group of stats in a row
+#[allow(dead_code)]
 #[component]
 pub fn StatsRow(children: Children) -> impl IntoView {
     view! {

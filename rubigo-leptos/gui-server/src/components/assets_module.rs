@@ -553,6 +553,7 @@ pub fn AssetsModule(
 }
 
 /// Asset create/edit form component
+#[allow(dead_code)]
 #[component]
 pub fn AssetForm(
     asset: Option<NetworkAsset>,
