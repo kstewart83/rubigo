@@ -1,6 +1,12 @@
-import { parse } from "@iarna/toml";
-import { readFileSync } from "fs";
-import { join } from "path";
+/**
+ * Project Data Library
+ * 
+ * Server-side data access for the project management module.
+ * Reads from SQLite database (seeded from TOML).
+ */
+
+import { db } from "@/db";
+import * as schema from "@/db/schema";
 import type {
     ProjectData,
     Service,
@@ -14,253 +20,124 @@ import type {
     Role,
     Assignment,
     Allocation,
-    ServiceStatus,
-    ProjectStatus,
-    ObjectiveStatus,
-    FeatureStatus,
-    InitiativeStatus,
-    ActivityStatus,
-    KPIDirection,
-    RACIType,
     KPIWithMetric,
     AssignmentWithCapacity,
     ObjectiveTreeNode,
 } from "@/types/project";
 
 // ============================================================================
-// Raw TOML Types (snake_case as stored in file)
+// Data Loading from SQLite
 // ============================================================================
-
-interface RawService {
-    id: string;
-    name: string;
-    description?: string;
-    status?: string;
-    is_product?: boolean;
-    is_service?: boolean;
-}
-
-interface RawProject {
-    id: string;
-    name: string;
-    description?: string;
-    service_id: string;
-    status?: string;
-    start_date?: string;
-    end_date?: string;
-}
-
-interface RawObjective {
-    id: string;
-    title: string;
-    description?: string;
-    project_id: string;
-    parent_id?: string;
-    status?: string;
-}
-
-interface RawFeature {
-    id: string;
-    name: string;
-    description?: string;
-    objective_id: string;
-    status?: string;
-}
-
-interface RawMetric {
-    id: string;
-    name: string;
-    description?: string;
-    unit: string;
-    current_value?: number;
-    source?: string;
-}
-
-interface RawKPI {
-    id: string;
-    metric_id: string;
-    objective_id?: string;
-    target_value: number;
-    direction: string;
-    threshold_warning?: number;
-    threshold_critical?: number;
-}
-
-interface RawInitiative {
-    id: string;
-    name: string;
-    description?: string;
-    kpi_id: string;
-    status?: string;
-    start_date?: string;
-    end_date?: string;
-}
-
-interface RawActivity {
-    id: string;
-    name: string;
-    description?: string;
-    parent_id?: string;
-    initiative_id?: string;
-    blocked_by?: string[];
-    status?: string;
-}
-
-interface RawRole {
-    id: string;
-    name: string;
-    description?: string;
-}
-
-interface RawAssignment {
-    id: string;
-    activity_id: string;
-    role_id: string;
-    quantity: number;
-    unit?: string;
-    raci_type?: string;
-}
-
-interface RawAllocation {
-    id: string;
-    assignment_id: string;
-    person_id: string;
-    quantity_contributed: number;
-    start_date?: string;
-    end_date?: string;
-}
-
-interface RawProjectData {
-    description?: {
-        overview?: string;
-    };
-    services?: RawService[];
-    projects?: RawProject[];
-    objectives?: RawObjective[];
-    features?: RawFeature[];
-    metrics?: RawMetric[];
-    kpis?: RawKPI[];
-    initiatives?: RawInitiative[];
-    activities?: RawActivity[];
-    roles?: RawRole[];
-    assignments?: RawAssignment[];
-    allocations?: RawAllocation[];
-}
-
-// ============================================================================
-// Data Loading & Caching
-// ============================================================================
-
-let cachedData: ProjectData | null = null;
 
 /**
- * Load and parse project data from TOML file
+ * Load all project data from SQLite database
  */
 export function getProjectData(): ProjectData {
-    if (cachedData) {
-        return cachedData;
-    }
+    // Load all entities from SQLite
+    const servicesRaw = db.select().from(schema.services).all();
+    const projectsRaw = db.select().from(schema.projects).all();
+    const objectivesRaw = db.select().from(schema.objectives).all();
+    const featuresRaw = db.select().from(schema.features).all();
+    const metricsRaw = db.select().from(schema.metrics).all();
+    const kpisRaw = db.select().from(schema.kpis).all();
+    const initiativesRaw = db.select().from(schema.initiatives).all();
+    const activitiesRaw = db.select().from(schema.activities).all();
+    const rolesRaw = db.select().from(schema.roles).all();
+    const assignmentsRaw = db.select().from(schema.assignments).all();
+    const allocationsRaw = db.select().from(schema.allocations).all();
 
-    const dataPath = join(process.cwd(), "src/data/projects.toml");
-    const content = readFileSync(dataPath, "utf-8");
-    const raw = parse(content) as unknown as RawProjectData;
-
-    // Transform to camelCase and proper types
-    cachedData = {
-        description: {
-            overview: raw.description?.overview ?? "",
-        },
-        services: (raw.services ?? []).map((s): Service => ({
+    // Transform to expected types (handle any column name differences)
+    return {
+        description: { overview: "Loaded from SQLite database" },
+        services: servicesRaw.map((s): Service => ({
             id: s.id,
             name: s.name,
-            description: s.description,
-            status: (s.status ?? "catalog") as ServiceStatus,
-            isProduct: s.is_product ?? false,
-            isService: s.is_service ?? false,
+            description: s.description ?? undefined,
+            status: s.status as Service["status"],
+            isProduct: s.isProduct ?? false,
+            isService: s.isService ?? false,
         })),
-        projects: (raw.projects ?? []).map((p): Project => ({
+        projects: projectsRaw.map((p): Project => ({
             id: p.id,
             name: p.name,
-            description: p.description,
-            serviceId: p.service_id,
-            status: (p.status ?? "planning") as ProjectStatus,
-            startDate: p.start_date,
-            endDate: p.end_date,
+            description: p.description ?? undefined,
+            serviceId: p.serviceId ?? "",
+            status: p.status as Project["status"],
+            startDate: p.startDate ?? undefined,
+            endDate: p.endDate ?? undefined,
         })),
-        objectives: (raw.objectives ?? []).map((o): Objective => ({
+        objectives: objectivesRaw.map((o): Objective => ({
             id: o.id,
             title: o.title,
-            description: o.description,
-            projectId: o.project_id,
-            parentId: o.parent_id,
-            status: (o.status ?? "draft") as ObjectiveStatus,
+            description: o.description ?? undefined,
+            projectId: o.projectId ?? "",
+            parentId: o.parentId ?? undefined,
+            status: o.status as Objective["status"],
         })),
-        features: (raw.features ?? []).map((f): Feature => ({
+        features: featuresRaw.map((f): Feature => ({
             id: f.id,
             name: f.name,
-            description: f.description,
-            objectiveId: f.objective_id,
-            status: (f.status ?? "planned") as FeatureStatus,
+            description: f.description ?? undefined,
+            objectiveId: f.objectiveId ?? "",
+            status: f.status as Feature["status"],
         })),
-        metrics: (raw.metrics ?? []).map((m): Metric => ({
+        metrics: metricsRaw.map((m): Metric => ({
             id: m.id,
             name: m.name,
-            description: m.description,
+            description: m.description ?? undefined,
             unit: m.unit,
-            currentValue: m.current_value,
-            source: m.source,
+            currentValue: m.currentValue ?? undefined,
+            source: m.source ?? undefined,
         })),
-        kpis: (raw.kpis ?? []).map((k): KPI => ({
+        kpis: kpisRaw.map((k): KPI => ({
             id: k.id,
-            metricId: k.metric_id,
-            objectiveId: k.objective_id,
-            targetValue: k.target_value,
-            direction: k.direction as KPIDirection,
-            thresholdWarning: k.threshold_warning,
-            thresholdCritical: k.threshold_critical,
+            metricId: k.metricId,
+            objectiveId: k.objectiveId ?? undefined,
+            targetValue: k.targetValue,
+            direction: k.direction as KPI["direction"],
+            thresholdWarning: k.thresholdWarning ?? undefined,
+            thresholdCritical: k.thresholdCritical ?? undefined,
         })),
-        initiatives: (raw.initiatives ?? []).map((i): Initiative => ({
+        initiatives: initiativesRaw.map((i): Initiative => ({
             id: i.id,
             name: i.name,
-            description: i.description,
-            kpiId: i.kpi_id,
-            status: (i.status ?? "planned") as InitiativeStatus,
-            startDate: i.start_date,
-            endDate: i.end_date,
+            description: i.description ?? undefined,
+            kpiId: i.kpiId ?? "",
+            status: i.status as Initiative["status"],
+            startDate: i.startDate ?? undefined,
+            endDate: i.endDate ?? undefined,
         })),
-        activities: (raw.activities ?? []).map((a): Activity => ({
+        activities: activitiesRaw.map((a): Activity => ({
             id: a.id,
             name: a.name,
-            description: a.description,
-            parentId: a.parent_id,
-            initiativeId: a.initiative_id,
-            blockedBy: a.blocked_by,
-            status: (a.status ?? "backlog") as ActivityStatus,
+            description: a.description ?? undefined,
+            parentId: a.parentId ?? undefined,
+            initiativeId: a.initiativeId ?? undefined,
+            blockedBy: a.blockedBy ? JSON.parse(a.blockedBy) : undefined,
+            status: a.status as Activity["status"],
         })),
-        roles: (raw.roles ?? []).map((r): Role => ({
+        roles: rolesRaw.map((r): Role => ({
             id: r.id,
             name: r.name,
-            description: r.description,
+            description: r.description ?? undefined,
         })),
-        assignments: (raw.assignments ?? []).map((a): Assignment => ({
+        assignments: assignmentsRaw.map((a): Assignment => ({
             id: a.id,
-            activityId: a.activity_id,
-            roleId: a.role_id,
+            activityId: a.activityId,
+            roleId: a.roleId,
             quantity: a.quantity,
             unit: a.unit ?? "fte",
-            raciType: (a.raci_type ?? "responsible") as RACIType,
+            raciType: a.raciType as Assignment["raciType"],
         })),
-        allocations: (raw.allocations ?? []).map((a): Allocation => ({
+        allocations: allocationsRaw.map((a): Allocation => ({
             id: a.id,
-            assignmentId: a.assignment_id,
-            personId: a.person_id,
-            quantityContributed: a.quantity_contributed,
-            startDate: a.start_date,
-            endDate: a.end_date,
+            assignmentId: a.assignmentId,
+            personId: a.personId,
+            quantityContributed: a.quantityContributed,
+            startDate: a.startDate ?? undefined,
+            endDate: a.endDate ?? undefined,
         })),
     };
-
-    return cachedData;
 }
 
 // ============================================================================
@@ -367,9 +244,6 @@ export function getAllocationsByAssignment(assignmentId: string): Allocation[] {
 // Computed Data Helpers
 // ============================================================================
 
-/**
- * Get KPI with resolved Metric data and progress calculation
- */
 export function getKPIWithMetric(kpi: KPI): KPIWithMetric {
     const metric = getMetricById(kpi.metricId);
     const objective = kpi.objectiveId ? getObjectiveById(kpi.objectiveId) : undefined;
@@ -380,17 +254,13 @@ export function getKPIWithMetric(kpi: KPI): KPIWithMetric {
         const target = kpi.targetValue;
 
         if (kpi.direction === "increase") {
-            // For increase: 0 → target = 0% → 100%
             percentComplete = Math.min(100, (current / target) * 100);
         } else if (kpi.direction === "decrease") {
-            // For decrease: high → target = 0% → 100%
-            // Assume starting point is 2x target if not specified
             const startValue = (kpi.thresholdCritical ?? target * 2);
             const progress = startValue - current;
             const totalNeeded = startValue - target;
             percentComplete = Math.min(100, Math.max(0, (progress / totalNeeded) * 100));
         } else {
-            // For maintain: if at target, 100%
             percentComplete = current === target ? 100 : Math.max(0, 100 - Math.abs(current - target));
         }
     }
@@ -404,16 +274,10 @@ export function getKPIWithMetric(kpi: KPI): KPIWithMetric {
     };
 }
 
-/**
- * Get all KPIs with resolved Metric data
- */
 export function getAllKPIsWithMetrics(): KPIWithMetric[] {
     return getAllKPIs().map(getKPIWithMetric);
 }
 
-/**
- * Get Assignment with capacity gap calculation
- */
 export function getAssignmentWithCapacity(assignment: Assignment): AssignmentWithCapacity {
     const role = getRoleById(assignment.roleId);
     const activity = getAllActivities().find((a) => a.id === assignment.activityId);
@@ -432,32 +296,19 @@ export function getAssignmentWithCapacity(assignment: Assignment): AssignmentWit
     };
 }
 
-/**
- * Get all assignments with capacity gaps
- */
 export function getAllAssignmentsWithCapacity(): AssignmentWithCapacity[] {
     return getAllAssignments().map(getAssignmentWithCapacity);
 }
 
-/**
- * Get assignments that are under-resourced (capacity gap > 0)
- */
 export function getUnderResourcedAssignments(): AssignmentWithCapacity[] {
     return getAllAssignmentsWithCapacity().filter((a) => a.capacityGap > 0);
 }
 
-/**
- * Build objective tree for hierarchical display
- */
 export function getObjectiveTree(projectId: string): ObjectiveTreeNode[] {
     const objectives = getObjectivesByProject(projectId);
     const features = getAllFeatures();
     const kpis = getAllKPIs();
 
-    // Build lookup maps
-    const objectiveMap = new Map<string, Objective>(objectives.map((o) => [o.id, o]));
-
-    // Find root objectives (no parent)
     const roots = objectives.filter((o) => !o.parentId);
 
     function buildNode(objective: Objective): ObjectiveTreeNode {

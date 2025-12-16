@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 // ============================================================================
 
 export function ProjectOverviewWithCRUD() {
-    const { data, updateObjective, updateService, updateProject, updateMetric, updateKPI, updateInitiative, createObjective, deleteObjective, hasUnsavedChanges, exportToTOML } = useProjectData();
+    const { data, updateObjective, updateService, updateProject, updateMetric, updateKPI, updateInitiative, createObjective, deleteObjective } = useProjectData();
 
     const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(new Set());
 
@@ -133,17 +133,6 @@ export function ProjectOverviewWithCRUD() {
         setNewObjective({ title: "", description: "", projectId: "", status: "draft" });
     };
 
-    const handleExport = () => {
-        const toml = exportToTOML();
-        const blob = new Blob([toml], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "projects.toml";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
     // Get KPIs for a specific objective
     const getKPIsForObjective = (objectiveId: string) =>
         data.kpis.filter((k) => k.objectiveId === objectiveId);
@@ -179,19 +168,8 @@ export function ProjectOverviewWithCRUD() {
                         + New Objective
                     </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                    {hasUnsavedChanges && (
-                        <span className="text-sm text-orange-600 dark:text-orange-400">
-                            Unsaved changes
-                        </span>
-                    )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExport}
-                    >
-                        Export TOML
-                    </Button>
+                <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                    ✓ Auto-saved to database
                 </div>
             </div>
 

@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PersonaProvider } from "@/contexts/persona-context";
-import { ProjectDataProvider } from "@/contexts/project-data-context";
+import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getProjectData } from "@/lib/projects";
 import { ProjectOverviewWithCRUD } from "./project-overview-crud";
@@ -29,11 +29,12 @@ function ProjectsContent() {
 export default function ProjectsPage() {
     return (
         <PersonaProvider>
-            <ProjectDataProvider initialData={projectData}>
+            <LoggingProjectDataProvider initialData={projectData}>
                 <AppShell personnel={personnel}>
                     <ProjectsContent />
                 </AppShell>
-            </ProjectDataProvider>
+            </LoggingProjectDataProvider>
         </PersonaProvider>
     );
 }
+

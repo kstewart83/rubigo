@@ -1,31 +1,29 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PersonaProvider } from "@/contexts/persona-context";
-import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
+import { ActionLogProvider } from "@/contexts/action-log-context";
 import { getAllPersonnel } from "@/lib/personnel";
-import { getProjectData } from "@/lib/projects";
-import { MetricsListWithCRUD } from "./metrics-list";
+import { ActionLogList } from "./action-log-list";
 
 const personnel = getAllPersonnel();
-const projectData = getProjectData();
 
-export default function MetricsPage() {
+export default function ActionsPage() {
     return (
         <PersonaProvider>
-            <LoggingProjectDataProvider initialData={projectData}>
+            <ActionLogProvider>
                 <AppShell personnel={personnel}>
                     <div>
                         <div className="mb-6">
                             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-                                Metrics & KPIs
+                                Action Logs
                             </h1>
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Measurements and key performance indicators
+                                Audit trail of all create, update, and delete operations
                             </p>
                         </div>
-                        <MetricsListWithCRUD />
+                        <ActionLogList />
                     </div>
                 </AppShell>
-            </LoggingProjectDataProvider>
+            </ActionLogProvider>
         </PersonaProvider>
     );
 }

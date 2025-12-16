@@ -1,0 +1,1932 @@
+openapi: 3.1.0
+info:
+  title: Project Management API
+  version: 1.0.0
+  description: |
+    API for managing project management entities including services, projects, 
+    objectives, features, metrics, KPIs, initiatives, activities, roles, 
+    assignments, and allocations.
+    
+    ## Audit Trail
+    All operations include an `operationId` that is logged for audit purposes.
+    Requests should include `X-Request-ID` header for traceability.
+    
+    ## Authorization Scopes
+    - `read:projects` - Read access to project data
+    - `write:projects` - Create, update, delete project data  
+    - `admin:projects` - Administrative operations (bulk import/export)
+
+servers:
+  - url: /api/v1
+    description: Production API
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Services
+    description: Products and services portfolio management
+  - name: Projects
+    description: Temporary efforts to create or modify services
+  - name: Objectives
+    description: Strategic goals and hierarchical decomposition
+  - name: Features
+    description: Capabilities that realize objectives
+  - name: Metrics
+    description: Raw operational measurements
+  - name: KPIs
+    description: Key performance indicators aligned to objectives
+  - name: Initiatives
+    description: Short-term efforts to move KPIs
+  - name: Activities
+    description: Discrete units of work
+  - name: Roles
+    description: Abstract job functions
+  - name: Assignments
+    description: Planned resource slots (The Plan)
+  - name: Allocations
+    description: Concrete resource contributions (The Fulfillment)
+  - name: Bulk
+    description: Bulk import/export operations
+
+paths:
+  # ===========================================================================
+  # SERVICES
+  # ===========================================================================
+  /services:
+    get:
+      operationId: listServices
+      summary: List all services
+      description: Returns all products and services in the portfolio
+      tags: [Services]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: is_product
+          in: query
+          schema:
+            type: boolean
+          description: Filter by product flag
+        - name: is_service
+          in: query
+          schema:
+            type: boolean
+          description: Filter by service flag
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pipeline, catalog, retired]
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createService
+      summary: Create a new service
+      tags: [Services]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceInput'
+      responses:
+        '201':
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /services/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    
+    get:
+      operationId: getService
+      summary: Get a service by ID
+      tags: [Services]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          description: Service details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateService
+      summary: Update a service
+      tags: [Services]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceUpdate'
+      responses:
+        '200':
+          description: Service updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteService
+      summary: Delete a service
+      tags: [Services]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Service deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cannot delete - has dependent projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===========================================================================
+  # OBJECTIVES
+  # ===========================================================================
+  /objectives:
+    get:
+      operationId: listObjectives
+      summary: List all objectives
+      tags: [Objectives]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project
+        - name: parent_id
+          in: query
+          schema:
+            type: string
+          description: Filter by parent objective (use 'null' for root)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, achieved, deferred]
+      responses:
+        '200':
+          description: List of objectives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveList'
+
+    post:
+      operationId: createObjective
+      summary: Create a new objective
+      tags: [Objectives]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+      responses:
+        '201':
+          description: Objective created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Objective'
+
+  /objectives/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    
+    get:
+      operationId: getObjective
+      summary: Get an objective by ID
+      tags: [Objectives]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          description: Objective details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Objective'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateObjective
+      summary: Update an objective
+      tags: [Objectives]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveUpdate'
+      responses:
+        '200':
+          description: Objective updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Objective'
+
+    delete:
+      operationId: deleteObjective
+      summary: Delete an objective
+      tags: [Objectives]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Objective deleted
+        '409':
+          description: Cannot delete - has child objectives
+
+  /objectives/{id}/children:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getObjectiveChildren
+      summary: Get child objectives
+      description: Returns immediate children of the specified objective
+      tags: [Objectives]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          description: List of child objectives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveList'
+
+  /objectives/{id}/tree:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getObjectiveTree
+      summary: Get full objective tree
+      description: Returns the objective and all descendants as a tree structure
+      tags: [Objectives]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          description: Objective tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveTree'
+
+  # ===========================================================================
+  # PROJECTS
+  # ===========================================================================
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List all projects
+      tags: [Projects]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: service_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [planning, active, on_hold, complete, cancelled]
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+
+    post:
+      operationId: createProject
+      summary: Create a new project
+      tags: [Projects]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /projects/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getProject
+      summary: Get a project by ID
+      tags: [Projects]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    patch:
+      operationId: updateProject
+      summary: Update a project
+      tags: [Projects]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    delete:
+      operationId: deleteProject
+      summary: Delete a project
+      tags: [Projects]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Project deleted
+
+  # ===========================================================================
+  # FEATURES
+  # ===========================================================================
+  /features:
+    get:
+      operationId: listFeatures
+      summary: List all features
+      tags: [Features]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: objective_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of features
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureList'
+
+    post:
+      operationId: createFeature
+      summary: Create a new feature
+      tags: [Features]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureInput'
+      responses:
+        '201':
+          description: Feature created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+
+  /features/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getFeature
+      tags: [Features]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+    patch:
+      operationId: updateFeature
+      tags: [Features]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+    delete:
+      operationId: deleteFeature
+      tags: [Features]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # METRICS
+  # ===========================================================================
+  /metrics:
+    get:
+      operationId: listMetrics
+      summary: List all metrics
+      tags: [Metrics]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricList'
+
+    post:
+      operationId: createMetric
+      tags: [Metrics]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metric'
+
+  /metrics/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getMetric
+      tags: [Metrics]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metric'
+    patch:
+      operationId: updateMetric
+      tags: [Metrics]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metric'
+    delete:
+      operationId: deleteMetric
+      tags: [Metrics]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # KPIs
+  # ===========================================================================
+  /kpis:
+    get:
+      operationId: listKPIs
+      summary: List all KPIs
+      tags: [KPIs]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - name: objective_id
+          in: query
+          schema:
+            type: string
+        - name: metric_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPIList'
+
+    post:
+      operationId: createKPI
+      tags: [KPIs]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KPIInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+
+  /kpis/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getKPI
+      tags: [KPIs]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPIWithMetric'
+    patch:
+      operationId: updateKPI
+      tags: [KPIs]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KPIUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+    delete:
+      operationId: deleteKPI
+      tags: [KPIs]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # INITIATIVES
+  # ===========================================================================
+  /initiatives:
+    get:
+      operationId: listInitiatives
+      tags: [Initiatives]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - name: kpi_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [planned, active, complete, cancelled]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitiativeList'
+
+    post:
+      operationId: createInitiative
+      tags: [Initiatives]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiativeInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Initiative'
+
+  /initiatives/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getInitiative
+      tags: [Initiatives]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Initiative'
+    patch:
+      operationId: updateInitiative
+      tags: [Initiatives]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiativeUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Initiative'
+    delete:
+      operationId: deleteInitiative
+      tags: [Initiatives]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # ACTIVITIES
+  # ===========================================================================
+  /activities:
+    get:
+      operationId: listActivities
+      tags: [Activities]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - name: initiative_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [backlog, ready, in_progress, blocked, complete]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityList'
+
+    post:
+      operationId: createActivity
+      tags: [Activities]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+
+  /activities/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getActivity
+      tags: [Activities]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+    patch:
+      operationId: updateActivity
+      tags: [Activities]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+    delete:
+      operationId: deleteActivity
+      tags: [Activities]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # ROLES
+  # ===========================================================================
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [Roles]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+
+    post:
+      operationId: createRole
+      tags: [Roles]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+
+  /roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getRole
+      tags: [Roles]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    patch:
+      operationId: updateRole
+      tags: [Roles]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    delete:
+      operationId: deleteRole
+      tags: [Roles]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # ASSIGNMENTS
+  # ===========================================================================
+  /assignments:
+    get:
+      operationId: listAssignments
+      tags: [Assignments]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - name: activity_id
+          in: query
+          schema:
+            type: string
+        - name: role_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentList'
+
+    post:
+      operationId: createAssignment
+      tags: [Assignments]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+
+  /assignments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getAssignment
+      tags: [Assignments]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentWithCapacity'
+    patch:
+      operationId: updateAssignment
+      tags: [Assignments]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+    delete:
+      operationId: deleteAssignment
+      tags: [Assignments]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # ALLOCATIONS
+  # ===========================================================================
+  /allocations:
+    get:
+      operationId: listAllocations
+      tags: [Allocations]
+      security:
+        - bearerAuth: [read:projects]
+      parameters:
+        - name: assignment_id
+          in: query
+          schema:
+            type: string
+        - name: person_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationList'
+
+    post:
+      operationId: createAllocation
+      tags: [Allocations]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocationInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+
+  /allocations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idParam'
+    get:
+      operationId: getAllocation
+      tags: [Allocations]
+      security:
+        - bearerAuth: [read:projects]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+    patch:
+      operationId: updateAllocation
+      tags: [Allocations]
+      security:
+        - bearerAuth: [write:projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocationUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+    delete:
+      operationId: deleteAllocation
+      tags: [Allocations]
+      security:
+        - bearerAuth: [write:projects]
+      responses:
+        '204':
+          description: Deleted
+
+  # ===========================================================================
+  # BULK OPERATIONS
+  # ===========================================================================
+  /bulk/export:
+    get:
+      operationId: exportAllData
+      summary: Export all project data
+      description: Export all entities in TOML format
+      tags: [Bulk]
+      security:
+        - bearerAuth: [admin:projects]
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [toml, json]
+            default: toml
+      responses:
+        '200':
+          description: Exported data
+          content:
+            application/toml:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+
+  /bulk/import:
+    post:
+      operationId: importAllData
+      summary: Import project data
+      description: Import entities from TOML or JSON format
+      tags: [Bulk]
+      security:
+        - bearerAuth: [admin:projects]
+      parameters:
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [merge, replace]
+            default: merge
+          description: merge = add/update, replace = delete all first
+      requestBody:
+        required: true
+        content:
+          application/toml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Import complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: integer
+                  updated:
+                    type: integer
+                  deleted:
+                    type: integer
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token with scopes
+
+  parameters:
+    idParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Entity ID
+
+    limitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+
+    offsetParam:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Entity not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # -------------------------------------------------------------------------
+    # Common
+    # -------------------------------------------------------------------------
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -------------------------------------------------------------------------
+    # Service
+    # -------------------------------------------------------------------------
+    Service:
+      type: object
+      required: [id, name, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pipeline, catalog, retired]
+        is_product:
+          type: boolean
+        is_service:
+          type: boolean
+
+    ServiceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pipeline, catalog, retired]
+          default: pipeline
+        is_product:
+          type: boolean
+          default: false
+        is_service:
+          type: boolean
+          default: true
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pipeline, catalog, retired]
+        is_product:
+          type: boolean
+        is_service:
+          type: boolean
+
+    ServiceList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Project
+    # -------------------------------------------------------------------------
+    Project:
+      type: object
+      required: [id, name, service_id, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        service_id:
+          type: string
+        status:
+          type: string
+          enum: [planning, active, on_hold, complete, cancelled]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    ProjectInput:
+      type: object
+      required: [name, service_id]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        service_id:
+          type: string
+        status:
+          type: string
+          default: planning
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    ProjectList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Objective
+    # -------------------------------------------------------------------------
+    Objective:
+      type: object
+      required: [id, title, project_id, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        project_id:
+          type: string
+        parent_id:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, achieved, deferred]
+
+    ObjectiveInput:
+      type: object
+      required: [title, project_id]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        project_id:
+          type: string
+        parent_id:
+          type: string
+        status:
+          type: string
+          default: draft
+
+    ObjectiveUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+        status:
+          type: string
+
+    ObjectiveList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Objective'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ObjectiveTree:
+      allOf:
+        - $ref: '#/components/schemas/Objective'
+        - type: object
+          properties:
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/ObjectiveTree'
+            features:
+              type: array
+              items:
+                $ref: '#/components/schemas/Feature'
+            kpis:
+              type: array
+              items:
+                $ref: '#/components/schemas/KPIWithMetric'
+
+    # -------------------------------------------------------------------------
+    # Feature
+    # -------------------------------------------------------------------------
+    Feature:
+      type: object
+      required: [id, name, objective_id]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        objective_id:
+          type: string
+        status:
+          type: string
+          enum: [planned, in_progress, complete, cancelled]
+
+    FeatureInput:
+      type: object
+      required: [name, objective_id]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        objective_id:
+          type: string
+        status:
+          type: string
+          default: planned
+
+    FeatureUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+
+    FeatureList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Metric
+    # -------------------------------------------------------------------------
+    Metric:
+      type: object
+      required: [id, name, unit]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        current_value:
+          type: number
+        source:
+          type: string
+
+    MetricInput:
+      type: object
+      required: [name, unit]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        current_value:
+          type: number
+        source:
+          type: string
+
+    MetricUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        current_value:
+          type: number
+        source:
+          type: string
+
+    MetricList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Metric'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # KPI
+    # -------------------------------------------------------------------------
+    KPI:
+      type: object
+      required: [id, metric_id, target_value, direction]
+      properties:
+        id:
+          type: string
+        metric_id:
+          type: string
+        objective_id:
+          type: string
+        target_value:
+          type: number
+        direction:
+          type: string
+          enum: [increase, decrease, maintain]
+        threshold_warning:
+          type: number
+        threshold_critical:
+          type: number
+
+    KPIInput:
+      type: object
+      required: [metric_id, target_value, direction]
+      properties:
+        metric_id:
+          type: string
+        objective_id:
+          type: string
+        target_value:
+          type: number
+        direction:
+          type: string
+          enum: [increase, decrease, maintain]
+        threshold_warning:
+          type: number
+        threshold_critical:
+          type: number
+
+    KPIUpdate:
+      type: object
+      properties:
+        objective_id:
+          type: string
+        target_value:
+          type: number
+        direction:
+          type: string
+        threshold_warning:
+          type: number
+        threshold_critical:
+          type: number
+
+    KPIWithMetric:
+      allOf:
+        - $ref: '#/components/schemas/KPI'
+        - type: object
+          properties:
+            metric:
+              $ref: '#/components/schemas/Metric'
+            objective:
+              $ref: '#/components/schemas/Objective'
+            current_value:
+              type: number
+            percent_complete:
+              type: number
+
+    KPIList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KPI'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Initiative
+    # -------------------------------------------------------------------------
+    Initiative:
+      type: object
+      required: [id, name, kpi_id]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        kpi_id:
+          type: string
+        status:
+          type: string
+          enum: [planned, active, complete, cancelled]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    InitiativeInput:
+      type: object
+      required: [name, kpi_id]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        kpi_id:
+          type: string
+        status:
+          type: string
+          default: planned
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    InitiativeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    InitiativeList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Initiative'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Activity
+    # -------------------------------------------------------------------------
+    Activity:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+        initiative_id:
+          type: string
+        blocked_by:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [backlog, ready, in_progress, blocked, complete]
+
+    ActivityInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+        initiative_id:
+          type: string
+        blocked_by:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          default: backlog
+
+    ActivityUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+        initiative_id:
+          type: string
+        blocked_by:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+
+    ActivityList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activity'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Role
+    # -------------------------------------------------------------------------
+    Role:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    RoleInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    RoleUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    RoleList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Assignment
+    # -------------------------------------------------------------------------
+    Assignment:
+      type: object
+      required: [id, activity_id, role_id, quantity]
+      properties:
+        id:
+          type: string
+        activity_id:
+          type: string
+        role_id:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+          default: fte
+        raci_type:
+          type: string
+          enum: [responsible, accountable, consulted, informed]
+
+    AssignmentInput:
+      type: object
+      required: [activity_id, role_id, quantity]
+      properties:
+        activity_id:
+          type: string
+        role_id:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+          default: fte
+        raci_type:
+          type: string
+          default: responsible
+
+    AssignmentUpdate:
+      type: object
+      properties:
+        quantity:
+          type: number
+        unit:
+          type: string
+        raci_type:
+          type: string
+
+    AssignmentWithCapacity:
+      allOf:
+        - $ref: '#/components/schemas/Assignment'
+        - type: object
+          properties:
+            role:
+              $ref: '#/components/schemas/Role'
+            activity:
+              $ref: '#/components/schemas/Activity'
+            allocations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Allocation'
+            total_allocated:
+              type: number
+            capacity_gap:
+              type: number
+              description: Positive = under-resourced, negative = over-resourced
+
+    AssignmentList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # -------------------------------------------------------------------------
+    # Allocation
+    # -------------------------------------------------------------------------
+    Allocation:
+      type: object
+      required: [id, assignment_id, person_id, quantity_contributed]
+      properties:
+        id:
+          type: string
+        assignment_id:
+          type: string
+        person_id:
+          type: string
+        quantity_contributed:
+          type: number
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    AllocationInput:
+      type: object
+      required: [assignment_id, person_id, quantity_contributed]
+      properties:
+        assignment_id:
+          type: string
+        person_id:
+          type: string
+        quantity_contributed:
+          type: number
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    AllocationUpdate:
+      type: object
+      properties:
+        quantity_contributed:
+          type: number
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    AllocationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Allocation'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'

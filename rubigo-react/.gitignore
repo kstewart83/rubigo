@@ -44,3 +44,8 @@ next-env.d.ts
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+# SQLite database
+rubigo.db
+rubigo.db-wal
+rubigo.db-shm

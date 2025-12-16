@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PersonaProvider } from "@/contexts/persona-context";
-import { ProjectDataProvider } from "@/contexts/project-data-context";
+import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getProjectData } from "@/lib/projects";
 import { InitiativesListWithCRUD } from "./initiatives-list";
@@ -11,7 +11,7 @@ const projectData = getProjectData();
 export default function InitiativesPage() {
     return (
         <PersonaProvider>
-            <ProjectDataProvider initialData={projectData}>
+            <LoggingProjectDataProvider initialData={projectData}>
                 <AppShell personnel={personnel}>
                     <div>
                         <div className="mb-6">
@@ -25,7 +25,7 @@ export default function InitiativesPage() {
                         <InitiativesListWithCRUD />
                     </div>
                 </AppShell>
-            </ProjectDataProvider>
+            </LoggingProjectDataProvider>
         </PersonaProvider>
     );
 }

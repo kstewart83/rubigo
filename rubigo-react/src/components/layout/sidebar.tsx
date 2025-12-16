@@ -59,6 +59,15 @@ const sidebarModules: SidebarModule[] = [
             { id: "activities", label: "Activities", href: "/projects/activities" },
         ]
     },
+    {
+        id: "logs",
+        label: "Logs",
+        href: "/logs",
+        icon: "📋",
+        subPages: [
+            { id: "actions", label: "Actions", href: "/logs/actions" },
+        ]
+    },
     // Future modules with sub-pages
     // { id: "calendar", label: "Calendar", href: "/calendar", icon: "📅" },
     // { id: "chat", label: "Chat", href: "/chat", icon: "💬" },

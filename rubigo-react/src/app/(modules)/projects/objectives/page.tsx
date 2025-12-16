@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PersonaProvider } from "@/contexts/persona-context";
-import { ProjectDataProvider } from "@/contexts/project-data-context";
+import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getProjectData } from "@/lib/projects";
 import { ObjectivesListWithCRUD } from "./objectives-list";
@@ -11,7 +11,7 @@ const projectData = getProjectData();
 export default function ObjectivesPage() {
     return (
         <PersonaProvider>
-            <ProjectDataProvider initialData={projectData}>
+            <LoggingProjectDataProvider initialData={projectData}>
                 <AppShell personnel={personnel}>
                     <div>
                         <div className="mb-6">
@@ -25,7 +25,7 @@ export default function ObjectivesPage() {
                         <ObjectivesListWithCRUD />
                     </div>
                 </AppShell>
-            </ProjectDataProvider>
+            </LoggingProjectDataProvider>
         </PersonaProvider>
     );
 }
