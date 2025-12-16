@@ -1,0 +1,497 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubigo.dev/schemas/project.schema.json",
+    "title": "Project Management Configuration",
+    "description": "Schema for project management data including objectives, metrics, KPIs, and initiatives",
+    "type": "object",
+    "properties": {
+        "description": {
+            "type": "object",
+            "properties": {
+                "overview": {
+                    "type": "string",
+                    "description": "Overview of the project management data"
+                }
+            }
+        },
+        "services": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Service"
+            }
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Project"
+            }
+        },
+        "objectives": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Objective"
+            }
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Feature"
+            }
+        },
+        "metrics": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Metric"
+            }
+        },
+        "kpis": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/KPI"
+            }
+        },
+        "initiatives": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Initiative"
+            }
+        },
+        "activities": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Activity"
+            }
+        },
+        "roles": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Role"
+            }
+        },
+        "assignments": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Assignment"
+            }
+        },
+        "allocations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Allocation"
+            }
+        }
+    },
+    "$defs": {
+        "Service": {
+            "type": "object",
+            "description": "Persistent business service that aggregates products and persists beyond projects",
+            "required": [
+                "id",
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier (6 hex chars)",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Service name"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Service description"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pipeline",
+                        "catalog",
+                        "retired"
+                    ],
+                    "description": "Service portfolio status"
+                }
+            }
+        },
+        "Project": {
+            "type": "object",
+            "description": "Temporary effort to create or modify a service",
+            "required": [
+                "id",
+                "name",
+                "service_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "service_id": {
+                    "type": "string",
+                    "description": "Reference to parent service"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "planning",
+                        "active",
+                        "on_hold",
+                        "complete",
+                        "cancelled"
+                    ]
+                },
+                "start_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_date": {
+                    "type": "string",
+                    "format": "date"
+                }
+            }
+        },
+        "Objective": {
+            "type": "object",
+            "description": "High-level strategic goal",
+            "required": [
+                "id",
+                "title",
+                "project_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string",
+                    "description": "Reference to parent project"
+                },
+                "parent_id": {
+                    "type": "string",
+                    "description": "Reference to parent objective for hierarchy"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "achieved",
+                        "deferred"
+                    ]
+                }
+            }
+        },
+        "Feature": {
+            "type": "object",
+            "description": "Distinct capability that helps satisfy an objective",
+            "required": [
+                "id",
+                "name",
+                "objective_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "objective_id": {
+                    "type": "string",
+                    "description": "Reference to parent objective"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "planned",
+                        "in_progress",
+                        "complete",
+                        "cancelled"
+                    ]
+                }
+            }
+        },
+        "Metric": {
+            "type": "object",
+            "description": "Raw measurement gathered from operations",
+            "required": [
+                "id",
+                "name",
+                "unit"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string",
+                    "description": "Unit of measure (e.g., hours, percent, count)"
+                },
+                "current_value": {
+                    "type": "number",
+                    "description": "Most recent measured value"
+                },
+                "source": {
+                    "type": "string",
+                    "description": "Data source for this metric"
+                }
+            }
+        },
+        "KPI": {
+            "type": "object",
+            "description": "Key Performance Indicator - a metric aligned to an objective",
+            "required": [
+                "id",
+                "metric_id",
+                "target_value",
+                "direction"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "metric_id": {
+                    "type": "string",
+                    "description": "Reference to the underlying metric"
+                },
+                "objective_id": {
+                    "type": "string",
+                    "description": "Optional reference to aligned objective"
+                },
+                "target_value": {
+                    "type": "number",
+                    "description": "Target value for this KPI"
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "increase",
+                        "decrease",
+                        "maintain"
+                    ],
+                    "description": "Desired direction of change"
+                },
+                "threshold_warning": {
+                    "type": "number",
+                    "description": "Warning threshold value"
+                },
+                "threshold_critical": {
+                    "type": "number",
+                    "description": "Critical threshold value"
+                }
+            }
+        },
+        "Initiative": {
+            "type": "object",
+            "description": "Short-term focused effort to move a KPI",
+            "required": [
+                "id",
+                "name",
+                "kpi_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "kpi_id": {
+                    "type": "string",
+                    "description": "Reference to the KPI this initiative aims to move"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "planned",
+                        "active",
+                        "complete",
+                        "cancelled"
+                    ]
+                },
+                "start_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_date": {
+                    "type": "string",
+                    "format": "date"
+                }
+            }
+        },
+        "Activity": {
+            "type": "object",
+            "description": "Discrete unit of work",
+            "required": [
+                "id",
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string",
+                    "description": "Reference to parent activity for decomposition"
+                },
+                "initiative_id": {
+                    "type": "string",
+                    "description": "Reference to parent initiative"
+                },
+                "blocked_by": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "IDs of blocking activities"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "backlog",
+                        "ready",
+                        "in_progress",
+                        "blocked",
+                        "complete"
+                    ]
+                }
+            }
+        },
+        "Role": {
+            "type": "object",
+            "description": "Abstract function or job title",
+            "required": [
+                "id",
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "Assignment": {
+            "type": "object",
+            "description": "Planned slot for a role needed to complete work (The Plan)",
+            "required": [
+                "id",
+                "activity_id",
+                "role_id",
+                "quantity"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "activity_id": {
+                    "type": "string",
+                    "description": "Reference to the activity requiring this role"
+                },
+                "role_id": {
+                    "type": "string",
+                    "description": "Reference to the required role"
+                },
+                "quantity": {
+                    "type": "number",
+                    "description": "Amount needed (FTE, count, etc.)"
+                },
+                "unit": {
+                    "type": "string",
+                    "description": "Unit of measure for quantity",
+                    "default": "fte"
+                },
+                "raci_type": {
+                    "type": "string",
+                    "enum": [
+                        "responsible",
+                        "accountable",
+                        "consulted",
+                        "informed"
+                    ],
+                    "description": "RACI responsibility type"
+                }
+            }
+        },
+        "Allocation": {
+            "type": "object",
+            "description": "Concrete contribution from a resource to fulfill an assignment (The Fulfillment)",
+            "required": [
+                "id",
+                "assignment_id",
+                "person_id",
+                "quantity_contributed"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{6}$"
+                },
+                "assignment_id": {
+                    "type": "string",
+                    "description": "Reference to the assignment being fulfilled"
+                },
+                "person_id": {
+                    "type": "string",
+                    "description": "Reference to the person providing the allocation"
+                },
+                "quantity_contributed": {
+                    "type": "number",
+                    "description": "Amount contributed by this resource"
+                },
+                "start_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_date": {
+                    "type": "string",
+                    "format": "date"
+                }
+            }
+        }
+    }
+}

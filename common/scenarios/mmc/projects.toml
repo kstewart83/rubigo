@@ -1,0 +1,698 @@
+# ============================================================================
+# MMC Project Management Data
+# ============================================================================
+# This file contains project management seed data for the Midwest Manufacturing
+# Co. scenario, following the Requirements & Delivery Ontology.
+
+[description]
+overview = """
+PROJECT MANAGEMENT DATA
+- Services: 1 (HVAC Solutions Platform)
+- Active Projects: 1 (FY2025 Operational Excellence)
+- Strategic Objectives: 3
+- Metrics: 5 (raw operational measurements)
+- KPIs: 3 (metrics aligned to objectives)
+- Initiatives: 3 (short-term efforts to move KPIs)
+- Activities: 6 (work items)
+- Roles: 4 (abstract job functions)
+- Assignments: 4 (planned resource slots)
+- Allocations: 4 (actual resource assignments)
+
+This data represents MMC's strategic planning and execution tracking for their
+digital transformation and operational excellence initiatives.
+"""
+
+# ============================================================================
+# PRODUCTS & SERVICES - Persistent business offerings
+# ============================================================================
+# is_product: Can be acquired/deployed by customers (e.g., HVAC equipment, software)
+# is_service: Ongoing provision of value (e.g., maintenance, IT operations, SaaS)
+# Note: These are NOT mutually exclusive - an offering can be both
+
+[[services]]
+id = "a1b2c3"
+name = "HVAC Solutions Platform"
+description = "Core business service encompassing design, manufacturing, installation, and maintenance of commercial HVAC systems"
+status = "catalog"
+is_product = false
+is_service = true
+
+[[services]]
+id = "svc-hvac-equip"
+name = "Commercial HVAC Equipment"
+description = "Industrial and commercial heating, ventilation, and air conditioning units designed for reliability and energy efficiency"
+status = "catalog"
+is_product = true
+is_service = false
+
+[[services]]
+id = "svc-hvac-parts"
+name = "HVAC Parts & Components"
+description = "Replacement parts, filters, and components for HVAC systems, available for direct purchase or through service contracts"
+status = "catalog"
+is_product = true
+is_service = false
+
+[[services]]
+id = "svc-rubigo"
+name = "Rubigo ERM Platform"
+description = "Internal enterprise resource management platform providing strategic alignment visibility, project portfolio oversight, resource capacity planning, and operational metrics tracking"
+status = "catalog"
+is_product = false
+is_service = true
+
+# ============================================================================
+# PROJECTS - Temporary efforts to modify/improve services
+# ============================================================================
+
+[[projects]]
+id = "d4e5f6"
+name = "FY2025 Operational Excellence"
+description = "Strategic initiative to improve operational efficiency, reduce service response times, and enhance customer satisfaction through digital transformation"
+service_id = "a1b2c3"
+status = "active"
+start_date = "2025-01-01"
+end_date = "2025-12-31"
+
+# ============================================================================
+# OBJECTIVES - Strategic goals (hierarchical via parent_id)
+# ============================================================================
+# Hierarchy:
+#   Company Level (root)
+#     └── Department Level (HR, Engineering, Operations, IT, Finance, Sales)
+#           └── Tactical Level (specific measurable objectives)
+
+# --- ROOT: Company Level Objective ---
+[[objectives]]
+id = "obj-root"
+title = "MMC 2025 Strategic Vision"
+description = "Become the leading provider of smart, connected HVAC solutions in the Midwest through operational excellence, customer-centricity, and technological innovation"
+project_id = "d4e5f6"
+status = "active"
+
+# --- DEPARTMENT LEVEL ---
+
+[[objectives]]
+id = "obj-ops"
+title = "Operations Excellence"
+description = "Transform field operations through technology-enabled efficiency and predictive capabilities"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+[[objectives]]
+id = "obj-cust"
+title = "Customer Experience"
+description = "Deliver exceptional customer experiences across all touchpoints through digital transformation"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+[[objectives]]
+id = "obj-eng"
+title = "Engineering Innovation"
+description = "Drive product innovation and R&D excellence to maintain competitive advantage"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+[[objectives]]
+id = "obj-it"
+title = "IT Modernization"
+description = "Modernize IT infrastructure to enable digital transformation initiatives"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+[[objectives]]
+id = "obj-hr"
+title = "Workforce Development"
+description = "Build a skilled, engaged workforce ready for the digital future"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+[[objectives]]
+id = "obj-fin"
+title = "Financial Performance"
+description = "Achieve sustainable profitability growth while investing in future capabilities"
+project_id = "d4e5f6"
+parent_id = "obj-root"
+status = "active"
+
+# --- TACTICAL LEVEL (under Operations) ---
+
+[[objectives]]
+id = "101a2b"
+title = "Rapid Field Service Response"
+description = "Customers experiencing equipment issues must receive on-site technician support within a timeframe that minimizes business disruption and demonstrates our commitment to their operations"
+project_id = "d4e5f6"
+parent_id = "obj-ops"
+status = "active"
+
+[[objectives]]
+id = "202b3c"
+title = "First-Visit Issue Resolution"
+description = "Service visits must be equipped with the knowledge, tools, and parts necessary to resolve customer issues on the initial visit, avoiding costly follow-ups and extended downtime"
+project_id = "d4e5f6"
+parent_id = "obj-ops"
+status = "active"
+
+[[objectives]]
+id = "obj-ops-pred"
+title = "Proactive Equipment Health Management"
+description = "Equipment health must be continuously monitored to identify potential failures before they impact customer operations, enabling planned maintenance over reactive repairs"
+project_id = "d4e5f6"
+parent_id = "obj-ops"
+status = "active"
+
+[[objectives]]
+id = "obj-ops-dispatch"
+title = "Intelligent Dispatch Optimization"
+description = "Technician assignments must consider location, skills, parts availability, and customer priority to minimize travel time and maximize daily service capacity"
+project_id = "d4e5f6"
+parent_id = "obj-ops"
+status = "active"
+
+[[objectives]]
+id = "obj-ops-inventory"
+title = "Parts and Inventory Excellence"
+description = "Service vehicles and warehouses must maintain optimal inventory levels, ensuring parts availability while minimizing carrying costs and obsolescence"
+project_id = "d4e5f6"
+parent_id = "obj-ops"
+status = "active"
+
+# --- TACTICAL LEVEL (under Customer Experience) ---
+
+[[objectives]]
+id = "303c4d"
+title = "Seamless Customer Journey"
+description = "Every customer interaction—from initial inquiry through ongoing service—must feel cohesive, professional, and tailored to their specific needs and preferences"
+project_id = "d4e5f6"
+parent_id = "obj-cust"
+status = "active"
+
+[[objectives]]
+id = "obj-cust-portal"
+title = "Customer Self-Service Capability"
+description = "Customers must have the ability to independently manage service requests, monitor equipment status, access documentation, and track technician arrivals at their convenience"
+project_id = "d4e5f6"
+parent_id = "obj-cust"
+status = "active"
+
+[[objectives]]
+id = "obj-cust-comm"
+title = "Proactive Customer Communication"
+description = "Customers must receive timely, relevant updates about their equipment, service appointments, and technician arrival without needing to initiate contact"
+project_id = "d4e5f6"
+parent_id = "obj-cust"
+status = "active"
+
+[[objectives]]
+id = "obj-cust-feedback"
+title = "Customer Voice Integration"
+description = "Customer feedback must be systematically captured, analyzed, and acted upon to continuously improve service delivery and product quality"
+project_id = "d4e5f6"
+parent_id = "obj-cust"
+status = "active"
+
+# --- TACTICAL LEVEL (under Engineering) ---
+
+[[objectives]]
+id = "obj-eng-iot"
+title = "Connected Product Ecosystem"
+description = "HVAC systems must integrate seamlessly with building management systems and provide remote visibility into performance, enabling data-driven maintenance and optimization"
+project_id = "d4e5f6"
+parent_id = "obj-eng"
+status = "active"
+
+[[objectives]]
+id = "obj-eng-energy"
+title = "Energy-Efficient Product Design"
+description = "Products must minimize energy consumption while maintaining or exceeding performance requirements, helping customers reduce operational costs and environmental impact"
+project_id = "d4e5f6"
+parent_id = "obj-eng"
+status = "active"
+
+[[objectives]]
+id = "obj-eng-quality"
+title = "Product Reliability and Durability"
+description = "Products must be designed and manufactured to exceed expected lifespan with minimal maintenance, reducing total cost of ownership for customers"
+project_id = "d4e5f6"
+parent_id = "obj-eng"
+status = "active"
+
+[[objectives]]
+id = "obj-eng-modular"
+title = "Modular and Serviceable Design"
+description = "Products must be designed for easy diagnosis, repair, and component replacement, minimizing service time and enabling field upgrades"
+project_id = "d4e5f6"
+parent_id = "obj-eng"
+status = "active"
+
+# --- TACTICAL LEVEL (under IT) ---
+
+[[objectives]]
+id = "obj-it-cloud"
+title = "Scalable Computing Infrastructure"
+description = "Technology infrastructure must scale elastically to meet demand fluctuations, ensure high availability, and enable rapid deployment of new capabilities"
+project_id = "d4e5f6"
+parent_id = "obj-it"
+status = "active"
+
+[[objectives]]
+id = "obj-it-data"
+title = "Unified Data Foundation"
+description = "Enterprise data must be accessible, trustworthy, and governed—providing a single source of truth that enables analytics, automation, and informed decision-making"
+project_id = "d4e5f6"
+parent_id = "obj-it"
+status = "active"
+
+[[objectives]]
+id = "obj-it-security"
+title = "Cybersecurity and Compliance"
+description = "Systems and data must be protected from unauthorized access, breaches, and threats while meeting regulatory and industry compliance requirements"
+project_id = "d4e5f6"
+parent_id = "obj-it"
+status = "active"
+
+[[objectives]]
+id = "obj-it-business-systems"
+title = "Integrated Business Systems"
+description = "Enterprise applications must work together seamlessly, eliminating data silos and manual handoffs to enable efficient cross-functional processes"
+project_id = "d4e5f6"
+parent_id = "obj-it"
+status = "active"
+
+# --- SUB-OBJECTIVES (under Integrated Business Systems) ---
+# This is where Rubigo requirements live
+
+[[objectives]]
+id = "obj-rubigo-strategy"
+title = "Strategic Alignment Visibility"
+description = "Leadership must be able to see how projects, initiatives, and activities align to strategic objectives, enabling informed prioritization and resource decisions"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-capacity"
+title = "Resource Capacity Planning"
+description = "The organization must have visibility into workforce capacity, skill availability, and allocation gaps to ensure initiatives are properly staffed"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-portfolio"
+title = "Project Portfolio Oversight"
+description = "Management must have a comprehensive view of all projects, their status, dependencies, and resource consumption to optimize the portfolio"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-metrics"
+title = "Operational Metrics and KPIs"
+description = "Key performance indicators must be tracked, visualized, and connected to strategic objectives to measure progress and identify areas needing attention"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-personnel"
+title = "Personnel Directory and Org Structure"
+description = "The organization must maintain an accurate, accessible directory of personnel with reporting relationships, roles, skills, and contact information"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-crm"
+title = "Customer Relationship Management"
+description = "Customer interactions, sales pipelines, and service history must be centrally managed to enable personalized engagement and data-driven decision making"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-finance"
+title = "Financial Operations Management"
+description = "Financial, procurement, and supply chain operations must be managed through integrated systems that provide real-time visibility and control"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+# --- TACTICAL LEVEL (under Workforce Development) ---
+
+[[objectives]]
+id = "obj-hr-train"
+title = "Technical Workforce Readiness"
+description = "Technicians and engineers must possess current expertise in smart HVAC systems, diagnostic tools, and emerging technologies to deliver exceptional service"
+project_id = "d4e5f6"
+parent_id = "obj-hr"
+status = "active"
+
+[[objectives]]
+id = "obj-hr-retain"
+title = "Engaged and Committed Workforce"
+description = "Employees must feel valued, see clear career paths, and receive competitive compensation that reflects their contribution to customer success"
+project_id = "d4e5f6"
+parent_id = "obj-hr"
+status = "active"
+
+[[objectives]]
+id = "obj-hr-recruit"
+title = "Talent Acquisition Pipeline"
+description = "The organization must attract qualified candidates with the right skills and cultural fit to support growth and replace attrition"
+project_id = "d4e5f6"
+parent_id = "obj-hr"
+status = "active"
+
+[[objectives]]
+id = "obj-hr-safety"
+title = "Workplace Safety Culture"
+description = "Employees must work in environments that prioritize safety, with training and protocols that prevent incidents and protect well-being"
+project_id = "d4e5f6"
+parent_id = "obj-hr"
+status = "active"
+
+[[objectives]]
+id = "obj-hr-knowledge"
+title = "Institutional Knowledge Preservation"
+description = "Critical expertise and tribal knowledge must be documented and transferred to ensure continuity as employees transition"
+project_id = "d4e5f6"
+parent_id = "obj-hr"
+status = "active"
+
+# --- TACTICAL LEVEL (under Financial Performance) ---
+
+[[objectives]]
+id = "obj-fin-margin"
+title = "Sustainable Service Profitability"
+description = "Service operations must generate margins that support continued investment in people, technology, and capabilities while delivering exceptional customer value"
+project_id = "d4e5f6"
+parent_id = "obj-fin"
+status = "active"
+
+[[objectives]]
+id = "obj-fin-recurring"
+title = "Predictable Revenue Streams"
+description = "The business model must emphasize subscription and maintenance contracts that provide stable, recurring revenue and strengthen long-term customer relationships"
+project_id = "d4e5f6"
+parent_id = "obj-fin"
+status = "active"
+
+[[objectives]]
+id = "obj-fin-cashflow"
+title = "Healthy Cash Flow Management"
+description = "Receivables, payables, and working capital must be managed to ensure liquidity and enable investment in growth opportunities"
+project_id = "d4e5f6"
+parent_id = "obj-fin"
+status = "active"
+
+[[objectives]]
+id = "obj-fin-visibility"
+title = "Financial Visibility and Forecasting"
+description = "Leadership must have real-time visibility into financial performance and accurate forecasts to make informed strategic decisions"
+project_id = "d4e5f6"
+parent_id = "obj-fin"
+status = "active"
+
+# ============================================================================
+# FEATURES - Capabilities that realize objectives
+# ============================================================================
+
+[[features]]
+id = "f01a23"
+name = "Real-time Technician Tracking"
+description = "GPS-enabled tracking of field technicians for optimal dispatch"
+objective_id = "101a2b"
+status = "in_progress"
+
+[[features]]
+id = "f02b34"
+name = "Predictive Parts Inventory"
+description = "ML-based prediction of required parts for common equipment issues"
+objective_id = "202b3c"
+status = "planned"
+
+[[features]]
+id = "f03c45"
+name = "Customer Portal"
+description = "Self-service portal for service requests, status tracking, and feedback"
+objective_id = "303c4d"
+status = "in_progress"
+
+# ============================================================================
+# METRICS - Raw operational measurements
+# ============================================================================
+
+[[metrics]]
+id = "m01abc"
+name = "Mean Time to Arrival"
+description = "Average time from service dispatch to technician arrival on-site"
+unit = "hours"
+current_value = 4.2
+source = "dispatch_system"
+
+[[metrics]]
+id = "m02bcd"
+name = "First Visit Resolution Rate"
+description = "Percentage of service calls resolved on the first technician visit"
+unit = "percent"
+current_value = 68.5
+source = "service_management"
+
+[[metrics]]
+id = "m03cde"
+name = "Customer Satisfaction Score"
+description = "Average score from post-service customer surveys (1-10 scale)"
+unit = "score"
+current_value = 7.8
+source = "survey_platform"
+
+[[metrics]]
+id = "m04def"
+name = "Parts Availability Rate"
+description = "Percentage of service calls where required parts are in stock"
+unit = "percent"
+current_value = 72.0
+source = "inventory_system"
+
+[[metrics]]
+id = "m05efg"
+name = "Average Ticket Age"
+description = "Average time from ticket creation to resolution"
+unit = "days"
+current_value = 3.4
+source = "service_management"
+
+# ============================================================================
+# KPIs - Metrics aligned to objectives
+# ============================================================================
+
+[[kpis]]
+id = "k01xyz"
+metric_id = "m01abc"
+objective_id = "101a2b"
+target_value = 2.5
+direction = "decrease"
+threshold_warning = 3.5
+threshold_critical = 5.0
+
+[[kpis]]
+id = "k02yza"
+metric_id = "m02bcd"
+objective_id = "202b3c"
+target_value = 85.0
+direction = "increase"
+threshold_warning = 70.0
+threshold_critical = 60.0
+
+[[kpis]]
+id = "k03zab"
+metric_id = "m03cde"
+objective_id = "303c4d"
+target_value = 9.0
+direction = "increase"
+threshold_warning = 7.5
+threshold_critical = 7.0
+
+# ============================================================================
+# INITIATIVES - Short-term efforts to move KPIs
+# ============================================================================
+
+[[initiatives]]
+id = "i01aaa"
+name = "Dispatch Optimization Rollout"
+description = "Implement GPS tracking and AI-powered dispatch routing to reduce technician travel time"
+kpi_id = "k01xyz"
+status = "active"
+start_date = "2025-01-15"
+end_date = "2025-04-30"
+
+[[initiatives]]
+id = "i02bbb"
+name = "Technician Training Program"
+description = "Enhanced diagnostic training and mobile knowledge base to improve first-visit resolution"
+kpi_id = "k02yza"
+status = "active"
+start_date = "2025-02-01"
+end_date = "2025-06-30"
+
+[[initiatives]]
+id = "i03ccc"
+name = "Customer Portal MVP"
+description = "Launch minimum viable customer self-service portal with status tracking"
+kpi_id = "k03zab"
+status = "planned"
+start_date = "2025-03-01"
+end_date = "2025-05-31"
+
+# ============================================================================
+# ACTIVITIES - Work items (linked to initiatives)
+# ============================================================================
+
+[[activities]]
+id = "act001"
+name = "GPS Hardware Procurement"
+description = "Procure and deploy GPS tracking devices for service fleet"
+initiative_id = "i01aaa"
+status = "complete"
+
+[[activities]]
+id = "act002"
+name = "Dispatch Algorithm Development"
+description = "Develop AI routing algorithm for optimal technician dispatch"
+initiative_id = "i01aaa"
+status = "in_progress"
+blocked_by = ["act001"]
+
+[[activities]]
+id = "act003"
+name = "Training Curriculum Design"
+description = "Design comprehensive diagnostic training curriculum"
+initiative_id = "i02bbb"
+status = "in_progress"
+
+[[activities]]
+id = "act004"
+name = "Mobile Knowledge Base"
+description = "Build mobile app with searchable equipment guides and troubleshooting"
+initiative_id = "i02bbb"
+status = "backlog"
+
+[[activities]]
+id = "act005"
+name = "Portal UI Design"
+description = "Design customer portal user interface and experience"
+initiative_id = "i03ccc"
+status = "backlog"
+
+[[activities]]
+id = "act006"
+name = "Portal Backend API"
+description = "Develop REST API for customer portal integration with service system"
+initiative_id = "i03ccc"
+status = "backlog"
+blocked_by = ["act005"]
+
+# ============================================================================
+# ROLES - Abstract job functions
+# ============================================================================
+
+[[roles]]
+id = "r01dev"
+name = "Software Developer"
+description = "Develops software solutions and integrations"
+
+[[roles]]
+id = "r02uxd"
+name = "UX Designer"
+description = "Designs user interfaces and experiences"
+
+[[roles]]
+id = "r03pm"
+name = "Project Manager"
+description = "Coordinates project activities and resources"
+
+[[roles]]
+id = "r04tra"
+name = "Training Specialist"
+description = "Develops and delivers training programs"
+
+# ============================================================================
+# ASSIGNMENTS - Planned resource slots (The Plan)
+# ============================================================================
+
+[[assignments]]
+id = "asg001"
+activity_id = "act002"
+role_id = "r01dev"
+quantity = 1.0
+unit = "fte"
+raci_type = "responsible"
+
+[[assignments]]
+id = "asg002"
+activity_id = "act003"
+role_id = "r04tra"
+quantity = 0.5
+unit = "fte"
+raci_type = "responsible"
+
+[[assignments]]
+id = "asg003"
+activity_id = "act005"
+role_id = "r02uxd"
+quantity = 1.0
+unit = "fte"
+raci_type = "responsible"
+
+[[assignments]]
+id = "asg004"
+activity_id = "act006"
+role_id = "r01dev"
+quantity = 2.0
+unit = "fte"
+raci_type = "responsible"
+
+# ============================================================================
+# ALLOCATIONS - Actual resource assignments (The Fulfillment)
+# References personnel IDs from personnel.toml
+# ============================================================================
+
+[[allocations]]
+id = "alc001"
+assignment_id = "asg001"
+person_id = "d62d4d"  # Jason Wright - Systems Administrator (has dev skills)
+quantity_contributed = 0.5
+start_date = "2025-02-01"
+end_date = "2025-04-30"
+
+[[allocations]]
+id = "alc002"
+assignment_id = "asg002"
+person_id = "4f6f43"  # Patricia Martinez - HR Director (training background)
+quantity_contributed = 0.5
+start_date = "2025-02-01"
+end_date = "2025-06-30"
+
+[[allocations]]
+id = "alc003"
+assignment_id = "asg003"
+person_id = "8f3a18"  # Lisa Chen - CAD Designer (design skills)
+quantity_contributed = 0.5
+start_date = "2025-03-01"
+end_date = "2025-05-31"
+
+# Note: Assignment asg004 for Portal Backend requires 2.0 FTE but only has
+# partial allocation. This represents the "capacity gap" the ontology models.
+[[allocations]]
+id = "alc004"
+assignment_id = "asg004"
+person_id = "d62d4d"  # Jason Wright
+quantity_contributed = 0.5
+start_date = "2025-04-01"
+end_date = "2025-05-31"
