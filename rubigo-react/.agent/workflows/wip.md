@@ -6,12 +6,18 @@ description: Start isolated work in a git worktree for multi-agent development
 
 This workflow creates an isolated workspace for feature development without disturbing the main branch.
 
+## Usage
+
+Invoke with optional context:
+- `/wip` - Start interactive dialogue to gather requirements
+- `/wip <description>` - Include context upfront (e.g., `/wip I want to build a collaboration module`)
+
 ## Step 1: Understand the Goal
 
 Before creating the worktree, conduct a dialogue to determine:
 
 1. **What type of work is this?**
-   - `feature/` - New functionality
+   - `feature/` - New functionality → **triggers `/req` workflow first**
    - `bugfix/` - Fixing broken behavior
    - `docs/` - Documentation only
    - `chore/` - Maintenance, deps, tooling
@@ -20,61 +26,96 @@ Before creating the worktree, conduct a dialogue to determine:
 
 3. **Draft a PR title and description**
 
-## Step 2: Confirm Plan with User
+> [!IMPORTANT]
+> If type is `feature/`, complete the `/req` workflow first to document requirements (Objective → Feature → Rules → Scenarios) before creating the worktree.
+
+## Step 2: Requirements (Feature Only)
+
+For `feature/` work, follow the `/req` workflow to:
+1. Identify or create the parent Objective
+2. Define the Feature in requirements TOML
+3. Document Rules (user stories)
+4. Define Scenarios (test cases)
+
+This ensures requirements are captured before implementation begins.
+
+## Step 3: Confirm Plan with User
 
 Present the proposed:
 - Branch name: `<type>/<slug>`
 - Worktree path: `wip/<slug>/`
 - PR title and description
+- (For features) Link to requirements in TOML
 
 Get user approval before proceeding.
 
-## Step 3: Create Worktree
+## Step 4: Create Worktree
 
 From the repo root:
-```bash
+```
 git worktree add wip/<slug> -b <type>/<slug>
 ```
 
-## Step 4: Push Branch to Remote
+## Step 5: Push Branch to Remote
 
-```bash
+```
 cd wip/<slug>
 git push -u origin <type>/<slug>
 ```
 
-## Step 5: Begin Work
+## Step 6: Initialize Worktree Environment
+
+New worktrees need their environment set up:
+
+```
+cd wip/<slug>/rubigo-react
+bun install
+bun run db:push
+```
+
+This installs dependencies and creates the database schema.
+
+> [!IMPORTANT]
+> Each worktree uses its own database file (`rubigo.db`) in its own `rubigo-react/` directory. This isolation prevents SQLite lock conflicts between worktrees.
+
+## Step 7: Begin Work
 
 Work continues in `wip/<slug>/` using absolute paths. The main checkout remains untouched.
 
 > [!NOTE]
 > A draft PR cannot be created until the branch has at least one commit that differs from `main`. The PR will be created after the first commit is pushed.
 
-## Step 6: First Commit and PR Creation
+## Step 8: First Commit and PR Creation
 
 When the user asks to commit and push changes:
 
-1. Commit and push the changes to the remote branch
-2. Check if a PR already exists for this branch using:
+1. **Commit and push** the changes to the remote branch
+
+2. **Get repo info** by parsing the git remote:
    ```
-   mcp_github-mcp-server_list_pull_requests
-     owner: <repo-owner>
-     repo: <repo-name>
-     head: <owner>:<type>/<slug>
-     state: all
+   git remote get-url origin
+   # Returns: git@github.com:<owner>/<repo>.git or https://github.com/<owner>/<repo>.git
    ```
-3. If no PR exists, create the draft PR:
+
+3. **Check if PR exists** using GitHub MCP:
+   ```
+   mcp_github-mcp-server_search_pull_requests
+     query: "repo:<owner>/<repo> head:<type>/<slug> is:open"
+   ```
+
+4. **Create draft PR** if none exists:
    ```
    mcp_github-mcp-server_create_pull_request
-     owner: <repo-owner>
-     repo: <repo-name>
+     owner: <owner>
+     repo: <repo>
      title: <PR title>
      body: <PR description>
      head: <type>/<slug>
      base: main
      draft: true
    ```
-4. Report the PR URL to the user
+
+5. **Report the PR URL** to the user
 
 ## Notes
 
