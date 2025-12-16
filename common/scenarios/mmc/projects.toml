@@ -343,6 +343,14 @@ project_id = "d4e5f6"
 parent_id = "obj-it-business-systems"
 status = "active"
 
+[[objectives]]
+id = "obj-rubigo-events"
+title = "Event and Schedule Management"
+description = "The organization must have a unified calendar system for scheduling, coordinating, and tracking events, meetings, deadlines, and milestones across teams and projects"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
 # --- TACTICAL LEVEL (under Workforce Development) ---
 
 [[objectives]]

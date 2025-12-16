@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun --bun next dev --turbopack",
+    "dev": "bun run db:sync && bun --bun next dev --turbopack",
+    "dev:sync": "bun run src/db/sync.ts --watch",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
     "lint": "eslint .",
@@ -14,6 +15,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "bun src/db/seed.ts",
+    "db:sync": "bun src/db/sync.ts",
+    "db:sync:watch": "bun src/db/sync.ts --watch",
+    "db:clean": "bun src/db/clean.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
