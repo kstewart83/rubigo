@@ -14,91 +14,60 @@ This workflow runs the complete end-to-end test suite, including:
 ## Prerequisites
 
 Ensure Playwright is installed:
-```bash
+```
 bunx playwright install chromium
 ```
 
-## Workflow Steps
+## Quick Run (Recommended)
 
-// turbo-all
+// turbo
+Run the full E2E suite with a single command:
+```
+bun run test:e2e:full
+```
+
+This TypeScript script handles all steps automatically:
+- Cleans the database
+- Builds the production bundle
+- Starts the server and extracts the init token
+- Runs Playwright tests
+- Cleans up when done
+
+## Manual Steps (If Needed)
 
 ### Step 1: Clean the database
 
-Remove all existing data to start fresh:
-
-```bash
+```
 bun run db:clean
 ```
 
 ### Step 2: Build production bundle
 
-Build the Next.js application for production:
-
-```bash
+```
 bun run build
 ```
 
 ### Step 3: Start production server
 
-Start the server on port 3100 and capture the init token from logs:
-
-```bash
-# Kill any existing process on port 3100
-lsof -ti:3100 | xargs kill -9 2>/dev/null || true
-
-# Start server and capture output
-PORT=3100 bun run start 2>&1 | tee .e2e-server.log &
-
-# Wait for server to be ready
-sleep 8
+Start the server on port 3100:
+```
+PORT=3100 bun run start
 ```
 
-### Step 4: Extract initialization token
+Look for the `INIT TOKEN: <words>` in the output.
 
-Get the BIP39 words from the server log:
+### Step 4: Run Playwright tests
 
-```bash
-INIT_TOKEN=$(grep "INIT TOKEN:" .e2e-server.log | sed 's/.*INIT TOKEN: //')
-echo "Init Token: $INIT_TOKEN"
+In a separate terminal:
+```
+E2E_INIT_TOKEN="<token-from-step-3>" bunx playwright test --reporter=list
 ```
 
-### Step 5: Run Playwright E2E tests
-
-Run the full test suite with the initialization token:
-
-```bash
-E2E_INIT_TOKEN="$INIT_TOKEN" bunx playwright test --reporter=list
-```
-
-### Step 6: Stop server and cleanup
-
-Terminate the server process:
-
-```bash
-lsof -ti:3100 | xargs kill -9 2>/dev/null || true
-rm -f .e2e-server.log
-```
-
-### Step 7: Review results
-
-Check the test results in `e2e/test-results/`:
-
-```bash
-ls -la e2e/test-results/
-```
+### Step 5: Review results
 
 If tests failed, view the HTML report:
-
-```bash
-bunx playwright show-report e2e/test-results/html
 ```
-
-## Quick Run (Single Command)
-
-For a quick E2E run without step-by-step execution:
-
-```bash
-./scripts/run-e2e.sh
+bunx playwright show-report e2e/test-results/html
 ```
 
 ## Notes
