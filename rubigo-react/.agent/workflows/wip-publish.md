@@ -9,13 +9,30 @@ Complete a WIP branch by rebasing, testing, merging, and cleaning up.
 ## Prerequisites
 
 - Active WIP worktree at `wip/<slug>/`
-- Draft PR exists on GitHub
+- At least one commit pushed to the branch
+- PR may or may not exist on GitHub
 
-## Step 1: Sync with Main
+## Step 1: Get Context
+
+Determine branch and repo info:
+```bash
+# Get current branch name
+git branch --show-current
+
+# Get repo remote URL to extract owner/repo
+git remote get-url origin
+```
+
+Find existing PR:
+```
+mcp_github-mcp-server_search_pull_requests
+  query: "repo:<owner>/<repo> head:<branch> is:open"
+```
+
+## Step 2: Sync with Main
 
 From the WIP worktree:
 ```bash
-cd /path/to/repo/wip/<slug>
 git fetch origin
 git rebase origin/main
 ```
@@ -25,58 +42,78 @@ If conflicts occur, resolve them and continue:
 git rebase --continue
 ```
 
-## Step 2: Run E2E Tests
+## Step 3: Run E2E Tests
 
 Follow the `/e2e` workflow to validate all tests pass.
 
-## Step 3: Version Bump
+## Step 4: Version Bump
 
 Follow `/publish` guidelines to bump version in `rubigo.toml`.
 
-## Step 4: Push Changes
+## Step 5: Push Changes
 
 Push the rebased branch (force-with-lease is safe after rebase):
 ```bash
 git push --force-with-lease
 ```
 
-> **Note:** `--force-with-lease` fails if someone else pushed since your last fetch, preventing accidental overwrites.
+> [!NOTE]
+> `--force-with-lease` fails if someone else pushed since your last fetch, preventing accidental overwrites.
 
-## Step 5: Mark PR Ready
+## Step 6: Ensure PR Exists
 
-Use GitHub MCP:
+If no PR exists yet, create one:
+```
+mcp_github-mcp-server_create_pull_request
+  owner: <owner>
+  repo: <repo>
+  title: <PR title>
+  body: <PR description>
+  head: <branch>
+  base: main
+  draft: false
+```
+
+If PR already exists as draft, mark it ready:
 ```
 mcp_github-mcp-server_update_pull_request
-  owner: <repo-owner>
-  repo: <repo-name>
+  owner: <owner>
+  repo: <repo>
   pullNumber: <PR number>
   draft: false
 ```
 
-## Step 6: Merge PR
+## Step 7: Merge PR
 
 Use GitHub MCP:
 ```
 mcp_github-mcp-server_merge_pull_request
-  owner: <repo-owner>
-  repo: <repo-name>
+  owner: <owner>
+  repo: <repo>
   pullNumber: <PR number>
   merge_method: squash
 ```
 
-## Step 7: Cleanup
+## Step 8: Cleanup
 
-Remove the worktree and local branch:
+From the main repo checkout (not the worktree):
 ```bash
-cd /path/to/repo
+# Remove the worktree
 git worktree remove wip/<slug>
+
+# Delete local branch
 git branch -D <type>/<slug>
 ```
 
-## Step 8: Sync Main
+## Step 9: Sync Main
 
 Update the main checkout with merged changes:
 ```bash
 git checkout main
 git pull
 ```
+
+## Notes
+
+- The remote branch is automatically deleted by GitHub when the PR is merged
+- If merge fails due to checks, wait for CI and retry

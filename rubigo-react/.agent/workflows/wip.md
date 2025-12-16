@@ -54,27 +54,33 @@ Work continues in `wip/<slug>/` using absolute paths. The main checkout remains 
 
 When the user asks to commit and push changes:
 
-1. Commit and push the changes to the remote branch
-2. Check if a PR already exists for this branch using:
+1. **Commit and push** the changes to the remote branch
+
+2. **Get repo info** by parsing the git remote:
+   ```bash
+   git remote get-url origin
+   # Returns: git@github.com:<owner>/<repo>.git or https://github.com/<owner>/<repo>.git
    ```
-   mcp_github-mcp-server_list_pull_requests
-     owner: <repo-owner>
-     repo: <repo-name>
-     head: <owner>:<type>/<slug>
-     state: all
+
+3. **Check if PR exists** using GitHub MCP:
    ```
-3. If no PR exists, create the draft PR:
+   mcp_github-mcp-server_search_pull_requests
+     query: "repo:<owner>/<repo> head:<type>/<slug> is:open"
+   ```
+
+4. **Create draft PR** if none exists:
    ```
    mcp_github-mcp-server_create_pull_request
-     owner: <repo-owner>
-     repo: <repo-name>
+     owner: <owner>
+     repo: <repo>
      title: <PR title>
      body: <PR description>
      head: <type>/<slug>
      base: main
      draft: true
    ```
-4. Report the PR URL to the user
+
+5. **Report the PR URL** to the user
 
 ## Notes
 
