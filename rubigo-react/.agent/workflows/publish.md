@@ -62,12 +62,15 @@ version = "x.y.z"
 bun run build
 ```
 
-## Step 4: Run Tests
+## Step 4: Run Unit Tests
 
 // turbo
 ```
 bun test
 ```
+
+> [!NOTE]
+> E2E tests are run separately using the `/e2e` workflow or `bun run test:e2e:full`.
 
 ## Step 5: Commit and Push
 

@@ -63,14 +63,29 @@ cd wip/<slug>
 git push -u origin <type>/<slug>
 ```
 
-## Step 6: Begin Work
+## Step 6: Initialize Worktree Environment
+
+New worktrees need their environment set up:
+
+```
+cd wip/<slug>/rubigo-react
+bun install
+bun run db:push
+```
+
+This installs dependencies and creates the database schema.
+
+> [!IMPORTANT]
+> Each worktree uses its own database file (`rubigo.db`) in its own `rubigo-react/` directory. This isolation prevents SQLite lock conflicts between worktrees.
+
+## Step 7: Begin Work
 
 Work continues in `wip/<slug>/` using absolute paths. The main checkout remains untouched.
 
 > [!NOTE]
 > A draft PR cannot be created until the branch has at least one commit that differs from `main`. The PR will be created after the first commit is pushed.
 
-## Step 7: First Commit and PR Creation
+## Step 8: First Commit and PR Creation
 
 When the user asks to commit and push changes:
 
