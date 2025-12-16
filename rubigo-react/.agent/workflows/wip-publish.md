@@ -106,6 +106,12 @@ git worktree remove wip/<slug>
 
 # Delete local branch
 git branch -D <type>/<slug>
+
+# Delete remote branch (if not auto-deleted)
+git push origin --delete <type>/<slug>
+
+# Prune stale remote tracking refs
+git fetch --prune
 ```
 
 ## Step 9: Sync Main
@@ -118,5 +124,5 @@ git pull
 
 ## Notes
 
-- The remote branch is automatically deleted by GitHub when the PR is merged
+- GitHub may auto-delete the remote branch on merge, but verify with `git branch -a`
 - If merge fails due to checks, wait for CI and retry
