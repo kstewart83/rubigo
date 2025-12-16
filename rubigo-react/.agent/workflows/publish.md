@@ -10,8 +10,8 @@ Follow these steps when publishing changes to the Rubigo platform.
 
 // turbo
 Run the validation script from `rubigo-react/`:
-```bash
-./scripts/pre-push-check.sh
+```
+bun run pre-push-check
 ```
 
 This checks for:
@@ -58,21 +58,21 @@ version = "x.y.z"
 ## Step 3: Build Verification
 
 // turbo
-```bash
-bun --bun run build
+```
+bun run build
 ```
 
 ## Step 4: Run Tests
 
 // turbo
-```bash
+```
 bun test
 ```
 
 ## Step 5: Commit and Push
 
 Commit with a conventional commit message:
-```bash
+```
 git add -A
 git commit -m "<type>(<scope>): <description>"
 ```
@@ -88,6 +88,6 @@ git commit -m "<type>(<scope>): <description>"
 For breaking changes, add `BREAKING CHANGE:` in the commit body.
 
 Push:
-```bash
+```
 git push
 ```

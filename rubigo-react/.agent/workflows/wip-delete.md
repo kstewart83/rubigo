@@ -14,7 +14,7 @@ Abandon a WIP branch, close any associated PR, and cleanup resources.
 ## Step 1: Get Context
 
 Determine branch and repo info:
-```bash
+```
 # From the WIP worktree
 git branch --show-current
 
@@ -42,31 +42,31 @@ mcp_github-mcp-server_update_pull_request
 ## Step 3: Remove Worktree
 
 From the main repo checkout (not the worktree):
-```bash
+```
 git worktree remove wip/<slug>
 ```
 
 If there are uncommitted changes, force removal:
-```bash
+```
 git worktree remove --force wip/<slug>
 ```
 
 ## Step 4: Delete Local Branch
 
-```bash
+```
 git branch -D <type>/<slug>
 ```
 
 ## Step 5: Delete Remote Branch
 
-```bash
+```
 git push origin --delete <type>/<slug>
 ```
 
 ## Confirmation
 
 Verify cleanup is complete:
-```bash
+```
 git worktree list
 git branch -a | grep <slug>
 ```

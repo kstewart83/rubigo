@@ -15,7 +15,7 @@ Complete a WIP branch by rebasing, testing, merging, and cleaning up.
 ## Step 1: Get Context
 
 Determine branch and repo info:
-```bash
+```
 # Get current branch name
 git branch --show-current
 
@@ -32,19 +32,22 @@ mcp_github-mcp-server_search_pull_requests
 ## Step 2: Sync with Main
 
 From the WIP worktree:
-```bash
+```
 git fetch origin
 git rebase origin/main
 ```
 
 If conflicts occur, resolve them and continue:
-```bash
+```
 git rebase --continue
 ```
 
 ## Step 3: Run E2E Tests
 
-Follow the `/e2e` workflow to validate all tests pass.
+Follow the `/e2e` workflow or run directly:
+```
+bun run test:e2e:full
+```
 
 ## Step 4: Version Bump
 
@@ -53,7 +56,7 @@ Follow `/publish` guidelines to bump version in `rubigo.toml`.
 ## Step 5: Push Changes
 
 Push the rebased branch (force-with-lease is safe after rebase):
-```bash
+```
 git push --force-with-lease
 ```
 
@@ -97,7 +100,7 @@ mcp_github-mcp-server_merge_pull_request
 ## Step 8: Cleanup
 
 From the main repo checkout (not the worktree):
-```bash
+```
 # Remove the worktree
 git worktree remove wip/<slug>
 
@@ -108,7 +111,7 @@ git branch -D <type>/<slug>
 ## Step 9: Sync Main
 
 Update the main checkout with merged changes:
-```bash
+```
 git checkout main
 git pull
 ```

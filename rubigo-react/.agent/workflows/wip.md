@@ -52,13 +52,13 @@ Get user approval before proceeding.
 ## Step 4: Create Worktree
 
 From the repo root:
-```bash
+```
 git worktree add wip/<slug> -b <type>/<slug>
 ```
 
 ## Step 5: Push Branch to Remote
 
-```bash
+```
 cd wip/<slug>
 git push -u origin <type>/<slug>
 ```
@@ -77,7 +77,7 @@ When the user asks to commit and push changes:
 1. **Commit and push** the changes to the remote branch
 
 2. **Get repo info** by parsing the git remote:
-   ```bash
+   ```
    git remote get-url origin
    # Returns: git@github.com:<owner>/<repo>.git or https://github.com/<owner>/<repo>.git
    ```
