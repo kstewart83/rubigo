@@ -96,14 +96,16 @@ async function checkDebugStatements(files: string[]): Promise<string[]> {
 
 async function checkTestOnlyPatterns(files: string[]): Promise<string[]> {
     const issues: string[] = [];
-    const pattern = /\.(only|skip)\(/;
+    // Only flag .only() calls - these always skip other tests and should never be committed
+    // Note: .skip() with conditions like test.skip(!data, "reason") are legitimate
+    const onlyPattern = /\.(only)\(/;
     const testFiles = files.filter(f => f.includes(".spec.") || f.includes(".test."));
 
     for (const file of testFiles) {
         const content = await Bun.file(file).text();
         const lines = content.split("\n");
-        lines.forEach((line, index) => {
-            if (pattern.test(line)) {
+        lines.forEach((line: string, index: number) => {
+            if (onlyPattern.test(line)) {
                 issues.push(`${relative(".", file)}:${index + 1}: ${line.trim().substring(0, 80)}`);
             }
         });
