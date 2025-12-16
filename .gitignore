@@ -5,3 +5,6 @@ Thumbs.db
 # Runner
 runner
 *.service
+
+# WIP worktrees for multi-agent development
+wip/
