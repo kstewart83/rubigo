@@ -12,6 +12,7 @@ jobs:
     runs-on: self-hosted
     env:
       BASE: ${{ github.workspace }}/production/rubigo-react
+      DATABASE_URL: ${{ github.workspace }}/production/rubigo-react/data/rubigo.db
     
     steps:
       - name: Checkout
@@ -20,7 +21,7 @@ jobs:
       - name: Build in new directory
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          mkdir -p "$BUILD_DIR" "$BASE/data"
+          mkdir -p "$BUILD_DIR"
           
           # Copy app source
           cp -r rubigo-react/* "$BUILD_DIR/"
@@ -32,20 +33,44 @@ jobs:
           
           echo "Build complete in $BUILD_DIR"
 
+      - name: Run database migrations
+        run: |
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          mkdir -p "$BASE/data"
+          cd "$BUILD_DIR"
+          DATABASE_URL="$DATABASE_URL" bun run db:migrate
+          echo "Migrations complete"
+
       - name: Deploy (stop, swap, start)
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           
-          # Stop current service
-          sudo systemctl stop rubigo-react || true
+          # Stop current service (launchctl or manual process)
+          launchctl unload ~/Library/LaunchAgents/net.kwip.rubigo-react.plist 2>/dev/null || true
+          pkill -f "bun.*rubigo-react.*start" || true
           
           # Swap symlink to new build
           ln -sfn "$BUILD_DIR" "$BASE/current"
           
           # Start service
-          sudo systemctl start rubigo-react
+          cd "$BASE/current"
+          DATABASE_URL="$DATABASE_URL" PORT=4430 nohup bun run start > "$BASE/stdout.log" 2> "$BASE/stderr.log" &
+          sleep 3
           
           echo "Deployed: $(readlink $BASE/current)"
+
+      - name: Health check
+        run: |
+          for i in {1..10}; do
+            if curl -sf http://localhost:4430 > /dev/null; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Waiting for server... ($i/10)"
+            sleep 2
+          done
+          echo "❌ Health check failed"
+          exit 1
 
       - name: Cleanup old builds
         run: |

@@ -1,0 +1,7 @@
+# Override .gitignore - allow AI access to production configs
+!production/
+
+# Exclude runtime/sensitive data from AI access
+production/rubigo-react/builds/
+production/rubigo-react/data/
+production/runner/

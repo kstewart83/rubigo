@@ -2,9 +2,9 @@
 .DS_Store
 Thumbs.db
 
-# Runner
-runner
-*.service
-
 # WIP worktrees for multi-agent development
 wip/
+
+# Production deployment folder
+production/*
+!production/.gitignore
