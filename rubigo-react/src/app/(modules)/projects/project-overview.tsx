@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type {
-    Service,
+    SolutionView,
     Project,
     Objective,
     Initiative,
@@ -11,7 +11,7 @@ import type {
 } from "@/types/project";
 
 interface ProjectOverviewProps {
-    services: Service[];
+    solutionViews: SolutionView[];
     projects: Project[];
     objectives: Objective[];
     kpis: KPIWithMetric[];
@@ -20,7 +20,7 @@ interface ProjectOverviewProps {
 }
 
 export function ProjectOverview({
-    services,
+    solutionViews,
     projects,
     objectives,
     kpis,
@@ -54,8 +54,8 @@ export function ProjectOverview({
             {/* Stats Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
-                    label="Services"
-                    value={services.length}
+                    label="Solutions"
+                    value={solutionViews.length}
                     icon="🏢"
                 />
                 <StatCard
@@ -76,40 +76,40 @@ export function ProjectOverview({
                 />
             </div>
 
-            {/* Service & Project Overview */}
-            {services.map((service) => {
-                const serviceProjects = projects.filter((p) => p.serviceId === service.id);
+            {/* Solution & Project Overview */}
+            {solutionViews.map((solution) => {
+                const solutionProjects = projects.filter((p) => p.solutionId === solution.id);
 
                 return (
                     <div
-                        key={service.id}
+                        key={solution.id}
                         className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
-                        {/* Service Header */}
+                        {/* Solution Header */}
                         <div className="bg-zinc-50 dark:bg-zinc-900 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">🏢</span>
+                                <span className="text-lg">{solution.isProduct && solution.isService ? "📦🔧" : solution.isProduct ? "📦" : "🔧"}</span>
                                 <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {service.name}
+                                    {solution.name}
                                 </h2>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${service.status === "catalog"
-                                        ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
-                                        : service.status === "pipeline"
-                                            ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
-                                            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${solution.status === "catalog"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+                                    : solution.status === "pipeline"
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                                     }`}>
-                                    {service.status}
+                                    {solution.status}
                                 </span>
                             </div>
-                            {service.description && (
+                            {solution.description && (
                                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                    {service.description}
+                                    {solution.description}
                                 </p>
                             )}
                         </div>
 
                         {/* Projects */}
-                        {serviceProjects.map((project) => {
+                        {solutionProjects.map((project) => {
                             const projectObjectives = objectives.filter(
                                 (o) => o.projectId === project.id
                             );
@@ -236,21 +236,21 @@ function StatCard({
 }) {
     return (
         <div className={`rounded-lg p-4 ${variant === "warning"
-                ? "bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900"
-                : "bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+            ? "bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900"
+            : "bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
             }`}>
             <div className="flex items-center gap-2 mb-1">
                 <span>{icon}</span>
                 <span className={`text-sm ${variant === "warning"
-                        ? "text-orange-600 dark:text-orange-400"
-                        : "text-zinc-600 dark:text-zinc-400"
+                    ? "text-orange-600 dark:text-orange-400"
+                    : "text-zinc-600 dark:text-zinc-400"
                     }`}>
                     {label}
                 </span>
             </div>
             <div className={`text-2xl font-bold ${variant === "warning"
-                    ? "text-orange-700 dark:text-orange-300"
-                    : "text-zinc-900 dark:text-zinc-100"
+                ? "text-orange-700 dark:text-orange-300"
+                : "text-zinc-900 dark:text-zinc-100"
                 }`}>
                 {value}
             </div>

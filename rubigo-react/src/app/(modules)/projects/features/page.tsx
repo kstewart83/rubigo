@@ -3,12 +3,12 @@ import { PersonaProvider } from "@/contexts/persona-context";
 import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getProjectData } from "@/lib/projects";
-import { ActivitiesListWithCRUD } from "./activities-list";
+import { FeaturesListWithCRUD } from "./features-list";
 
 const personnel = getAllPersonnel();
 const projectData = getProjectData();
 
-export default function ActivitiesPage() {
+export default function FeaturesPage() {
     return (
         <PersonaProvider>
             <LoggingProjectDataProvider initialData={projectData}>
@@ -16,13 +16,13 @@ export default function ActivitiesPage() {
                     <div>
                         <div className="mb-6">
                             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-                                Activities
+                                Features
                             </h1>
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Individual work items and their assignments
+                                Capabilities that realize strategic objectives
                             </p>
                         </div>
-                        <ActivitiesListWithCRUD personnel={personnel} />
+                        <FeaturesListWithCRUD />
                     </div>
                 </AppShell>
             </LoggingProjectDataProvider>

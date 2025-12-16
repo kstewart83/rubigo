@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useProjectData } from "@/contexts/project-data-context";
-import type { Service } from "@/types/project";
+import type { SolutionView } from "@/types/project";
 import {
     EntityDetailPanel,
     FormField,
@@ -14,16 +14,16 @@ import {
 import { Button } from "@/components/ui/button";
 
 // Type badge helper
-function TypeBadges({ service }: { service: Service }) {
+function TypeBadges({ solution }: { solution: SolutionView }) {
     const badges = [];
-    if (service.isProduct) {
+    if (solution.isProduct) {
         badges.push(
             <span key="product" className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400">
                 Product
             </span>
         );
     }
-    if (service.isService) {
+    if (solution.isService) {
         badges.push(
             <span key="service" className="text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-400">
                 Service
@@ -41,13 +41,13 @@ function TypeBadges({ service }: { service: Service }) {
 }
 
 export function ServicesListWithCRUD() {
-    const { data, updateService, createService, deleteService } = useProjectData();
+    const { data, updateSolutionView, createSolutionView, deleteSolutionView } = useProjectData();
 
-    const [selectedService, setSelectedService] = useState<string | null>(null);
+    const [selectedSolution, setSelectedSolution] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState<Partial<Service>>({});
+    const [editForm, setEditForm] = useState<Partial<SolutionView>>({});
     const [showCreate, setShowCreate] = useState(false);
-    const [newService, setNewService] = useState<Omit<Service, "id">>({
+    const [newSolution, setNewSolution] = useState<Omit<SolutionView, "id" | "productId" | "serviceId">>({
         name: "",
         description: "",
         status: "pipeline",
@@ -55,51 +55,51 @@ export function ServicesListWithCRUD() {
         isService: true,
     });
 
-    const openService = (id: string) => {
-        setSelectedService(id);
+    const openSolution = (id: string) => {
+        setSelectedSolution(id);
         setIsEditing(false);
-        const service = data.services.find((s) => s.id === id);
-        if (service) {
-            setEditForm({ ...service });
+        const solution = data.solutionViews.find((s) => s.id === id);
+        if (solution) {
+            setEditForm({ ...solution });
         }
     };
 
     const handleSave = () => {
-        if (selectedService) {
-            updateService(selectedService, editForm);
+        if (selectedSolution) {
+            updateSolutionView(selectedSolution, editForm);
             setIsEditing(false);
         }
     };
 
     const handleDelete = () => {
-        if (selectedService) {
-            deleteService(selectedService);
-            setSelectedService(null);
+        if (selectedSolution) {
+            deleteSolutionView(selectedSolution);
+            setSelectedSolution(null);
         }
     };
 
     const handleCreate = () => {
-        if (newService.name) {
-            createService(newService);
+        if (newSolution.name) {
+            createSolutionView(newSolution);
             setShowCreate(false);
-            setNewService({ name: "", description: "", status: "pipeline", isProduct: false, isService: true });
+            setNewSolution({ name: "", description: "", status: "pipeline", isProduct: false, isService: true });
         }
     };
 
-    // Count projects per service
-    const getProjectCount = (serviceId: string) =>
-        data.projects.filter((p) => p.serviceId === serviceId).length;
+    // Count projects per solution
+    const getProjectCount = (solutionId: string) =>
+        data.projects.filter((p) => p.solutionId === solutionId).length;
 
     // Filter counts
-    const productCount = data.services.filter((s) => s.isProduct).length;
-    const serviceCount = data.services.filter((s) => s.isService).length;
+    const productCount = data.solutionViews.filter((s) => s.isProduct).length;
+    const serviceCount = data.solutionViews.filter((s) => s.isService).length;
 
     return (
         <div className="space-y-4">
             {/* Action Bar */}
             <div className="flex justify-between items-center">
                 <div className="flex gap-4 text-sm text-zinc-500">
-                    <span>{data.services.length} total</span>
+                    <span>{data.solutionViews.length} total</span>
                     <span className="text-purple-600 dark:text-purple-400">📦 {productCount} products</span>
                     <span className="text-cyan-600 dark:text-cyan-400">🔧 {serviceCount} services</span>
                 </div>
@@ -108,40 +108,40 @@ export function ServicesListWithCRUD() {
                 </Button>
             </div>
 
-            {/* Services Grid */}
+            {/* Solutions Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {data.services.map((service) => (
+                {data.solutionViews.map((solution) => (
                     <button
-                        key={service.id}
-                        onClick={() => openService(service.id)}
+                        key={solution.id}
+                        onClick={() => openSolution(solution.id)}
                         className="text-left p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-orange-300 dark:hover:border-orange-700 transition-colors"
                     >
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xl">
-                                {service.isProduct && service.isService ? "📦🔧" : service.isProduct ? "📦" : "🔧"}
+                                {solution.isProduct && solution.isService ? "📦🔧" : solution.isProduct ? "📦" : "🔧"}
                             </span>
                             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate flex-1">
-                                {service.name}
+                                {solution.name}
                             </h3>
                         </div>
                         <p className="text-sm text-zinc-500 line-clamp-2 mb-3">
-                            {service.description || "No description"}
+                            {solution.description || "No description"}
                         </p>
                         <div className="flex items-center justify-between">
-                            <TypeBadges service={service} />
+                            <TypeBadges solution={solution} />
                             <span className="text-xs text-zinc-500">
-                                {getProjectCount(service.id)} project{getProjectCount(service.id) !== 1 ? "s" : ""}
+                                {getProjectCount(solution.id)} project{getProjectCount(solution.id) !== 1 ? "s" : ""}
                             </span>
                         </div>
                     </button>
                 ))}
             </div>
 
-            {/* Service Detail Panel */}
+            {/* Solution Detail Panel */}
             <EntityDetailPanel
-                isOpen={selectedService !== null}
-                onClose={() => setSelectedService(null)}
-                title={data.services.find((s) => s.id === selectedService)?.name ?? ""}
+                isOpen={selectedSolution !== null}
+                onClose={() => setSelectedSolution(null)}
+                title={data.solutionViews.find((s) => s.id === selectedSolution)?.name ?? ""}
                 isEditing={isEditing}
                 onEditToggle={() => setIsEditing(!isEditing)}
                 onSave={handleSave}
@@ -164,7 +164,7 @@ export function ServicesListWithCRUD() {
                         <FormField label="Status">
                             <SelectInput
                                 value={editForm.status ?? "catalog"}
-                                onChange={(v) => setEditForm({ ...editForm, status: v as Service["status"] })}
+                                onChange={(v) => setEditForm({ ...editForm, status: v as SolutionView["status"] })}
                                 options={[
                                     { value: "pipeline", label: "Pipeline" },
                                     { value: "catalog", label: "Catalog" },
@@ -203,22 +203,22 @@ export function ServicesListWithCRUD() {
                         <div className="mt-2">
                             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Type</label>
                             <div className="mt-1">
-                                <TypeBadges service={editForm as Service} />
+                                <TypeBadges solution={editForm as SolutionView} />
                             </div>
                         </div>
-                        <DisplayField label="ID" value={selectedService ?? ""} />
+                        <DisplayField label="ID" value={selectedSolution ?? ""} />
 
                         {/* Related Projects */}
                         <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                             <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                                 Projects
                             </h4>
-                            {data.projects.filter((p) => p.serviceId === selectedService).length === 0 ? (
+                            {data.projects.filter((p) => p.solutionId === selectedSolution).length === 0 ? (
                                 <p className="text-sm text-zinc-500 italic">No projects</p>
                             ) : (
                                 <ul className="space-y-1">
                                     {data.projects
-                                        .filter((p) => p.serviceId === selectedService)
+                                        .filter((p) => p.solutionId === selectedSolution)
                                         .map((project) => (
                                             <li key={project.id} className="text-sm text-zinc-600 dark:text-zinc-400">
                                                 📁 {project.name}
@@ -231,7 +231,7 @@ export function ServicesListWithCRUD() {
                 )}
             </EntityDetailPanel>
 
-            {/* Create Service Panel */}
+            {/* Create Solution Panel */}
             <EntityDetailPanel
                 isOpen={showCreate}
                 onClose={() => setShowCreate(false)}
@@ -241,22 +241,22 @@ export function ServicesListWithCRUD() {
             >
                 <FormField label="Name">
                     <TextInput
-                        value={newService.name}
-                        onChange={(v) => setNewService({ ...newService, name: v })}
+                        value={newSolution.name}
+                        onChange={(v) => setNewSolution({ ...newSolution, name: v })}
                         placeholder="Enter name"
                     />
                 </FormField>
                 <FormField label="Description">
                     <TextArea
-                        value={newService.description ?? ""}
-                        onChange={(v) => setNewService({ ...newService, description: v })}
+                        value={newSolution.description ?? ""}
+                        onChange={(v) => setNewSolution({ ...newSolution, description: v })}
                         placeholder="Describe the product or service"
                     />
                 </FormField>
                 <FormField label="Status">
                     <SelectInput
-                        value={newService.status}
-                        onChange={(v) => setNewService({ ...newService, status: v as Service["status"] })}
+                        value={newSolution.status}
+                        onChange={(v) => setNewSolution({ ...newSolution, status: v as SolutionView["status"] })}
                         options={[
                             { value: "pipeline", label: "Pipeline" },
                             { value: "catalog", label: "Catalog" },
@@ -268,8 +268,8 @@ export function ServicesListWithCRUD() {
                     <label className="flex items-center gap-2 text-sm">
                         <input
                             type="checkbox"
-                            checked={newService.isProduct ?? false}
-                            onChange={(e) => setNewService({ ...newService, isProduct: e.target.checked })}
+                            checked={newSolution.isProduct ?? false}
+                            onChange={(e) => setNewSolution({ ...newSolution, isProduct: e.target.checked })}
                             className="rounded border-zinc-300 dark:border-zinc-700"
                         />
                         <span>Is a Product</span>
@@ -277,8 +277,8 @@ export function ServicesListWithCRUD() {
                     <label className="flex items-center gap-2 text-sm">
                         <input
                             type="checkbox"
-                            checked={newService.isService ?? false}
-                            onChange={(e) => setNewService({ ...newService, isService: e.target.checked })}
+                            checked={newSolution.isService ?? false}
+                            onChange={(e) => setNewSolution({ ...newSolution, isService: e.target.checked })}
                             className="rounded border-zinc-300 dark:border-zinc-700"
                         />
                         <span>Is a Service</span>

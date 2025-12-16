@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun run db:sync && bun --bun next dev --turbopack",
-    "dev:sync": "bun run src/db/sync.ts --watch",
+    "dev": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun run db:sync && RUBIGO_SEED_DIR=../common/scenarios/mmc RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack",
+    "dev:clean": "bun --bun next dev --turbopack",
+    "dev:sync": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun run src/db/sync.ts --watch",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
     "lint": "eslint .",
@@ -14,17 +15,21 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun src/db/seed.ts",
-    "db:sync": "bun src/db/sync.ts",
-    "db:sync:watch": "bun src/db/sync.ts --watch",
+    "db:seed": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/seed.ts",
+    "db:sync": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/sync.ts",
+    "db:sync:watch": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/sync.ts --watch",
     "db:clean": "bun src/db/clean.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test:e2e": "bunx playwright test",
+    "test:e2e:ui": "bunx playwright test --ui",
+    "test:e2e:full": "./scripts/run-e2e.sh"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
+    "@scure/bip39": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
@@ -35,6 +40,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "^1.3.4",

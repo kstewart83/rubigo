@@ -1,52 +1,148 @@
 /**
- * Project Management type definitions based on common/schemas/project.schema.json
+ * Requirements & Delivery Ontology type definitions
  * 
- * This implements the Requirements & Delivery Ontology with the Strategy Cascade:
- * Objective → KPI (references Metric) → Initiative → Activity
+ * This implements the full ontology with four spaces:
+ * - Requirements Space: Objective → Feature → Rule → Scenario
+ * - Solution Space: Solution → Product/Service → Release → Evidence → Evaluation
+ * - Activity Space: Activity → Assignment → Allocation
+ * - Resource Space: (to be added)
  */
 
 // ============================================================================
 // Status Enums
 // ============================================================================
 
-export type ServiceStatus = "pipeline" | "catalog" | "retired";
+export type SolutionStatus = "pipeline" | "catalog" | "retired";
+export type ReleaseStatus = "planned" | "released" | "deprecated";
 export type ProjectStatus = "planning" | "active" | "on_hold" | "complete" | "cancelled";
 export type ObjectiveStatus = "draft" | "active" | "achieved" | "deferred";
 export type FeatureStatus = "planned" | "in_progress" | "complete" | "cancelled";
+export type RuleStatus = "draft" | "active" | "deprecated";
+export type ScenarioStatus = "draft" | "active" | "deprecated";
+export type SpecificationStatus = "draft" | "active" | "deprecated";
+export type SpecificationCategory = "performance" | "security" | "usability" | "reliability" | "accessibility" | "maintainability";
+export type EvidenceType = "test_result" | "screenshot" | "recording" | "document";
+export type Verdict = "pass" | "fail" | "inconclusive";
 export type InitiativeStatus = "planned" | "active" | "complete" | "cancelled";
 export type ActivityStatus = "backlog" | "ready" | "in_progress" | "blocked" | "complete";
 export type KPIDirection = "increase" | "decrease" | "maintain";
 export type RACIType = "responsible" | "accountable" | "consulted" | "informed";
 
 // ============================================================================
-// Core Entities
+// Solution Space
 // ============================================================================
 
 /**
- * Service - Persistent business product or service offering
- * Lives beyond projects; part of the Product/Service Portfolio
- * 
- * Note: isProduct and isService are not mutually exclusive.
- * - isProduct: Can be acquired/deployed by customers (e.g., HVAC equipment)
- * - isService: Ongoing provision of value (e.g., maintenance contracts, internal IT services)
+ * Solution - Base entity for Products and Services
+ * Common fields shared by both specializations
  */
-export interface Service {
+export interface Solution {
     id: string;
     name: string;
     description?: string;
-    status: ServiceStatus;
-    isProduct?: boolean;
-    isService?: boolean;
+    status: SolutionStatus;
 }
 
 /**
- * Project - Temporary effort to create or modify a service
+ * Product - Deliverable that can be acquired/deployed by customers
+ * Extends Solution via solutionId reference
+ */
+export interface Product {
+    id: string;
+    solutionId: string;
+    version?: string;
+    releaseDate?: string;
+}
+
+/**
+ * Service - Ongoing provision of value
+ * Extends Solution via solutionId reference
+ */
+export interface Service {
+    id: string;
+    solutionId: string;
+    serviceLevel?: string;
+}
+
+/**
+ * Release - Versioned snapshot of a Product
+ */
+export interface Release {
+    id: string;
+    productId: string;
+    version: string;
+    releaseDate?: string;
+    notes?: string;
+    status: ReleaseStatus;
+}
+
+// ============================================================================
+// UI Compatibility Layer
+// ============================================================================
+
+/**
+ * SolutionView - Flattened view for UI backward compatibility
+ * Combines Solution + Product/Service into a single view that mirrors
+ * the old Service entity structure the UI was built around.
+ * 
+ * Use this for UI display; use normalized entities for database operations.
+ */
+export interface SolutionView {
+    // From Solution (base)
+    id: string;
+    name: string;
+    description?: string;
+    status: SolutionStatus;
+
+    // Computed flags (like old Service.isProduct/isService)
+    isProduct: boolean;
+    isService: boolean;
+
+    // From Product (if isProduct)
+    productId?: string;
+    version?: string;
+    productReleaseDate?: string;
+
+    // From Service (if isService)
+    serviceId?: string;
+    serviceLevel?: string;
+}
+
+/**
+ * Helper to create SolutionView from normalized entities
+ */
+export function createSolutionView(
+    solution: Solution,
+    product?: Product,
+    service?: Service
+): SolutionView {
+    return {
+        id: solution.id,
+        name: solution.name,
+        description: solution.description,
+        status: solution.status,
+        isProduct: !!product,
+        isService: !!service,
+        productId: product?.id,
+        version: product?.version,
+        productReleaseDate: product?.releaseDate,
+        serviceId: service?.id,
+        serviceLevel: service?.serviceLevel,
+    };
+}
+
+// ============================================================================
+// Project & Objectives
+// ============================================================================
+
+/**
+ * Project - Temporary effort to create or modify a solution
  */
 export interface Project {
     id: string;
     name: string;
     description?: string;
-    serviceId: string;
+    solutionId: string;
     status: ProjectStatus;
     startDate?: string;
     endDate?: string;
@@ -65,6 +161,10 @@ export interface Objective {
     status: ObjectiveStatus;
 }
 
+// ============================================================================
+// Requirements Space
+// ============================================================================
+
 /**
  * Feature - Distinct capability that helps satisfy an objective
  */
@@ -76,13 +176,78 @@ export interface Feature {
     status: FeatureStatus;
 }
 
+/**
+ * Rule - User story using Three Rs format
+ * "As a {role}, I want to {requirement}, so I can {reason}"
+ */
+export interface Rule {
+    id: string;
+    featureId: string;
+    role: string;
+    requirement: string;
+    reason: string;
+    status: RuleStatus;
+}
+
+/**
+ * Scenario - Testable acceptance criterion
+ * Uses Given/When/Then inspired narrative (freeform, not strict Gherkin)
+ */
+export interface Scenario {
+    id: string;
+    ruleId: string;
+    name: string;
+    narrative: string;
+    status: ScenarioStatus;
+}
+
+/**
+ * Specification - Non-functional requirement using RFC 2119 language
+ */
+export interface Specification {
+    id: string;
+    featureId: string;
+    name: string;
+    narrative: string;
+    category: SpecificationCategory;
+    status: SpecificationStatus;
+}
+
+// ============================================================================
+// Verification Space
+// ============================================================================
+
+/**
+ * Evidence - Artifact that validates a Scenario or Specification
+ */
+export interface Evidence {
+    id: string;
+    releaseId: string;
+    scenarioId?: string;
+    specificationId?: string;
+    type: EvidenceType;
+    artifactUrl?: string;
+    capturedAt: string;
+}
+
+/**
+ * Evaluation - Pass/Fail verdict on Evidence
+ */
+export interface Evaluation {
+    id: string;
+    evidenceId: string;
+    verdict: Verdict;
+    evaluatorId?: string;
+    evaluatedAt: string;
+    notes?: string;
+}
+
 // ============================================================================
 // Strategy Cascade: Metric → KPI → Initiative
 // ============================================================================
 
 /**
  * Metric - Raw measurement gathered from operations
- * Metrics exist independently; they may or may not be useful for management
  */
 export interface Metric {
     id: string;
@@ -95,8 +260,7 @@ export interface Metric {
 
 /**
  * KPI - Key Performance Indicator
- * A Metric that management has chosen to align to an Objective
- * References a Metric (not extends); objectiveId is optional
+ * A Metric aligned to an Objective with target and thresholds
  */
 export interface KPI {
     id: string;
@@ -110,7 +274,6 @@ export interface KPI {
 
 /**
  * Initiative - Short-term focused effort to move a KPI
- * Decomposes into Activities
  */
 export interface Initiative {
     id: string;
@@ -128,7 +291,6 @@ export interface Initiative {
 
 /**
  * Activity - Discrete unit of work
- * Can form hierarchies via parentId, can be blocked by other activities
  */
 export interface Activity {
     id: string;
@@ -150,8 +312,7 @@ export interface Role {
 }
 
 /**
- * Assignment - Planned slot for a role needed to complete work (The Plan)
- * Represents demand: "We need X amount of Role Y for Activity Z"
+ * Assignment - Planned slot for a role (The Plan)
  */
 export interface Assignment {
     id: string;
@@ -164,7 +325,6 @@ export interface Assignment {
 
 /**
  * Allocation - Concrete contribution from a resource (The Fulfillment)
- * Represents supply: "Person P contributes X to Assignment A"
  */
 export interface Allocation {
     id: string;
@@ -186,13 +346,29 @@ export interface ProjectData {
     description: {
         overview: string;
     };
+    // Solution Space (normalized)
+    solutions: Solution[];
+    products: Product[];
     services: Service[];
+    releases: Release[];
+    // UI Compatibility (denormalized view)
+    solutionViews: SolutionView[];
+    // Project & Objectives
     projects: Project[];
     objectives: Objective[];
+    // Requirements Space
     features: Feature[];
+    rules: Rule[];
+    scenarios: Scenario[];
+    specifications: Specification[];
+    // Verification Space
+    evidences: Evidence[];
+    evaluations: Evaluation[];
+    // Strategy Cascade
     metrics: Metric[];
     kpis: KPI[];
     initiatives: Initiative[];
+    // Activity Space
     activities: Activity[];
     roles: Role[];
     assignments: Assignment[];
@@ -202,6 +378,15 @@ export interface ProjectData {
 // ============================================================================
 // Computed/Derived Types (for UI)
 // ============================================================================
+
+/**
+ * Solution with its Product/Service specialization
+ */
+export interface SolutionWithType extends Solution {
+    product?: Product;
+    service?: Service;
+    releases?: Release[];
+}
 
 /**
  * KPI with resolved Metric data for display
@@ -221,7 +406,24 @@ export interface AssignmentWithCapacity extends Assignment {
     activity: Activity;
     allocations: Allocation[];
     totalAllocated: number;
-    capacityGap: number; // positive = under-resourced, negative = over-resourced
+    capacityGap: number;
+}
+
+/**
+ * Feature with its Rules and Scenarios
+ */
+export interface FeatureWithRequirements extends Feature {
+    rules: RuleWithScenarios[];
+    specifications: Specification[];
+}
+
+/**
+ * Rule with its Scenarios
+ */
+export interface RuleWithScenarios extends Rule {
+    scenarios: Scenario[];
+    /** Computed narrative: "As a {role}, I want to {requirement}, so I can {reason}" */
+    narrative: string;
 }
 
 /**
@@ -229,6 +431,13 @@ export interface AssignmentWithCapacity extends Assignment {
  */
 export interface ObjectiveTreeNode extends Objective {
     children: ObjectiveTreeNode[];
-    features: Feature[];
+    features: FeatureWithRequirements[];
     kpis: KPIWithMetric[];
+}
+
+/**
+ * Helper to generate Rule narrative from Three Rs
+ */
+export function formatRuleNarrative(rule: Rule): string {
+    return `As a ${rule.role}, I want to ${rule.requirement}, so I can ${rule.reason}`;
 }

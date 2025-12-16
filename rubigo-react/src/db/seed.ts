@@ -15,10 +15,18 @@ import { join } from "path";
 const TOML_PATH = join(process.cwd(), "src/data/projects.toml");
 
 interface RawTomlData {
+    solutions?: Array<Record<string, unknown>>;
+    products?: Array<Record<string, unknown>>;
     services?: Array<Record<string, unknown>>;
+    releases?: Array<Record<string, unknown>>;
     projects?: Array<Record<string, unknown>>;
     objectives?: Array<Record<string, unknown>>;
     features?: Array<Record<string, unknown>>;
+    rules?: Array<Record<string, unknown>>;
+    scenarios?: Array<Record<string, unknown>>;
+    specifications?: Array<Record<string, unknown>>;
+    evidences?: Array<Record<string, unknown>>;
+    evaluations?: Array<Record<string, unknown>>;
     metrics?: Array<Record<string, unknown>>;
     kpis?: Array<Record<string, unknown>>;
     initiatives?: Array<Record<string, unknown>>;
@@ -46,29 +54,60 @@ async function seed() {
     // Clear existing data (in reverse dependency order)
     console.log("🗑️  Clearing existing data...");
     await db.delete(schema.actionLogs);
+    await db.delete(schema.evaluations);
+    await db.delete(schema.evidences);
     await db.delete(schema.allocations);
     await db.delete(schema.assignments);
     await db.delete(schema.activities);
     await db.delete(schema.initiatives);
     await db.delete(schema.kpis);
+    await db.delete(schema.scenarios);
+    await db.delete(schema.specifications);
+    await db.delete(schema.rules);
     await db.delete(schema.features);
     await db.delete(schema.objectives);
     await db.delete(schema.metrics);
     await db.delete(schema.roles);
     await db.delete(schema.projects);
+    await db.delete(schema.releases);
+    await db.delete(schema.products);
     await db.delete(schema.services);
+    await db.delete(schema.solutions);
 
-    // Import Services
-    if (data.services?.length) {
-        console.log(`📦 Importing ${data.services.length} services...`);
-        for (const s of data.services) {
-            await db.insert(schema.services).values({
+    // Import Solutions
+    if (data.solutions?.length) {
+        console.log(`📦 Importing ${data.solutions.length} solutions...`);
+        for (const s of data.solutions) {
+            await db.insert(schema.solutions).values({
                 id: s.id as string,
                 name: s.name as string,
                 description: s.description as string | undefined,
                 status: s.status as "pipeline" | "catalog" | "retired" | undefined,
-                isProduct: (s.is_product as boolean) ?? false,
-                isService: (s.is_service as boolean) ?? false,
+            });
+        }
+    }
+
+    // Import Products
+    if (data.products?.length) {
+        console.log(`📍 Importing ${data.products.length} products...`);
+        for (const p of data.products) {
+            await db.insert(schema.products).values({
+                id: p.id as string,
+                solutionId: p.solution_id as string,
+                version: p.version as string | undefined,
+                releaseDate: p.release_date as string | undefined,
+            });
+        }
+    }
+
+    // Import Services
+    if (data.services?.length) {
+        console.log(`🔧 Importing ${data.services.length} services...`);
+        for (const s of data.services) {
+            await db.insert(schema.services).values({
+                id: s.id as string,
+                solutionId: s.solution_id as string,
+                serviceLevel: s.service_level as string | undefined,
             });
         }
     }
@@ -81,7 +120,7 @@ async function seed() {
                 id: p.id as string,
                 name: p.name as string,
                 description: p.description as string | undefined,
-                serviceId: p.service_id as string | undefined,
+                solutionId: p.solution_id as string | undefined,
                 status: p.status as "planning" | "active" | "on_hold" | "complete" | "cancelled" | undefined,
                 startDate: p.start_date as string | undefined,
                 endDate: p.end_date as string | undefined,
@@ -114,6 +153,50 @@ async function seed() {
                 description: f.description as string | undefined,
                 objectiveId: f.objective_id as string | undefined,
                 status: f.status as "planned" | "in_progress" | "complete" | "cancelled" | undefined,
+            });
+        }
+    }
+
+    // Import Rules
+    if (data.rules?.length) {
+        console.log(`📜 Importing ${data.rules.length} rules...`);
+        for (const r of data.rules) {
+            await db.insert(schema.rules).values({
+                id: r.id as string,
+                featureId: r.feature_id as string,
+                role: r.role as string,
+                requirement: r.requirement as string,
+                reason: r.reason as string,
+                status: r.status as "draft" | "active" | "deprecated" | undefined,
+            });
+        }
+    }
+
+    // Import Scenarios
+    if (data.scenarios?.length) {
+        console.log(`🎬 Importing ${data.scenarios.length} scenarios...`);
+        for (const s of data.scenarios) {
+            await db.insert(schema.scenarios).values({
+                id: s.id as string,
+                ruleId: s.rule_id as string,
+                name: s.name as string,
+                narrative: s.narrative as string,
+                status: s.status as "draft" | "active" | "deprecated" | undefined,
+            });
+        }
+    }
+
+    // Import Specifications
+    if (data.specifications?.length) {
+        console.log(`📋 Importing ${data.specifications.length} specifications...`);
+        for (const s of data.specifications) {
+            await db.insert(schema.specifications).values({
+                id: s.id as string,
+                featureId: s.feature_id as string,
+                name: s.name as string,
+                narrative: s.narrative as string,
+                category: s.category as "performance" | "security" | "usability" | "reliability" | "accessibility" | "maintainability",
+                status: s.status as "draft" | "active" | "deprecated" | undefined,
             });
         }
     }
@@ -227,11 +310,11 @@ async function seed() {
 
     // Print summary
     const counts = {
-        services: await db.select().from(schema.services).then(r => r.length),
+        solutions: await db.select().from(schema.solutions).then(r => r.length),
         projects: await db.select().from(schema.projects).then(r => r.length),
         objectives: await db.select().from(schema.objectives).then(r => r.length),
     };
-    console.log(`   Services: ${counts.services}`);
+    console.log(`   Solutions: ${counts.solutions}`);
     console.log(`   Projects: ${counts.projects}`);
     console.log(`   Objectives: ${counts.objectives}`);
 }

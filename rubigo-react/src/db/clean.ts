@@ -16,6 +16,12 @@ async function clean() {
     console.log("   Deleting action logs...");
     await db.delete(schema.actionLogs);
 
+    console.log("   Deleting evaluations...");
+    await db.delete(schema.evaluations);
+
+    console.log("   Deleting evidences...");
+    await db.delete(schema.evidences);
+
     console.log("   Deleting allocations...");
     await db.delete(schema.allocations);
 
@@ -30,6 +36,15 @@ async function clean() {
 
     console.log("   Deleting KPIs...");
     await db.delete(schema.kpis);
+
+    console.log("   Deleting scenarios...");
+    await db.delete(schema.scenarios);
+
+    console.log("   Deleting specifications...");
+    await db.delete(schema.specifications);
+
+    console.log("   Deleting rules...");
+    await db.delete(schema.rules);
 
     console.log("   Deleting features...");
     await db.delete(schema.features);
@@ -46,11 +61,23 @@ async function clean() {
     console.log("   Deleting projects...");
     await db.delete(schema.projects);
 
+    console.log("   Deleting releases...");
+    await db.delete(schema.releases);
+
+    console.log("   Deleting products...");
+    await db.delete(schema.products);
+
     console.log("   Deleting services...");
     await db.delete(schema.services);
 
-    console.log("\n✅ Database cleaned! All tables are now empty.");
-    console.log("   Run 'bun run db:sync' to repopulate from TOML.");
+    console.log("   Deleting solutions...");
+    await db.delete(schema.solutions);
+
+    console.log("   Deleting personnel (including Global Admin)...");
+    await db.delete(schema.personnel);
+
+    console.log("\n✅ Database cleaned! System reset to uninitialized state.");
+    console.log("   Run 'bun run start' to begin fresh initialization.");
 }
 
 clean().catch((err) => {

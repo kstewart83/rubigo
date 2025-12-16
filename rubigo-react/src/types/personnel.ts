@@ -15,7 +15,7 @@ export interface Person {
     id: string;
     name: string;
     email: string;
-    title: string;
+    title?: string;
     department: Department;
     site?: string;
     building?: string;
@@ -26,6 +26,7 @@ export interface Person {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
+    isGlobalAdmin?: boolean;
 }
 
 export interface PersonnelData {

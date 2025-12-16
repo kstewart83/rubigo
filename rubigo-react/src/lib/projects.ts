@@ -3,16 +3,26 @@
  * 
  * Server-side data access for the project management module.
  * Reads from SQLite database (seeded from TOML).
+ * Updated for the full Requirements & Delivery Ontology.
  */
 
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import type {
     ProjectData,
+    Solution,
+    Product,
     Service,
+    Release,
+    SolutionView,
     Project,
     Objective,
     Feature,
+    Rule,
+    Scenario,
+    Specification,
+    Evidence,
+    Evaluation,
     Metric,
     KPI,
     Initiative,
@@ -23,6 +33,7 @@ import type {
     KPIWithMetric,
     AssignmentWithCapacity,
     ObjectiveTreeNode,
+    FeatureWithRequirements,
 } from "@/types/project";
 
 // ============================================================================
@@ -34,10 +45,18 @@ import type {
  */
 export function getProjectData(): ProjectData {
     // Load all entities from SQLite
+    const solutionsRaw = db.select().from(schema.solutions).all();
+    const productsRaw = db.select().from(schema.products).all();
     const servicesRaw = db.select().from(schema.services).all();
+    const releasesRaw = db.select().from(schema.releases).all();
     const projectsRaw = db.select().from(schema.projects).all();
     const objectivesRaw = db.select().from(schema.objectives).all();
     const featuresRaw = db.select().from(schema.features).all();
+    const rulesRaw = db.select().from(schema.rules).all();
+    const scenariosRaw = db.select().from(schema.scenarios).all();
+    const specificationsRaw = db.select().from(schema.specifications).all();
+    const evidencesRaw = db.select().from(schema.evidences).all();
+    const evaluationsRaw = db.select().from(schema.evaluations).all();
     const metricsRaw = db.select().from(schema.metrics).all();
     const kpisRaw = db.select().from(schema.kpis).all();
     const initiativesRaw = db.select().from(schema.initiatives).all();
@@ -46,23 +65,67 @@ export function getProjectData(): ProjectData {
     const assignmentsRaw = db.select().from(schema.assignments).all();
     const allocationsRaw = db.select().from(schema.allocations).all();
 
-    // Transform to expected types (handle any column name differences)
+    // Build SolutionViews for UI compatibility
+    const productBySolution = new Map(productsRaw.map(p => [p.solutionId, p]));
+    const serviceBySolution = new Map(servicesRaw.map(s => [s.solutionId, s]));
+
+    const solutionViews: SolutionView[] = solutionsRaw.map(solution => {
+        const product = productBySolution.get(solution.id);
+        const service = serviceBySolution.get(solution.id);
+
+        return {
+            id: solution.id,
+            name: solution.name,
+            description: solution.description ?? undefined,
+            status: (solution.status ?? "catalog") as SolutionView["status"],
+            isProduct: !!product,
+            isService: !!service,
+            productId: product?.id,
+            version: product?.version ?? undefined,
+            productReleaseDate: product?.releaseDate ?? undefined,
+            serviceId: service?.id,
+            serviceLevel: service?.serviceLevel ?? undefined,
+        };
+    });
+
+    // Transform to expected types
     return {
         description: { overview: "Loaded from SQLite database" },
-        services: servicesRaw.map((s): Service => ({
+        // Solution Space
+        solutions: solutionsRaw.map((s): Solution => ({
             id: s.id,
             name: s.name,
             description: s.description ?? undefined,
-            status: s.status as Service["status"],
-            isProduct: s.isProduct ?? false,
-            isService: s.isService ?? false,
+            status: (s.status ?? "catalog") as Solution["status"],
         })),
+        products: productsRaw.map((p): Product => ({
+            id: p.id,
+            solutionId: p.solutionId,
+            version: p.version ?? undefined,
+            releaseDate: p.releaseDate ?? undefined,
+        })),
+        services: servicesRaw.map((s): Service => ({
+            id: s.id,
+            solutionId: s.solutionId,
+            serviceLevel: s.serviceLevel ?? undefined,
+        })),
+        releases: releasesRaw.map((r): Release => ({
+            id: r.id,
+            productId: r.productId,
+            version: r.version,
+            releaseDate: r.releaseDate ?? undefined,
+            notes: r.notes ?? undefined,
+            status: (r.status ?? "planned") as Release["status"],
+        })),
+        // UI Compatibility
+        solutionViews,
+        // Projects & Objectives
         projects: projectsRaw.map((p): Project => ({
             id: p.id,
             name: p.name,
             description: p.description ?? undefined,
-            serviceId: p.serviceId ?? "",
-            status: p.status as Project["status"],
+            solutionId: p.solutionId ?? "",
+            status: (p.status ?? "planning") as Project["status"],
             startDate: p.startDate ?? undefined,
             endDate: p.endDate ?? undefined,
         })),
@@ -72,15 +135,58 @@ export function getProjectData(): ProjectData {
             description: o.description ?? undefined,
             projectId: o.projectId ?? "",
             parentId: o.parentId ?? undefined,
-            status: o.status as Objective["status"],
+            status: (o.status ?? "draft") as Objective["status"],
         })),
+        // Requirements Space
         features: featuresRaw.map((f): Feature => ({
             id: f.id,
             name: f.name,
             description: f.description ?? undefined,
             objectiveId: f.objectiveId ?? "",
-            status: f.status as Feature["status"],
+            status: (f.status ?? "planned") as Feature["status"],
         })),
+        rules: rulesRaw.map((r): Rule => ({
+            id: r.id,
+            featureId: r.featureId,
+            role: r.role,
+            requirement: r.requirement,
+            reason: r.reason,
+            status: (r.status ?? "draft") as Rule["status"],
+        })),
+        scenarios: scenariosRaw.map((s): Scenario => ({
+            id: s.id,
+            ruleId: s.ruleId,
+            name: s.name,
+            narrative: s.narrative,
+            status: (s.status ?? "draft") as Scenario["status"],
+        })),
+        specifications: specificationsRaw.map((s): Specification => ({
+            id: s.id,
+            featureId: s.featureId,
+            name: s.name,
+            narrative: s.narrative,
+            category: s.category as Specification["category"],
+            status: (s.status ?? "draft") as Specification["status"],
+        })),
+        // Verification Space
+        evidences: evidencesRaw.map((e): Evidence => ({
+            id: e.id,
+            releaseId: e.releaseId,
+            scenarioId: e.scenarioId ?? undefined,
+            specificationId: e.specificationId ?? undefined,
+            type: e.type as Evidence["type"],
+            artifactUrl: e.artifactUrl ?? undefined,
+            capturedAt: e.capturedAt,
+        })),
+        evaluations: evaluationsRaw.map((e): Evaluation => ({
+            id: e.id,
+            evidenceId: e.evidenceId,
+            verdict: e.verdict as Evaluation["verdict"],
+            evaluatorId: e.evaluatorId ?? undefined,
+            evaluatedAt: e.evaluatedAt,
+            notes: e.notes ?? undefined,
+        })),
+        // Strategy Cascade
         metrics: metricsRaw.map((m): Metric => ({
             id: m.id,
             name: m.name,
@@ -103,10 +209,11 @@ export function getProjectData(): ProjectData {
             name: i.name,
             description: i.description ?? undefined,
             kpiId: i.kpiId ?? "",
-            status: i.status as Initiative["status"],
+            status: (i.status ?? "planned") as Initiative["status"],
             startDate: i.startDate ?? undefined,
             endDate: i.endDate ?? undefined,
         })),
+        // Activity Space
         activities: activitiesRaw.map((a): Activity => ({
             id: a.id,
             name: a.name,
@@ -114,7 +221,7 @@ export function getProjectData(): ProjectData {
             parentId: a.parentId ?? undefined,
             initiativeId: a.initiativeId ?? undefined,
             blockedBy: a.blockedBy ? JSON.parse(a.blockedBy) : undefined,
-            status: a.status as Activity["status"],
+            status: (a.status ?? "backlog") as Activity["status"],
         })),
         roles: rolesRaw.map((r): Role => ({
             id: r.id,
@@ -127,7 +234,7 @@ export function getProjectData(): ProjectData {
             roleId: a.roleId,
             quantity: a.quantity,
             unit: a.unit ?? "fte",
-            raciType: a.raciType as Assignment["raciType"],
+            raciType: (a.raciType ?? "responsible") as Assignment["raciType"],
         })),
         allocations: allocationsRaw.map((a): Allocation => ({
             id: a.id,
@@ -144,12 +251,12 @@ export function getProjectData(): ProjectData {
 // Basic Accessors
 // ============================================================================
 
-export function getAllServices(): Service[] {
-    return getProjectData().services;
+export function getAllSolutionViews(): SolutionView[] {
+    return getProjectData().solutionViews;
 }
 
-export function getServiceById(id: string): Service | undefined {
-    return getAllServices().find((s) => s.id === id);
+export function getSolutionViewById(id: string): SolutionView | undefined {
+    return getAllSolutionViews().find((s) => s.id === id);
 }
 
 export function getAllProjects(): Project[] {
@@ -160,8 +267,8 @@ export function getProjectById(id: string): Project | undefined {
     return getAllProjects().find((p) => p.id === id);
 }
 
-export function getProjectsByService(serviceId: string): Project[] {
-    return getAllProjects().filter((p) => p.serviceId === serviceId);
+export function getProjectsBySolution(solutionId: string): Project[] {
+    return getAllProjects().filter((p) => p.solutionId === solutionId);
 }
 
 export function getAllObjectives(): Objective[] {
@@ -180,6 +287,10 @@ export function getAllFeatures(): Feature[] {
     return getProjectData().features;
 }
 
+export function getFeatureById(id: string): Feature | undefined {
+    return getAllFeatures().find((f) => f.id === id);
+}
+
 export function getFeaturesByObjective(objectiveId: string): Feature[] {
     return getAllFeatures().filter((f) => f.objectiveId === objectiveId);
 }
@@ -196,12 +307,20 @@ export function getAllKPIs(): KPI[] {
     return getProjectData().kpis;
 }
 
+export function getKPIById(id: string): KPI | undefined {
+    return getAllKPIs().find((k) => k.id === id);
+}
+
 export function getKPIsByObjective(objectiveId: string): KPI[] {
     return getAllKPIs().filter((k) => k.objectiveId === objectiveId);
 }
 
 export function getAllInitiatives(): Initiative[] {
     return getProjectData().initiatives;
+}
+
+export function getInitiativeById(id: string): Initiative | undefined {
+    return getAllInitiatives().find((i) => i.id === id);
 }
 
 export function getInitiativesByKPI(kpiId: string): Initiative[] {
@@ -212,8 +331,8 @@ export function getAllActivities(): Activity[] {
     return getProjectData().activities;
 }
 
-export function getActivitiesByInitiative(initiativeId: string): Activity[] {
-    return getAllActivities().filter((a) => a.initiativeId === initiativeId);
+export function getActivityById(id: string): Activity | undefined {
+    return getAllActivities().find((a) => a.id === id);
 }
 
 export function getAllRoles(): Role[] {
@@ -228,48 +347,45 @@ export function getAllAssignments(): Assignment[] {
     return getProjectData().assignments;
 }
 
-export function getAssignmentsByActivity(activityId: string): Assignment[] {
-    return getAllAssignments().filter((a) => a.activityId === activityId);
+export function getAssignmentById(id: string): Assignment | undefined {
+    return getAllAssignments().find((a) => a.id === id);
 }
 
 export function getAllAllocations(): Allocation[] {
     return getProjectData().allocations;
 }
 
-export function getAllocationsByAssignment(assignmentId: string): Allocation[] {
-    return getAllAllocations().filter((a) => a.assignmentId === assignmentId);
+export function getAllocationById(id: string): Allocation | undefined {
+    return getAllAllocations().find((a) => a.id === id);
 }
 
 // ============================================================================
-// Computed Data Helpers
+// Derived/Computed Data
 // ============================================================================
 
 export function getKPIWithMetric(kpi: KPI): KPIWithMetric {
     const metric = getMetricById(kpi.metricId);
-    const objective = kpi.objectiveId ? getObjectiveById(kpi.objectiveId) : undefined;
-
-    let percentComplete: number | undefined;
-    if (metric?.currentValue !== undefined) {
-        const current = metric.currentValue;
-        const target = kpi.targetValue;
-
-        if (kpi.direction === "increase") {
-            percentComplete = Math.min(100, (current / target) * 100);
-        } else if (kpi.direction === "decrease") {
-            const startValue = (kpi.thresholdCritical ?? target * 2);
-            const progress = startValue - current;
-            const totalNeeded = startValue - target;
-            percentComplete = Math.min(100, Math.max(0, (progress / totalNeeded) * 100));
-        } else {
-            percentComplete = current === target ? 100 : Math.max(0, 100 - Math.abs(current - target));
-        }
+    if (!metric) {
+        throw new Error(`Metric ${kpi.metricId} not found for KPI ${kpi.id}`);
     }
+
+    const currentValue = metric.currentValue ?? 0;
+    const percentComplete =
+        kpi.direction === "maintain"
+            ? 100
+            : kpi.direction === "decrease"
+                ? currentValue <= kpi.targetValue
+                    ? 100
+                    : Math.max(0, 100 - ((currentValue - kpi.targetValue) / kpi.targetValue) * 100)
+                : currentValue >= kpi.targetValue
+                    ? 100
+                    : (currentValue / kpi.targetValue) * 100;
 
     return {
         ...kpi,
-        metric: metric!,
-        objective,
-        currentValue: metric?.currentValue,
+        metric,
+        objective: kpi.objectiveId ? getObjectiveById(kpi.objectiveId) : undefined,
+        currentValue,
         percentComplete,
     };
 }
@@ -280,16 +396,24 @@ export function getAllKPIsWithMetrics(): KPIWithMetric[] {
 
 export function getAssignmentWithCapacity(assignment: Assignment): AssignmentWithCapacity {
     const role = getRoleById(assignment.roleId);
-    const activity = getAllActivities().find((a) => a.id === assignment.activityId);
-    const allocations = getAllocationsByAssignment(assignment.id);
+    const activity = getActivityById(assignment.activityId);
 
-    const totalAllocated = allocations.reduce((sum, a) => sum + a.quantityContributed, 0);
-    const capacityGap = assignment.quantity - totalAllocated;
+    if (!role) throw new Error(`Role ${assignment.roleId} not found`);
+    if (!activity) throw new Error(`Activity ${assignment.activityId} not found`);
+
+    const allocations = getAllAllocations().filter(
+        (a) => a.assignmentId === assignment.id
+    );
+    const totalAllocated = allocations.reduce(
+        (sum, a) => sum + a.quantityContributed,
+        0
+    );
+    const capacityGap = Math.max(0, assignment.quantity - totalAllocated);
 
     return {
         ...assignment,
-        role: role!,
-        activity: activity!,
+        role,
+        activity,
         allocations,
         totalAllocated,
         capacityGap,
@@ -305,9 +429,13 @@ export function getUnderResourcedAssignments(): AssignmentWithCapacity[] {
 }
 
 export function getObjectiveTree(projectId: string): ObjectiveTreeNode[] {
-    const objectives = getObjectivesByProject(projectId);
-    const features = getAllFeatures();
-    const kpis = getAllKPIs();
+    const data = getProjectData();
+    const objectives = data.objectives.filter((o) => o.projectId === projectId);
+    const features = data.features;
+    const rules = data.rules;
+    const scenarios = data.scenarios;
+    const specifications = data.specifications;
+    const kpis = data.kpis;
 
     const roots = objectives.filter((o) => !o.parentId);
 
@@ -316,7 +444,23 @@ export function getObjectiveTree(projectId: string): ObjectiveTreeNode[] {
             .filter((o) => o.parentId === objective.id)
             .map(buildNode);
 
-        const objectiveFeatures = features.filter((f) => f.objectiveId === objective.id);
+        const objectiveFeatures: FeatureWithRequirements[] = features
+            .filter((f) => f.objectiveId === objective.id)
+            .map((f) => {
+                const featureRules = rules.filter((r) => r.featureId === f.id);
+                const featureSpecs = specifications.filter((s) => s.featureId === f.id);
+
+                return {
+                    ...f,
+                    rules: featureRules.map((r) => ({
+                        ...r,
+                        scenarios: scenarios.filter((s) => s.ruleId === r.id),
+                        narrative: `As a ${r.role}, I want to ${r.requirement}, so I can ${r.reason}`,
+                    })),
+                    specifications: featureSpecs,
+                };
+            });
+
         const objectiveKPIs = kpis
             .filter((k) => k.objectiveId === objective.id)
             .map(getKPIWithMetric);

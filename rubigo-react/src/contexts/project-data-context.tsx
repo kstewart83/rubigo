@@ -4,14 +4,13 @@ import {
     createContext,
     useContext,
     useState,
-    useEffect,
     useCallback,
     useTransition,
     type ReactNode,
 } from "react";
 import type {
     ProjectData,
-    Service,
+    SolutionView,
     Project,
     Objective,
     Feature,
@@ -22,6 +21,15 @@ import type {
     Role,
     Assignment,
     Allocation,
+    Solution,
+    Product,
+    Service,
+    Release,
+    Rule,
+    Scenario,
+    Specification,
+    Evidence,
+    Evaluation,
 } from "@/types/project";
 import type { EntityType, ActionType, FieldChange } from "@/types/logs";
 import * as actions from "@/lib/project-actions";
@@ -66,10 +74,10 @@ interface ProjectDataContextValue {
     isLoading: boolean;
     isPending: boolean;
 
-    // Services
-    updateService: (id: string, updates: Partial<Service>) => Promise<void>;
-    createService: (service: Omit<Service, "id">) => Promise<string>;
-    deleteService: (id: string) => Promise<void>;
+    // SolutionViews (UI Compatibility - replaces old Service CRUD)
+    updateSolutionView: (id: string, updates: Partial<SolutionView>) => Promise<void>;
+    createSolutionView: (view: Omit<SolutionView, "id" | "productId" | "serviceId">) => Promise<string>;
+    deleteSolutionView: (id: string) => Promise<void>;
 
     // Projects
     updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
@@ -137,21 +145,6 @@ interface ProjectDataProviderProps {
     onAction?: (event: ActionEvent) => void;
 }
 
-// Map entity names for logging
-const entityTypeMap: Record<string, EntityType> = {
-    service: 'service',
-    project: 'project',
-    objective: 'objective',
-    feature: 'feature',
-    metric: 'metric',
-    kpi: 'kpi',
-    initiative: 'initiative',
-    activity: 'activity',
-    role: 'role',
-    assignment: 'assignment',
-    allocation: 'allocation',
-};
-
 export function ProjectDataProvider({ children, initialData, onAction }: ProjectDataProviderProps) {
     const [data, setData] = useState<ProjectData>(initialData);
     const [isLoading, setIsLoading] = useState(false);
@@ -182,25 +175,44 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
         setIsLoading(true);
         try {
             const freshData = await actions.getAllProjectDataAction();
-            // Helper to convert null to undefined
             const nullToUndef = <T,>(val: T | null): T | undefined => val ?? undefined;
 
-            // Transform to match ProjectData types (SQLite uses null, TS types use undefined)
             setData({
                 description: freshData.description,
-                services: freshData.services.map(s => ({
+                // Solution Space (normalized)
+                solutions: freshData.solutions.map(s => ({
                     id: s.id,
                     name: s.name,
                     description: nullToUndef(s.description),
-                    status: (s.status ?? "catalog") as Service["status"],
-                    isProduct: s.isProduct ?? false,
-                    isService: s.isService ?? false,
+                    status: (s.status ?? "catalog") as Solution["status"],
                 })),
+                products: freshData.products.map(p => ({
+                    id: p.id,
+                    solutionId: p.solutionId,
+                    version: nullToUndef(p.version),
+                    releaseDate: nullToUndef(p.releaseDate),
+                })),
+                services: freshData.services.map(s => ({
+                    id: s.id,
+                    solutionId: s.solutionId,
+                    serviceLevel: nullToUndef(s.serviceLevel),
+                })),
+                releases: freshData.releases.map(r => ({
+                    id: r.id,
+                    productId: r.productId,
+                    version: r.version,
+                    releaseDate: nullToUndef(r.releaseDate),
+                    notes: nullToUndef(r.notes),
+                    status: (r.status ?? "planned") as Release["status"],
+                })),
+                // UI Compatibility
+                solutionViews: freshData.solutionViews,
+                // Projects & Objectives
                 projects: freshData.projects.map(p => ({
                     id: p.id,
                     name: p.name,
                     description: nullToUndef(p.description),
-                    serviceId: p.serviceId ?? "",
+                    solutionId: p.solutionId ?? "",
                     status: (p.status ?? "planning") as Project["status"],
                     startDate: nullToUndef(p.startDate),
                     endDate: nullToUndef(p.endDate),
@@ -213,6 +225,7 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
                     parentId: nullToUndef(o.parentId),
                     status: (o.status ?? "draft") as Objective["status"],
                 })),
+                // Requirements Space
                 features: freshData.features.map(f => ({
                     id: f.id,
                     name: f.name,
@@ -220,6 +233,48 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
                     objectiveId: f.objectiveId ?? "",
                     status: (f.status ?? "planned") as Feature["status"],
                 })),
+                rules: freshData.rules.map(r => ({
+                    id: r.id,
+                    featureId: r.featureId,
+                    role: r.role,
+                    requirement: r.requirement,
+                    reason: r.reason,
+                    status: (r.status ?? "draft") as Rule["status"],
+                })),
+                scenarios: freshData.scenarios.map(s => ({
+                    id: s.id,
+                    ruleId: s.ruleId,
+                    name: s.name,
+                    narrative: s.narrative,
+                    status: (s.status ?? "draft") as Scenario["status"],
+                })),
+                specifications: freshData.specifications.map(s => ({
+                    id: s.id,
+                    featureId: s.featureId,
+                    name: s.name,
+                    narrative: s.narrative,
+                    category: s.category as Specification["category"],
+                    status: (s.status ?? "draft") as Specification["status"],
+                })),
+                // Verification Space
+                evidences: freshData.evidences.map(e => ({
+                    id: e.id,
+                    releaseId: e.releaseId,
+                    scenarioId: nullToUndef(e.scenarioId),
+                    specificationId: nullToUndef(e.specificationId),
+                    type: e.type as Evidence["type"],
+                    artifactUrl: nullToUndef(e.artifactUrl),
+                    capturedAt: e.capturedAt,
+                })),
+                evaluations: freshData.evaluations.map(e => ({
+                    id: e.id,
+                    evidenceId: e.evidenceId,
+                    verdict: e.verdict as Evaluation["verdict"],
+                    evaluatorId: nullToUndef(e.evaluatorId),
+                    evaluatedAt: e.evaluatedAt,
+                    notes: nullToUndef(e.notes),
+                })),
+                // Strategy Cascade
                 metrics: freshData.metrics.map(m => ({
                     id: m.id,
                     name: m.name,
@@ -246,6 +301,7 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
                     startDate: nullToUndef(i.startDate),
                     endDate: nullToUndef(i.endDate),
                 })),
+                // Activity Space
                 activities: freshData.activities.map(a => ({
                     id: a.id,
                     name: a.name,
@@ -283,42 +339,41 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
     }, []);
 
     // ========================================================================
-    // Services
+    // SolutionViews (UI Compatibility Layer)
     // ========================================================================
-    const createService = useCallback(async (service: Omit<Service, "id">): Promise<string> => {
-        const newService = await actions.createServiceAction({
-            name: service.name,
-            description: service.description,
-            status: service.status,
-            isProduct: service.isProduct,
-            isService: service.isService,
-        });
+    const createSolutionView = useCallback(async (view: Omit<SolutionView, "id" | "productId" | "serviceId">): Promise<string> => {
+        const newView = await actions.createSolutionViewAction(view);
         setData(prev => ({
             ...prev,
-            services: [...prev.services, { ...service, id: newService.id, status: newService.status as Service["status"] }],
+            solutionViews: [...prev.solutionViews, newView],
         }));
-        logAction('create', 'service', newService.id);
-        return newService.id;
+        logAction('create', 'service', newView.id); // Log as 'service' for backward compat
+        return newView.id;
     }, [logAction]);
 
-    const updateService = useCallback(async (id: string, updates: Partial<Service>): Promise<void> => {
-        const oldService = data.services.find(s => s.id === id);
-        await actions.updateServiceAction(id, updates);
-        setData(prev => ({
-            ...prev,
-            services: prev.services.map(s => s.id === id ? { ...s, ...updates } : s),
-        }));
-        if (oldService) {
-            const changes = computeChanges(oldService as unknown as Record<string, unknown>, { ...oldService, ...updates } as unknown as Record<string, unknown>);
-            logAction('update', 'service', id, changes);
+    const updateSolutionView = useCallback(async (id: string, updates: Partial<SolutionView>): Promise<void> => {
+        const oldView = data.solutionViews.find(s => s.id === id);
+        const updated = await actions.updateSolutionViewAction(id, updates);
+        if (updated) {
+            setData(prev => ({
+                ...prev,
+                solutionViews: prev.solutionViews.map(s => s.id === id ? updated : s),
+            }));
+            if (oldView) {
+                const changes = computeChanges(
+                    oldView as unknown as Record<string, unknown>,
+                    updated as unknown as Record<string, unknown>
+                );
+                logAction('update', 'service', id, changes);
+            }
         }
-    }, [data.services, logAction]);
+    }, [data.solutionViews, logAction]);
 
-    const deleteService = useCallback(async (id: string): Promise<void> => {
-        await actions.deleteServiceAction(id);
+    const deleteSolutionView = useCallback(async (id: string): Promise<void> => {
+        await actions.deleteSolutionViewAction(id);
         setData(prev => ({
             ...prev,
-            services: prev.services.filter(s => s.id !== id),
+            solutionViews: prev.solutionViews.filter(s => s.id !== id),
         }));
         logAction('delete', 'service', id);
     }, [logAction]);
@@ -330,7 +385,7 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
         const newProject = await actions.createProjectAction({
             name: project.name,
             description: project.description,
-            serviceId: project.serviceId,
+            solutionId: project.solutionId,
             status: project.status,
             startDate: project.startDate,
             endDate: project.endDate,
@@ -743,9 +798,9 @@ export function ProjectDataProvider({ children, initialData, onAction }: Project
                 data,
                 isLoading,
                 isPending,
-                createService,
-                updateService,
-                deleteService,
+                createSolutionView,
+                updateSolutionView,
+                deleteSolutionView,
                 createProject,
                 updateProject,
                 deleteProject,

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useProjectData } from "@/contexts/project-data-context";
 import type {
-    Service,
+    SolutionView,
     Project,
     Objective,
     Initiative,
@@ -26,13 +26,13 @@ import { Button } from "@/components/ui/button";
 // ============================================================================
 
 export function ProjectOverviewWithCRUD() {
-    const { data, updateObjective, updateService, updateProject, updateMetric, updateKPI, updateInitiative, createObjective, deleteObjective } = useProjectData();
+    const { data, updateObjective, updateSolutionView, updateProject, updateMetric, updateKPI, updateInitiative, createObjective, deleteObjective } = useProjectData();
 
     const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(new Set());
 
     // Entity detail panel state
     const [selectedEntity, setSelectedEntity] = useState<{
-        type: "service" | "project" | "objective" | "metric" | "kpi" | "initiative";
+        type: "solution" | "project" | "objective" | "metric" | "kpi" | "initiative";
         id: string;
     } | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -62,8 +62,8 @@ export function ProjectOverviewWithCRUD() {
         // Load entity data into edit form
         let entity: unknown;
         switch (type) {
-            case "service":
-                entity = data.services.find((s) => s.id === id);
+            case "solution":
+                entity = data.solutionViews.find((s) => s.id === id);
                 break;
             case "project":
                 entity = data.projects.find((p) => p.id === id);
@@ -96,8 +96,8 @@ export function ProjectOverviewWithCRUD() {
         if (!selectedEntity) return;
 
         switch (selectedEntity.type) {
-            case "service":
-                updateService(selectedEntity.id, editForm as Partial<Service>);
+            case "solution":
+                updateSolutionView(selectedEntity.id, editForm as Partial<SolutionView>);
                 break;
             case "project":
                 updateProject(selectedEntity.id, editForm as Partial<Project>);
@@ -187,32 +187,32 @@ export function ProjectOverviewWithCRUD() {
                 />
             </div>
 
-            {/* Service & Project Overview */}
-            {data.services.map((service) => {
-                const serviceProjects = data.projects.filter((p) => p.serviceId === service.id);
+            {/* Solution & Project Overview */}
+            {data.solutionViews.map((solution) => {
+                const solutionProjects = data.projects.filter((p) => p.solutionId === solution.id);
 
                 return (
                     <div
-                        key={service.id}
+                        key={solution.id}
                         className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
-                        {/* Service Header */}
+                        {/* Solution Header */}
                         <button
-                            onClick={() => openEntityDetail("service", service.id)}
+                            onClick={() => openEntityDetail("solution", solution.id)}
                             className="w-full bg-zinc-50 dark:bg-zinc-900 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                         >
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">🏢</span>
+                                <span className="text-lg">{solution.isProduct && solution.isService ? "📦🔧" : solution.isProduct ? "📦" : "🔧"}</span>
                                 <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {service.name}
+                                    {solution.name}
                                 </h2>
-                                <StatusBadge status={service.status} />
+                                <StatusBadge status={solution.status} />
                                 <span className="text-xs text-zinc-500 ml-auto">Click to edit</span>
                             </div>
                         </button>
 
                         {/* Projects */}
-                        {serviceProjects.map((project) => {
+                        {solutionProjects.map((project) => {
                             const projectObjectives = data.objectives.filter(
                                 (o) => o.projectId === project.id
                             );
@@ -410,8 +410,8 @@ function getEntityTitle(
 ): string {
     if (!selected) return "";
     switch (selected.type) {
-        case "service":
-            return `Service: ${data.services.find((s) => s.id === selected.id)?.name ?? "Unknown"}`;
+        case "solution":
+            return `Solution: ${data.solutionViews.find((s) => s.id === selected.id)?.name ?? "Unknown"}`;
         case "project":
             return `Project: ${data.projects.find((p) => p.id === selected.id)?.name ?? "Unknown"}`;
         case "objective":

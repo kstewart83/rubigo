@@ -13,8 +13,14 @@ import { parse } from "@iarna/toml";
 import { readFileSync, existsSync, watch } from "fs";
 import { join } from "path";
 
-// TOML file location
-const TOML_PATH = join(process.cwd(), "src/data/projects.toml");
+// Get TOML file location from environment
+function getTomlPath(): string {
+    const seedDir = process.env.RUBIGO_SEED_DIR;
+    if (!seedDir) {
+        throw new Error("RUBIGO_SEED_DIR environment variable is not set. Cannot sync seed data.");
+    }
+    return join(seedDir, "projects.toml");
+}
 
 // Sync Engine persona for action logs
 const SYNC_ACTOR = {
@@ -23,10 +29,18 @@ const SYNC_ACTOR = {
 };
 
 interface RawTomlData {
+    solutions?: Array<Record<string, unknown>>;
+    products?: Array<Record<string, unknown>>;
     services?: Array<Record<string, unknown>>;
+    releases?: Array<Record<string, unknown>>;
     projects?: Array<Record<string, unknown>>;
     objectives?: Array<Record<string, unknown>>;
     features?: Array<Record<string, unknown>>;
+    rules?: Array<Record<string, unknown>>;
+    scenarios?: Array<Record<string, unknown>>;
+    specifications?: Array<Record<string, unknown>>;
+    evidences?: Array<Record<string, unknown>>;
+    evaluations?: Array<Record<string, unknown>>;
     metrics?: Array<Record<string, unknown>>;
     kpis?: Array<Record<string, unknown>>;
     initiatives?: Array<Record<string, unknown>>;
@@ -68,17 +82,69 @@ async function logAction(
 async function sync(): Promise<SyncStats> {
     const stats: SyncStats = { checked: 0, inserted: 0, skipped: 0 };
 
+    const tomlPath = getTomlPath();
+
     // Check if TOML file exists
-    if (!existsSync(TOML_PATH)) {
-        console.error(`❌ TOML file not found at: ${TOML_PATH}`);
+    if (!existsSync(tomlPath)) {
+        console.error(`❌ TOML file not found at: ${tomlPath}`);
         return stats;
     }
 
     // Parse TOML
-    const content = readFileSync(TOML_PATH, "utf-8");
+    const content = readFileSync(tomlPath, "utf-8");
     const data = parse(content) as RawTomlData;
 
     console.log("🔄 Syncing TOML data to database...");
+
+    // Sync Solutions
+    if (data.solutions?.length) {
+        for (const s of data.solutions) {
+            stats.checked++;
+            const id = s.id as string;
+
+            const existing = await db.select().from(schema.solutions).all();
+            const found = existing.some(e => e.id === id);
+
+            if (!found) {
+                await db.insert(schema.solutions).values({
+                    id,
+                    name: s.name as string,
+                    description: s.description as string | undefined,
+                    status: s.status as "pipeline" | "catalog" | "retired" | undefined,
+                });
+                await logAction("createSolution", "solution", id, "create");
+                stats.inserted++;
+                console.log(`  ✅ Created solution: ${s.name}`);
+            } else {
+                stats.skipped++;
+            }
+        }
+    }
+
+    // Sync Products
+    if (data.products?.length) {
+        for (const p of data.products) {
+            stats.checked++;
+            const id = p.id as string;
+
+            const existing = await db.select().from(schema.products).all();
+            const found = existing.some(e => e.id === id);
+
+            if (!found) {
+                await db.insert(schema.products).values({
+                    id,
+                    solutionId: p.solution_id as string,
+                    version: p.version as string | undefined,
+                    releaseDate: p.release_date as string | undefined,
+                });
+                await logAction("createProduct", "product", id, "create");
+                stats.inserted++;
+                console.log(`  ✅ Created product: ${id}`);
+            } else {
+                stats.skipped++;
+            }
+        }
+    }
 
     // Sync Services
     if (data.services?.length) {
@@ -92,15 +158,12 @@ async function sync(): Promise<SyncStats> {
             if (!found) {
                 await db.insert(schema.services).values({
                     id,
-                    name: s.name as string,
-                    description: s.description as string | undefined,
-                    status: s.status as "pipeline" | "catalog" | "retired" | undefined,
-                    isProduct: (s.is_product as boolean) ?? false,
-                    isService: (s.is_service as boolean) ?? false,
+                    solutionId: s.solution_id as string,
+                    serviceLevel: s.service_level as string | undefined,
                 });
                 await logAction("createService", "service", id, "create");
                 stats.inserted++;
-                console.log(`  ✅ Created service: ${s.name}`);
+                console.log(`  ✅ Created service: ${id}`);
             } else {
                 stats.skipped++;
             }
@@ -121,7 +184,7 @@ async function sync(): Promise<SyncStats> {
                     id,
                     name: p.name as string,
                     description: p.description as string | undefined,
-                    serviceId: p.service_id as string | undefined,
+                    solutionId: p.solution_id as string | undefined,
                     status: p.status as "planning" | "active" | "on_hold" | "complete" | "cancelled" | undefined,
                     startDate: p.start_date as string | undefined,
                     endDate: p.end_date as string | undefined,
@@ -182,6 +245,86 @@ async function sync(): Promise<SyncStats> {
                 await logAction("createFeature", "feature", id, "create");
                 stats.inserted++;
                 console.log(`  ✅ Created feature: ${f.name}`);
+            } else {
+                stats.skipped++;
+            }
+        }
+    }
+
+    // Sync Rules
+    if (data.rules?.length) {
+        for (const r of data.rules) {
+            stats.checked++;
+            const id = r.id as string;
+
+            const existing = await db.select().from(schema.rules).all();
+            const found = existing.some(e => e.id === id);
+
+            if (!found) {
+                await db.insert(schema.rules).values({
+                    id,
+                    featureId: r.feature_id as string,
+                    role: r.role as string,
+                    requirement: r.requirement as string,
+                    reason: r.reason as string,
+                    status: r.status as "draft" | "active" | "deprecated" | undefined,
+                });
+                await logAction("createRule", "rule", id, "create");
+                stats.inserted++;
+                console.log(`  ✅ Created rule: ${r.role}`);
+            } else {
+                stats.skipped++;
+            }
+        }
+    }
+
+    // Sync Scenarios
+    if (data.scenarios?.length) {
+        for (const s of data.scenarios) {
+            stats.checked++;
+            const id = s.id as string;
+
+            const existing = await db.select().from(schema.scenarios).all();
+            const found = existing.some(e => e.id === id);
+
+            if (!found) {
+                await db.insert(schema.scenarios).values({
+                    id,
+                    ruleId: s.rule_id as string,
+                    name: s.name as string,
+                    narrative: s.narrative as string,
+                    status: s.status as "draft" | "active" | "deprecated" | undefined,
+                });
+                await logAction("createScenario", "scenario", id, "create");
+                stats.inserted++;
+                console.log(`  ✅ Created scenario: ${s.name}`);
+            } else {
+                stats.skipped++;
+            }
+        }
+    }
+
+    // Sync Specifications
+    if (data.specifications?.length) {
+        for (const s of data.specifications) {
+            stats.checked++;
+            const id = s.id as string;
+
+            const existing = await db.select().from(schema.specifications).all();
+            const found = existing.some(e => e.id === id);
+
+            if (!found) {
+                await db.insert(schema.specifications).values({
+                    id,
+                    featureId: s.feature_id as string,
+                    name: s.name as string,
+                    narrative: s.narrative as string,
+                    category: s.category as "performance" | "security" | "usability" | "reliability" | "accessibility" | "maintainability",
+                    status: s.status as "draft" | "active" | "deprecated" | undefined,
+                });
+                await logAction("createSpecification", "specification", id, "create");
+                stats.inserted++;
+                console.log(`  ✅ Created specification: ${s.name}`);
             } else {
                 stats.skipped++;
             }
@@ -388,10 +531,12 @@ async function watchMode() {
     const initialStats = await sync();
     console.log(`\n📊 Initial sync: ${initialStats.inserted} inserted, ${initialStats.skipped} skipped\n`);
 
+    const tomlPath = getTomlPath();
+
     // Watch for changes
     let debounceTimer: Timer | null = null;
 
-    watch(TOML_PATH, async (eventType) => {
+    watch(tomlPath, async (eventType: string) => {
         if (eventType === "change") {
             // Debounce rapid changes
             if (debounceTimer) clearTimeout(debounceTimer);

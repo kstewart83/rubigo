@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://rubigo.dev/schemas/project.schema.json",
-    "title": "Project Management Configuration",
-    "description": "Schema for project management data including objectives, metrics, KPIs, and initiatives",
+    "title": "Requirements & Delivery Ontology",
+    "description": "Schema for the full Requirements & Delivery Ontology including Requirements Space, Solution Space, Activity Space, and Resource Space",
     "type": "object",
     "properties": {
         "description": {
@@ -14,10 +14,28 @@
                 }
             }
         },
+        "solutions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Solution"
+            }
+        },
+        "products": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Product"
+            }
+        },
         "services": {
             "type": "array",
             "items": {
                 "$ref": "#/$defs/Service"
+            }
+        },
+        "releases": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Release"
             }
         },
         "projects": {
@@ -36,6 +54,36 @@
             "type": "array",
             "items": {
                 "$ref": "#/$defs/Feature"
+            }
+        },
+        "rules": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Rule"
+            }
+        },
+        "scenarios": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Scenario"
+            }
+        },
+        "specifications": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Specification"
+            }
+        },
+        "evidences": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Evidence"
+            }
+        },
+        "evaluations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Evaluation"
             }
         },
         "metrics": {
@@ -82,9 +130,9 @@
         }
     },
     "$defs": {
-        "Service": {
+        "Solution": {
             "type": "object",
-            "description": "Persistent business product or service offering. is_product and is_service are not mutually exclusive.",
+            "description": "Base entity for Products and Services. Common fields shared by both.",
             "required": [
                 "id",
                 "name"
@@ -92,15 +140,16 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier"
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
                     "type": "string",
-                    "description": "Service name"
+                    "description": "Display name"
                 },
                 "description": {
                     "type": "string",
-                    "description": "Service description"
+                    "description": "Optional description"
                 },
                 "status": {
                     "type": "string",
@@ -109,32 +158,114 @@
                         "catalog",
                         "retired"
                     ],
-                    "description": "Service portfolio status"
+                    "description": "Portfolio status"
+                }
+            }
+        },
+        "Product": {
+            "type": "object",
+            "description": "Deliverable that can be acquired/deployed by customers. Extends Solution.",
+            "required": [
+                "id",
+                "solution_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
-                "is_product": {
-                    "type": "boolean",
-                    "description": "True if this can be acquired/deployed by customers",
-                    "default": false
+                "solution_id": {
+                    "type": "string",
+                    "description": "Reference to base Solution"
                 },
-                "is_service": {
-                    "type": "boolean",
-                    "description": "True if this is an ongoing provision of value",
-                    "default": false
+                "version": {
+                    "type": "string",
+                    "description": "Current version"
+                },
+                "release_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Last release date"
+                }
+            }
+        },
+        "Service": {
+            "type": "object",
+            "description": "Ongoing provision of value. Extends Solution.",
+            "required": [
+                "id",
+                "solution_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "solution_id": {
+                    "type": "string",
+                    "description": "Reference to base Solution"
+                },
+                "service_level": {
+                    "type": "string",
+                    "description": "SLA tier"
+                }
+            }
+        },
+        "Release": {
+            "type": "object",
+            "description": "Versioned snapshot of a Product",
+            "required": [
+                "id",
+                "product_id",
+                "version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "product_id": {
+                    "type": "string",
+                    "description": "Reference to parent Product"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "Semantic version"
+                },
+                "release_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Release date"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Release notes"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "planned",
+                        "released",
+                        "deprecated"
+                    ]
                 }
             }
         },
         "Project": {
             "type": "object",
-            "description": "Temporary effort to create or modify a service",
+            "description": "Temporary effort to create or modify a solution",
             "required": [
                 "id",
                 "name",
-                "service_id"
+                "solution_id"
             ],
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -143,9 +274,9 @@
                 "description": {
                     "type": "string"
                 },
-                "service_id": {
+                "solution_id": {
                     "type": "string",
-                    "description": "Reference to parent service"
+                    "description": "Reference to parent Solution"
                 },
                 "status": {
                     "type": "string",
@@ -178,7 +309,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "title": {
@@ -217,7 +348,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -241,6 +372,223 @@
                 }
             }
         },
+        "Rule": {
+            "type": "object",
+            "description": "User story using Three Rs format: As a {role}, I want to {requirement}, so I can {reason}",
+            "required": [
+                "id",
+                "feature_id",
+                "role",
+                "requirement",
+                "reason"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "feature_id": {
+                    "type": "string",
+                    "description": "Reference to parent Feature"
+                },
+                "role": {
+                    "type": "string",
+                    "description": "The user role (e.g., 'meeting organizer', 'participant', 'user')"
+                },
+                "requirement": {
+                    "type": "string",
+                    "description": "What they need (e.g., 'set weekly recurrence on specific days')"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Why they need it (e.g., 'schedule regular team standups')"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "deprecated"
+                    ]
+                }
+            }
+        },
+        "Scenario": {
+            "type": "object",
+            "description": "Testable acceptance criterion using Given/When/Then inspired narrative",
+            "required": [
+                "id",
+                "rule_id",
+                "name",
+                "narrative"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "rule_id": {
+                    "type": "string",
+                    "description": "Reference to parent Rule"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Short descriptive name"
+                },
+                "narrative": {
+                    "type": "string",
+                    "description": "Freeform Given/When/Then inspired description. Must be precise enough for a UI agent (human or LLM) to navigate and validate."
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "deprecated"
+                    ]
+                }
+            }
+        },
+        "Specification": {
+            "type": "object",
+            "description": "Non-functional requirement using RFC 2119 language",
+            "required": [
+                "id",
+                "feature_id",
+                "name",
+                "narrative",
+                "category"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "feature_id": {
+                    "type": "string",
+                    "description": "Reference to parent Feature"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Short descriptive name"
+                },
+                "narrative": {
+                    "type": "string",
+                    "description": "RFC 2119 requirement statement using MUST, SHOULD, MAY keywords"
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "performance",
+                        "security",
+                        "usability",
+                        "reliability",
+                        "accessibility",
+                        "maintainability"
+                    ]
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "deprecated"
+                    ]
+                }
+            }
+        },
+        "Evidence": {
+            "type": "object",
+            "description": "Artifact that validates a Scenario or Specification",
+            "required": [
+                "id",
+                "release_id",
+                "type",
+                "captured_at"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "release_id": {
+                    "type": "string",
+                    "description": "Release that produced this evidence"
+                },
+                "scenario_id": {
+                    "type": "string",
+                    "description": "Scenario being validated (if applicable)"
+                },
+                "specification_id": {
+                    "type": "string",
+                    "description": "Specification being validated (if applicable)"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "test_result",
+                        "screenshot",
+                        "recording",
+                        "document"
+                    ]
+                },
+                "artifact_url": {
+                    "type": "string",
+                    "description": "Link to artifact"
+                },
+                "captured_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When evidence was captured"
+                }
+            }
+        },
+        "Evaluation": {
+            "type": "object",
+            "description": "Pass/Fail verdict on Evidence",
+            "required": [
+                "id",
+                "evidence_id",
+                "verdict",
+                "evaluated_at"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+                },
+                "evidence_id": {
+                    "type": "string",
+                    "description": "Evidence being evaluated"
+                },
+                "verdict": {
+                    "type": "string",
+                    "enum": [
+                        "pass",
+                        "fail",
+                        "inconclusive"
+                    ]
+                },
+                "evaluator_id": {
+                    "type": "string",
+                    "description": "Person who evaluated"
+                },
+                "evaluated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When evaluation occurred"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Evaluation notes"
+                }
+            }
+        },
         "Metric": {
             "type": "object",
             "description": "Raw measurement gathered from operations",
@@ -252,7 +600,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -287,7 +635,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "metric_id": {
@@ -332,7 +680,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -374,7 +722,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -420,7 +768,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "name": {
@@ -443,7 +791,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "activity_id": {
@@ -487,7 +835,7 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique identifier (alphanumeric with optional hyphens)",
+                    "description": "Unique identifier",
                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
                 },
                 "assignment_id": {

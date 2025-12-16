@@ -7,9 +7,11 @@
 [description]
 overview = """
 PROJECT MANAGEMENT DATA
-- Services: 1 (HVAC Solutions Platform)
+- Solutions: 4 (HVAC Platform, Equipment, Parts, Rubigo)
+- Products: 2 (Equipment, Parts)  
+- Services: 2 (HVAC Platform, Rubigo)
 - Active Projects: 1 (FY2025 Operational Excellence)
-- Strategic Objectives: 3
+- Strategic Objectives: 30+
 - Metrics: 5 (raw operational measurements)
 - KPIs: 3 (metrics aligned to objectives)
 - Initiatives: 3 (short-term efforts to move KPIs)
@@ -23,43 +25,62 @@ digital transformation and operational excellence initiatives.
 """
 
 # ============================================================================
-# PRODUCTS & SERVICES - Persistent business offerings
+# SOLUTIONS - Base entities for Products and Services
 # ============================================================================
-# is_product: Can be acquired/deployed by customers (e.g., HVAC equipment, software)
-# is_service: Ongoing provision of value (e.g., maintenance, IT operations, SaaS)
-# Note: These are NOT mutually exclusive - an offering can be both
+# Solutions are the base entity that can be specialized as Products and/or Services.
+# A Solution represents a business offering that delivers value.
 
-[[services]]
+[[solutions]]
 id = "a1b2c3"
 name = "HVAC Solutions Platform"
-description = "Core business service encompassing design, manufacturing, installation, and maintenance of commercial HVAC systems"
+description = "Core business solution encompassing design, manufacturing, installation, and maintenance of commercial HVAC systems"
 status = "catalog"
-is_product = false
-is_service = true
 
-[[services]]
+[[solutions]]
 id = "svc-hvac-equip"
 name = "Commercial HVAC Equipment"
 description = "Industrial and commercial heating, ventilation, and air conditioning units designed for reliability and energy efficiency"
 status = "catalog"
-is_product = true
-is_service = false
 
-[[services]]
+[[solutions]]
 id = "svc-hvac-parts"
 name = "HVAC Parts & Components"
 description = "Replacement parts, filters, and components for HVAC systems, available for direct purchase or through service contracts"
 status = "catalog"
-is_product = true
-is_service = false
 
-[[services]]
+[[solutions]]
 id = "svc-rubigo"
 name = "Rubigo ERM Platform"
 description = "Internal enterprise resource management platform providing strategic alignment visibility, project portfolio oversight, resource capacity planning, and operational metrics tracking"
 status = "catalog"
-is_product = false
-is_service = true
+
+# ============================================================================
+# PRODUCTS - Deliverables that can be acquired/deployed by customers
+# ============================================================================
+
+[[products]]
+id = "prod-hvac-equip"
+solution_id = "svc-hvac-equip"
+version = "2024.1"
+
+[[products]]
+id = "prod-hvac-parts"
+solution_id = "svc-hvac-parts"
+version = "2024.2"
+
+# ============================================================================
+# SERVICES - Ongoing provision of value
+# ============================================================================
+
+[[services]]
+id = "svc-hvac-platform"
+solution_id = "a1b2c3"
+service_level = "enterprise"
+
+[[services]]
+id = "svc-rubigo-svc"
+solution_id = "svc-rubigo"
+service_level = "internal"
 
 # ============================================================================
 # PROJECTS - Temporary efforts to modify/improve services
@@ -69,7 +90,7 @@ is_service = true
 id = "d4e5f6"
 name = "FY2025 Operational Excellence"
 description = "Strategic initiative to improve operational efficiency, reduce service response times, and enhance customer satisfaction through digital transformation"
-service_id = "a1b2c3"
+solution_id = "a1b2c3"
 status = "active"
 start_date = "2025-01-01"
 end_date = "2025-12-31"
@@ -451,6 +472,119 @@ name = "Customer Portal"
 description = "Self-service portal for service requests, status tracking, and feedback"
 objective_id = "303c4d"
 status = "in_progress"
+
+# ============================================================================
+# RULES - Business rules as user stories (Given-When-Then scenarios)
+# ============================================================================
+# Format: As a [role], I want to [requirement], so I can [reason]
+
+[[rules]]
+id = "rule-001"
+feature_id = "f01a23"
+role = "Dispatch Coordinator"
+requirement = "see real-time technician locations on a map"
+reason = "assign the nearest available technician to emergency calls"
+status = "active"
+
+[[rules]]
+id = "rule-002"
+feature_id = "f01a23"
+role = "Field Technician"
+requirement = "receive optimal route guidance to my next job"
+reason = "minimize travel time and arrive faster"
+status = "active"
+
+[[rules]]
+id = "rule-003"
+feature_id = "f02b34"
+role = "Service Manager"
+requirement = "see predicted parts needs for scheduled service visits"
+reason = "ensure technicians have required parts before dispatch"
+status = "draft"
+
+[[rules]]
+id = "rule-004"
+feature_id = "f03c45"
+role = "Customer"
+requirement = "view the status of my service request online"
+reason = "know when to expect the technician without calling"
+status = "active"
+
+[[rules]]
+id = "rule-005"
+feature_id = "f03c45"
+role = "Customer"
+requirement = "submit a new service request through the portal"
+reason = "request service outside of business hours"
+status = "active"
+
+# ============================================================================
+# SCENARIOS - Behavioral test cases for rules
+# ============================================================================
+
+[[scenarios]]
+id = "scn-001"
+rule_id = "rule-001"
+name = "Emergency dispatch view"
+narrative = "Given I am a dispatch coordinator viewing the map, when an emergency call is received, then I can see all technicians within a 20-mile radius with their current status and ETA to the customer location"
+status = "active"
+
+[[scenarios]]
+id = "scn-002"
+rule_id = "rule-002"
+name = "Automatic route recalculation"
+narrative = "Given I am a technician en route to a job, when traffic conditions change significantly, then the app automatically recalculates and suggests an optimal alternative route"
+status = "active"
+
+[[scenarios]]
+id = "scn-003"
+rule_id = "rule-004"
+name = "Service status tracking"
+narrative = "Given I am a customer logged into the portal, when I navigate to my active service requests, then I can see the current status, assigned technician name, and estimated arrival window"
+status = "active"
+
+[[scenarios]]
+id = "scn-004"
+rule_id = "rule-005"
+name = "After-hours service request"
+narrative = "Given I am a customer accessing the portal at 10 PM, when I submit a new service request, then I receive a confirmation with a reference number and expected response timeframe"
+status = "active"
+
+# ============================================================================
+# SPECIFICATIONS - Non-functional and quality requirements
+# ============================================================================
+
+[[specifications]]
+id = "spec-001"
+feature_id = "f01a23"
+name = "Location Update Frequency"
+narrative = "Technician locations must be updated at least every 60 seconds during working hours"
+category = "performance"
+status = "active"
+
+[[specifications]]
+id = "spec-002"
+feature_id = "f01a23"
+name = "GPS Data Privacy"
+narrative = "Location data must be stored encrypted at rest and only accessible to authorized dispatch personnel"
+category = "security"
+status = "active"
+
+[[specifications]]
+id = "spec-003"
+feature_id = "f03c45"
+name = "Portal Availability"
+narrative = "The customer portal must maintain 99.9% uptime excluding planned maintenance windows"
+category = "reliability"
+status = "active"
+
+[[specifications]]
+id = "spec-004"
+feature_id = "f03c45"
+name = "Mobile Responsiveness"
+narrative = "The portal must be fully functional on mobile devices with screen widths from 320px to 1920px"
+category = "accessibility"
+status = "active"
 
 # ============================================================================
 # METRICS - Raw operational measurements

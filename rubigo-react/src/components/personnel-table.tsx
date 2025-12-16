@@ -55,7 +55,7 @@ export function PersonnelTable({ personnel }: PersonnelTableProps) {
             const matchesSearch =
                 search === "" ||
                 person.name.toLowerCase().includes(search.toLowerCase()) ||
-                person.title.toLowerCase().includes(search.toLowerCase()) ||
+                person.title?.toLowerCase().includes(search.toLowerCase()) ||
                 person.email.toLowerCase().includes(search.toLowerCase());
 
             const matchesDepartment =

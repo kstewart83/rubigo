@@ -1,5 +1,5 @@
 import { parse } from "@iarna/toml";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { Person, PersonnelData, Department } from "@/types/personnel";
 
@@ -30,16 +30,50 @@ interface RawPersonnelData {
 let cachedData: PersonnelData | null = null;
 
 /**
- * Load and parse personnel data from TOML file
+ * Get the seed directory from environment variable
+ * Returns null if RUBIGO_SEED_DIR is not set (clean mode)
+ */
+function getSeedDir(): string | null {
+    return process.env.RUBIGO_SEED_DIR || null;
+}
+
+/**
+ * Load and parse personnel data from TOML file in seed directory
+ * Returns empty data if no seed directory is configured
  */
 export function getPersonnelData(): PersonnelData {
     if (cachedData) {
         return cachedData;
     }
 
-    const dataPath = join(process.cwd(), "src/data/personnel.toml");
+    const seedDir = getSeedDir();
+
+    // No seed directory configured - return empty personnel data
+    if (!seedDir) {
+        cachedData = {
+            description: { overview: "" },
+            people: [],
+        };
+        return cachedData;
+    }
+
+    const dataPath = join(seedDir, "personnel.toml");
+
+    // Seed directory configured but file doesn't exist
+    if (!existsSync(dataPath)) {
+        console.warn(`[Personnel] RUBIGO_SEED_DIR is set but ${dataPath} not found`);
+        cachedData = {
+            description: { overview: "" },
+            people: [],
+        };
+        return cachedData;
+    }
+
     const content = readFileSync(dataPath, "utf-8");
     const raw = parse(content) as unknown as RawPersonnelData;
+
+    // Determine photo base path (for headshots directory)
+    const photoBasePath = seedDir.startsWith("/") ? seedDir : join(process.cwd(), seedDir);
 
     // Transform to camelCase and proper types
     cachedData = {
@@ -67,11 +101,58 @@ export function getPersonnelData(): PersonnelData {
     return cachedData;
 }
 
+import { db } from "@/db";
+import * as schema from "@/db/schema";
+
 /**
- * Get all personnel
+ * Get all personnel from database (includes Global Admin)
+ */
+export function getDbPersonnel(): Person[] {
+    try {
+        const dbPersonnel = db.select().from(schema.personnel).all();
+        return dbPersonnel.map((p): Person => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            title: p.title ?? undefined,
+            department: (p.department as Department) ?? "Executive",
+            site: p.site ?? undefined,
+            building: p.building ?? undefined,
+            level: p.level ?? undefined,
+            space: p.space ?? undefined,
+            manager: p.manager ?? undefined,
+            photo: p.photo ?? undefined,
+            deskPhone: p.deskPhone ?? undefined,
+            cellPhone: p.cellPhone ?? undefined,
+            bio: p.bio ?? undefined,
+            isGlobalAdmin: p.isGlobalAdmin ?? false,
+        }));
+    } catch {
+        // Table might not exist yet
+        return [];
+    }
+}
+
+/**
+ * Get all personnel (combines seed TOML and database sources)
+ * 
+ * If RUBIGO_SEED_DIR is not set, only returns database personnel.
+ * If RUBIGO_SEED_DIR is set, includes both seed TOML and database personnel.
  */
 export function getAllPersonnel(): Person[] {
-    return getPersonnelData().people;
+    const dbPersonnel = getDbPersonnel();
+    const seedPersonnel = getPersonnelData().people;
+
+    // Merge, with DB taking precedence for duplicates
+    const byId = new Map<string, Person>();
+    for (const p of seedPersonnel) {
+        byId.set(p.id, p);
+    }
+    for (const p of dbPersonnel) {
+        byId.set(p.id, p);
+    }
+
+    return Array.from(byId.values());
 }
 
 /**

@@ -54,6 +54,7 @@ const sidebarModules: SidebarModule[] = [
             { id: "dashboard", label: "Dashboard", href: "/projects" },
             { id: "services", label: "Products & Services", href: "/projects/services" },
             { id: "objectives", label: "Objectives", href: "/projects/objectives" },
+            { id: "features", label: "Features", href: "/projects/features" },
             { id: "metrics", label: "Metrics & KPIs", href: "/projects/metrics" },
             { id: "initiatives", label: "Initiatives", href: "/projects/initiatives" },
             { id: "activities", label: "Activities", href: "/projects/activities" },

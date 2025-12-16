@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,6 +32,8 @@ const departmentOrder: Department[] = [
 ];
 
 export function PersonaSwitcher({ personnel, open, onOpenChange }: PersonaSwitcherProps) {
+    const router = useRouter();
+    const pathname = usePathname();
     const { setPersona } = usePersona();
     const [search, setSearch] = useState("");
     const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -41,7 +44,7 @@ export function PersonaSwitcher({ personnel, open, onOpenChange }: PersonaSwitch
             const matchesSearch =
                 search === "" ||
                 p.name.toLowerCase().includes(search.toLowerCase()) ||
-                p.title.toLowerCase().includes(search.toLowerCase()) ||
+                p.title?.toLowerCase().includes(search.toLowerCase()) ||
                 p.email.toLowerCase().includes(search.toLowerCase());
 
             const matchesDepartment =
@@ -67,6 +70,11 @@ export function PersonaSwitcher({ personnel, open, onOpenChange }: PersonaSwitch
         onOpenChange(false);
         setSearch("");
         setDepartmentFilter("all");
+
+        // Navigate to dashboard if on landing page
+        if (pathname === "/") {
+            router.push("/dashboard");
+        }
     };
 
     const handleOpenChange = (isOpen: boolean) => {
