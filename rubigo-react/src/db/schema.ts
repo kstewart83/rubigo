@@ -303,6 +303,7 @@ export const actionLogs = sqliteTable("action_logs", {
     requestId: text("request_id"),
     changes: text("changes"), // JSON array of { field, oldValue, newValue }
     metadata: text("metadata"), // JSON object
+    source: text("source", { enum: ["ui", "api"] }), // Where the action originated
 });
 
 // ============================================================================

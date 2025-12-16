@@ -4,11 +4,14 @@ import { getAllPersonnel } from "@/lib/personnel";
 import { getVersion } from "@/lib/config";
 import { DashboardContent } from "@/components/dashboard-content";
 
-// Get personnel data at build time (server component)
-const personnel = getAllPersonnel();
-const version = getVersion();
+// Force dynamic rendering - personnel data must be fetched at request time
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+    // Get personnel data at request time (not build time)
+    const personnel = getAllPersonnel();
+    const version = getVersion();
+
     return (
         <PersonaProvider>
             <AppShell personnel={personnel}>

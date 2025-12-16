@@ -29,6 +29,8 @@ import type { Person, Department } from "@/types/personnel";
 
 interface PersonnelTableProps {
     personnel: Person[];
+    onEdit?: (person: Person) => void;
+    onDelete?: (person: Person) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -43,7 +45,7 @@ const departments: Department[] = [
     "Operations",
 ];
 
-export function PersonnelTable({ personnel }: PersonnelTableProps) {
+export function PersonnelTable({ personnel, onEdit, onDelete }: PersonnelTableProps) {
     const [search, setSearch] = useState("");
     const [departmentFilter, setDepartmentFilter] = useState<string>("all");
     const [currentPage, setCurrentPage] = useState(1);
@@ -319,6 +321,36 @@ export function PersonnelTable({ personnel }: PersonnelTableProps) {
                                         <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
                                             {selectedPerson.bio}
                                         </p>
+                                    </section>
+                                )}
+
+                                {/* Admin Actions */}
+                                {(onEdit || onDelete) && !selectedPerson.isGlobalAdmin && (
+                                    <section className="pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                                        <div className="flex gap-2">
+                                            {onEdit && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        onEdit(selectedPerson);
+                                                        setSelectedPerson(null);
+                                                    }}
+                                                >
+                                                    Edit
+                                                </Button>
+                                            )}
+                                            {onDelete && (
+                                                <Button
+                                                    variant="destructive"
+                                                    onClick={() => {
+                                                        onDelete(selectedPerson);
+                                                        setSelectedPerson(null);
+                                                    }}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </div>
                                     </section>
                                 )}
                             </div>

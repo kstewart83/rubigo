@@ -299,14 +299,30 @@ status = "active"
 
 [[objectives]]
 id = "obj-it-business-systems"
-title = "Integrated Business Systems"
-description = "Enterprise applications must work together seamlessly, eliminating data silos and manual handoffs to enable efficient cross-functional processes"
+title = "Enterprise Resource Management Software"
+description = "A unified platform must provide visibility into strategic alignment, resource capacity, project portfolios, and operational metrics, eliminating data silos and enabling informed decision-making"
 project_id = "d4e5f6"
 parent_id = "obj-it"
 status = "active"
 
-# --- SUB-OBJECTIVES (under Integrated Business Systems) ---
+# --- SUB-OBJECTIVES (under Enterprise Resource Management Software) ---
 # This is where Rubigo requirements live
+
+[[objectives]]
+id = "obj-rubigo-admin"
+title = "Platform Administration"
+description = "System administrators must be able to manage platform configuration, user accounts, and foundational data that enables all other platform capabilities"
+project_id = "d4e5f6"
+parent_id = "obj-it-business-systems"
+status = "active"
+
+[[objectives]]
+id = "obj-rubigo-personnel"
+title = "Personnel Directory Management"
+description = "Administrators must be able to maintain an accurate personnel directory that reflects the organization's current workforce, enabling effective resource allocation and communication"
+project_id = "d4e5f6"
+parent_id = "obj-rubigo-admin"
+status = "active"
 
 [[objectives]]
 id = "obj-rubigo-strategy"
@@ -473,6 +489,15 @@ description = "Self-service portal for service requests, status tracking, and fe
 objective_id = "303c4d"
 status = "in_progress"
 
+# --- Rubigo Platform Features ---
+
+[[features]]
+id = "feat-personnel-crud"
+name = "Personnel CRUD Operations"
+description = "Create, read, update, delete capabilities for personnel records"
+objective_id = "obj-rubigo-personnel"
+status = "in_progress"
+
 # ============================================================================
 # RULES - Business rules as user stories (Given-When-Then scenarios)
 # ============================================================================
@@ -518,6 +543,40 @@ requirement = "submit a new service request through the portal"
 reason = "request service outside of business hours"
 status = "active"
 
+# --- Rubigo Platform Rules ---
+
+[[rules]]
+id = "rule-personnel-view"
+feature_id = "feat-personnel-crud"
+role = "Platform User"
+requirement = "browse and search the personnel directory"
+reason = "find contact information and organizational relationships"
+status = "active"
+
+[[rules]]
+id = "rule-personnel-create"
+feature_id = "feat-personnel-crud"
+role = "Platform Administrator"
+requirement = "add new personnel records to the directory"
+reason = "onboard new employees and keep the directory current"
+status = "active"
+
+[[rules]]
+id = "rule-personnel-edit"
+feature_id = "feat-personnel-crud"
+role = "Platform Administrator"
+requirement = "modify existing personnel records"
+reason = "update role changes, contact information, and organizational assignments"
+status = "active"
+
+[[rules]]
+id = "rule-personnel-delete"
+feature_id = "feat-personnel-crud"
+role = "Platform Administrator"
+requirement = "remove personnel records from the directory"
+reason = "maintain accuracy when employees leave the organization"
+status = "active"
+
 # ============================================================================
 # SCENARIOS - Behavioral test cases for rules
 # ============================================================================
@@ -548,6 +607,43 @@ id = "scn-004"
 rule_id = "rule-005"
 name = "After-hours service request"
 narrative = "Given I am a customer accessing the portal at 10 PM, when I submit a new service request, then I receive a confirmation with a reference number and expected response timeframe"
+status = "active"
+
+# --- Rubigo Platform Scenarios ---
+
+[[scenarios]]
+id = "scen-personnel-list"
+rule_id = "rule-personnel-view"
+name = "Browse personnel directory"
+narrative = "Given I am signed in as any user, when I navigate to the Personnel page, then I see a paginated table of personnel records and I can search by name, title, or email and filter by department"
+status = "active"
+
+[[scenarios]]
+id = "scen-personnel-detail"
+rule_id = "rule-personnel-view"
+name = "View personnel details"
+narrative = "Given I am viewing the personnel directory, when I click on a personnel row, then a detail panel opens showing full information"
+status = "active"
+
+[[scenarios]]
+id = "scen-personnel-create"
+rule_id = "rule-personnel-create"
+name = "Add new employee"
+narrative = "Given I am signed in as Global Administrator, when I click the Add Personnel button and fill in required fields (name, email, department) and click Save, then the new personnel record appears in the table"
+status = "active"
+
+[[scenarios]]
+id = "scen-personnel-edit"
+rule_id = "rule-personnel-edit"
+name = "Update employee information"
+narrative = "Given I am signed in as Global Administrator and viewing a personnel detail panel, when I click Edit, modify fields, and Save, then the changes are reflected in the table"
+status = "active"
+
+[[scenarios]]
+id = "scen-personnel-delete"
+rule_id = "rule-personnel-delete"
+name = "Remove employee from directory"
+narrative = "Given I am signed in as Global Administrator and viewing a personnel detail panel, when I click Delete and confirm, then the record no longer appears in the table"
 status = "active"
 
 # ============================================================================
@@ -584,6 +680,40 @@ feature_id = "f03c45"
 name = "Mobile Responsiveness"
 narrative = "The portal must be fully functional on mobile devices with screen widths from 320px to 1920px"
 category = "accessibility"
+status = "active"
+
+# --- Rubigo Platform Specifications ---
+
+[[specifications]]
+id = "spec-personnel-db"
+feature_id = "feat-personnel-crud"
+name = "Personnel Database Schema"
+narrative = "Personnel records stored in personnel table with: id, name, email, title, department, site, building, level, space, manager, photo, deskPhone, cellPhone, bio, isGlobalAdmin"
+category = "data"
+status = "active"
+
+[[specifications]]
+id = "spec-personnel-actions"
+feature_id = "feat-personnel-crud"
+name = "Personnel Server Actions"
+narrative = "CRUD via Server Actions: createPersonnel, updatePersonnel, deletePersonnel with action log entries"
+category = "api"
+status = "active"
+
+[[specifications]]
+id = "spec-personnel-validation"
+feature_id = "feat-personnel-crud"
+name = "Personnel Validation"
+narrative = "Name and email required. Email unique. Department from enum. ID auto-generated."
+category = "validation"
+status = "active"
+
+[[specifications]]
+id = "spec-personnel-admin-only"
+feature_id = "feat-personnel-crud"
+name = "Admin-Only Mutations"
+narrative = "Only isGlobalAdmin=true users can create/edit/delete. All signed-in users can read."
+category = "security"
 status = "active"
 
 # ============================================================================

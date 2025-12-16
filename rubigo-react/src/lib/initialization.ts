@@ -150,11 +150,17 @@ async function autoInitialize(): Promise<void> {
     // Check if already initialized (race condition protection)
     const alreadyInit = await isInitialized();
     if (alreadyInit) {
+        // Generate API token for existing system
+        const apiToken = await getOrCreateApiToken();
+
         console.log("\n" + "=".repeat(60));
         console.log("✅ SYSTEM INITIALIZED");
         console.log("=".repeat(60));
-        console.log("\nThe system is ready. Users can sign in.\n");
-        console.log("=".repeat(60) + "\n");
+        console.log("\nThe system is ready. Users can sign in.");
+        if (apiToken) {
+            console.log(`\nAPI Token: ${apiToken}`);
+        }
+        console.log("\n" + "=".repeat(60) + "\n");
         return;
     }
 
@@ -169,12 +175,19 @@ async function autoInitialize(): Promise<void> {
         isGlobalAdmin: true,
     });
 
+    // Generate API token
+    const apiToken = await getOrCreateApiToken();
+
     console.log("\n" + "=".repeat(60));
     console.log("✅ AUTO-INITIALIZED (RUBIGO_AUTO_INIT=true)");
     console.log("=".repeat(60));
     console.log("\nGlobal Administrator created automatically.");
-    console.log("The system is ready. Users can sign in.\n");
-    console.log("=".repeat(60) + "\n");
+    console.log("The system is ready. Users can sign in.");
+    if (apiToken) {
+        console.log(`\nAPI Token: ${apiToken}`);
+        console.log("Use this token for programmatic API access.");
+    }
+    console.log("\n" + "=".repeat(60) + "\n");
 }
 
 /**
@@ -254,3 +267,86 @@ export async function getInitializationStatus(): Promise<InitializationStatus> {
     const initialized = await isInitialized();
     return { initialized };
 }
+
+// ============================================================================
+// API Token Authentication (for programmatic access)
+// ============================================================================
+
+const API_TOKEN_ENV_KEY = "RUBIGO_API_TOKEN";
+
+/**
+ * Generate a random API token (32 hex characters)
+ */
+function generateApiToken(): string {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Get or create the API token (stored in environment)
+ * Returns null if system is not initialized
+ */
+export async function getOrCreateApiToken(): Promise<string | null> {
+    const initialized = await isInitialized();
+    if (!initialized) {
+        return null;
+    }
+
+    let token = process.env[API_TOKEN_ENV_KEY];
+    if (!token) {
+        token = generateApiToken();
+        process.env[API_TOKEN_ENV_KEY] = token;
+    }
+    return token;
+}
+
+/**
+ * Get the current API token (without creating one)
+ */
+export function getApiToken(): string | null {
+    return process.env[API_TOKEN_ENV_KEY] || null;
+}
+
+/**
+ * Validate an API token and return the actor (Global Admin) if valid
+ */
+export interface ApiAuthResult {
+    valid: boolean;
+    actorId?: string;
+    actorName?: string;
+    error?: string;
+}
+
+export async function validateApiToken(token: string | null): Promise<ApiAuthResult> {
+    if (!token) {
+        return { valid: false, error: "No token provided" };
+    }
+
+    const storedToken = process.env[API_TOKEN_ENV_KEY];
+    if (!storedToken) {
+        return { valid: false, error: "API not available (system not initialized)" };
+    }
+
+    if (token !== storedToken) {
+        return { valid: false, error: "Invalid token" };
+    }
+
+    // Token is valid - return Global Admin as actor
+    const admins = await db
+        .select()
+        .from(schema.personnel)
+        .where(eq(schema.personnel.isGlobalAdmin, true))
+        .limit(1);
+
+    if (admins.length === 0) {
+        return { valid: false, error: "No Global Admin found" };
+    }
+
+    return {
+        valid: true,
+        actorId: admins[0].id,
+        actorName: admins[0].name,
+    };
+}
+

@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun run db:sync && RUBIGO_SEED_DIR=../common/scenarios/mmc RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack",
+    "dev": "RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack",
     "dev:clean": "bun --bun next dev --turbopack",
+    "dev:mmc": "bun src/scripts/dev-mmc.ts",
     "dev:sync": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun run src/db/sync.ts --watch",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
@@ -26,7 +27,9 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@scure/bip39": "^2.0.1",

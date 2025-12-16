@@ -10,11 +10,15 @@ import { getVersion } from "@/lib/config";
  * The AppShell handles determining what to display based on auth state.
  */
 
-// Get personnel data at build time (server component)
-const personnel = getAllPersonnel();
-const version = getVersion();
+// Force dynamic rendering - personnel data must be fetched at request time
+// because auto-init creates Global Admin at server startup (after build)
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+export default async function HomePage() {
+    // Get personnel data at request time (not build time)
+    const personnel = getAllPersonnel();
+    const version = getVersion();
+
     return (
         <PersonaProvider>
             <AppShell personnel={personnel} version={version}>
