@@ -17,11 +17,15 @@ Run the validation script from `rubigo-react/`:
 This checks for:
 - Local/absolute paths (`/Users/`, `/home/`, etc.)
 - Potential secrets (api_key, password, auth_token, etc.)
+- Debug statements (`console.log`, `debugger`)
+- Test-only patterns (`.only()`, `.skip()`)
+- Localhost/hardcoded dev URLs
 - Large files (>1MB)
 - `.env` files that shouldn't be committed
 
 > [!CAUTION]
-> Fix all issues before proceeding. Do not bypass these checks.
+> - **Errors**: Must be fixed before proceeding
+> - **Warnings**: Require explicit user approval to continue
 
 ## Step 2: Determine Version Bump
 
