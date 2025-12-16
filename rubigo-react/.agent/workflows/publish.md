@@ -6,54 +6,121 @@ description: How to publish changes to the Rubigo platform
 
 Follow these steps when publishing changes to the Rubigo platform.
 
-## Pre-Push Validation
+## Step 1: Pre-Publish Validation
+
+Check for non-production elements that should not be committed:
+
+### Secrets and Credentials
+```bash
+# Search for potential secrets
+grep -rE "(password|secret|api_key|token)\s*[:=]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" | grep -v node_modules | grep -v ".lock"
+```
+
+Look for:
+- Hardcoded passwords or API keys
+- Real credentials in config files
+- `.env` files (should be gitignored)
+
+### Test/Debug Code
+```bash
+# Search for common debug patterns
+grep -rE "(console\.log|debugger|\.only\(|\.skip\(|TODO|FIXME|XXX)" --include="*.ts" --include="*.tsx" | grep -v node_modules
+```
+
+Review and remove:
+- `console.log` statements (unless intentional logging)
+- `debugger` statements
+- `.only()` or `.skip()` in tests
+- Unresolved TODOs/FIXMEs that should be addressed
+
+### Non-Production Patterns
+```bash
+# Check for localhost or hardcoded URLs
+grep -rE "(localhost|127\.0\.0\.1|http://|https://.*\.(dev|test|local))" --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v e2e
+```
+
+### Large Files
+```bash
+# Find files over 1MB
+find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*"
+```
+
+> [!CAUTION]
+> Any findings from the above checks should be addressed before publishing.
+
+## Step 2: Run Pre-Push Script
 
 // turbo
-1. Run the pre-push check script:
 ```bash
 ./scripts/pre-push-check.sh
 ```
 
-2. Ensure no errors are reported. If errors are found:
-   - Fix any local path references
-   - Remove any secrets or sensitive information
-   - Get approval for any large files (> 1MB)
+## Step 3: Determine Version Bump
 
-## Version Bumping
+Use **UI-adapted Semantic Versioning**:
 
-Update `rubigo.toml` based on the type of change:
+| Change Type | Version Bump | Example |
+|-------------|--------------|---------|
+| Breaking UI changes (E2E tests modified) | **Major** | `1.0.0` → `2.0.0` |
+| New features, backwards-compatible changes | **Minor** | `1.0.0` → `1.1.0` |
+| Dependency updates, docs, bug fixes | **Patch** | `1.0.0` → `1.0.1` |
 
-| Change Type | Action |
-|-------------|--------|
-| Bug fixes, refactoring, docs | Bump **patch**: `0.1.0` → `0.1.1` |
-| New features (backward compatible) | Bump **minor**: `0.1.0` → `0.2.0` |
-| Breaking changes (UI overhaul, API) | Bump **major**: `0.x.x` → `1.0.0` |
+### Pre-1.0.0 Rules
 
-> **Note:** While at `0.x.x`, breaking changes may bump minor instead.
+While version is `0.x.x`:
+- What would be a **major** bump becomes a **minor** bump
+- Minor and patch bumps work as normal
 
-## Build Verification
+| Change Type (Pre-1.0) | Version Bump | Example |
+|-----------------------|--------------|---------|
+| Breaking UI changes | **Minor** | `0.3.0` → `0.4.0` |
+| New features | **Minor** | `0.3.0` → `0.4.0` |
+| Deps, docs, fixes | **Patch** | `0.3.0` → `0.3.1` |
+
+### How to Detect Breaking Changes
+
+A change is **breaking** if:
+- Existing E2E tests had to be modified to pass (not just new tests added)
+- Existing user workflows no longer work the same way
+- API contracts changed in incompatible ways
+
+Update the version in `rubigo-react/rubigo.toml`:
+```toml
+[package]
+version = "x.y.z"
+```
+
+## Step 4: Build Verification
 
 // turbo
-3. Run build to verify no TypeScript errors:
 ```bash
 bun --bun run build
 ```
 
+## Step 5: Run Tests
+
 // turbo
-4. Run tests:
 ```bash
 bun test
 ```
 
-## Commit and Push
+## Step 6: Commit and Push
 
-5. Stage and commit changes with a conventional commit message:
+Stage and commit with a conventional commit message:
 ```bash
 git add -A
-git commit -m "feat(module): description of change"
+git commit -m "<type>(<scope>): <description>"
 ```
 
-6. Push to main:
+Commit types:
+- `feat` - New feature (minor bump)
+- `fix` - Bug fix (patch bump)
+- `docs` - Documentation (patch bump)
+- `chore` - Maintenance, deps (patch bump)
+- `refactor` - Code refactoring (patch bump)
+- `BREAKING CHANGE` - In commit body for breaking changes (major bump)
+
+Push to main:
 ```bash
 git push
 ```
