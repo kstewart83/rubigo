@@ -743,6 +743,265 @@ narrative = "Given I am editing a personnel record as admin, when I click the ph
 status = "draft"
 
 # ============================================================================
+# PROJECTS MODULE - Features, Rules, Scenarios
+# ============================================================================
+
+# --- Projects Module Features ---
+
+[[features]]
+id = "feat-solution-mgmt"
+objective_id = "obj-root"
+name = "Solution Management"
+description = "Users can view, create, and manage Solutions (Products/Services) in the solution catalog"
+status = "active"
+
+[[features]]
+id = "feat-project-mgmt"
+objective_id = "obj-root"
+name = "Project Management"
+description = "Users can create and manage Projects linked to Solutions, tracking strategic initiatives"
+status = "active"
+
+[[features]]
+id = "feat-objective-mgmt"
+objective_id = "obj-root"
+name = "Objective Management"
+description = "Users can define hierarchical Objectives for Projects, including parent-child relationships"
+status = "active"
+
+[[features]]
+id = "feat-initiative-mgmt"
+objective_id = "obj-root"
+name = "Initiative Management"
+description = "Users can create Initiatives linked to KPIs, tracking tactical execution"
+status = "active"
+
+[[features]]
+id = "feat-activity-mgmt"
+objective_id = "obj-root"
+name = "Activity Management"
+description = "Users can manage Activities, Roles, Assignments, and Allocations for resource planning"
+status = "active"
+
+[[features]]
+id = "feat-metrics-kpis"
+objective_id = "obj-root"
+name = "Metrics and KPIs"
+description = "Users can define Metrics and KPIs to measure Objective achievement"
+status = "active"
+
+# --- Projects Module Rules ---
+
+# Solution Management Rules
+[[rules]]
+id = "rule-solution-list"
+feature_id = "feat-solution-mgmt"
+name = "Solution browsing"
+statement = "Signed-in users can browse the solution catalog showing all products and services"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-solution-crud"
+feature_id = "feat-solution-mgmt"
+name = "Solution CRUD"
+statement = "Administrators can create, edit, and delete solutions in the catalog"
+type = "behavioral"
+status = "active"
+
+# Project Management Rules
+[[rules]]
+id = "rule-project-list"
+feature_id = "feat-project-mgmt"
+name = "Project browsing"
+statement = "Signed-in users can browse projects organized by solution"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-project-crud"
+feature_id = "feat-project-mgmt"
+name = "Project CRUD"
+statement = "Administrators can create, edit, and delete projects linked to solutions"
+type = "behavioral"
+status = "active"
+
+# Objective Management Rules
+[[rules]]
+id = "rule-objective-list"
+feature_id = "feat-objective-mgmt"
+name = "Objective browsing"
+statement = "Signed-in users can browse objectives for a project in hierarchical view"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-objective-crud"
+feature_id = "feat-objective-mgmt"
+name = "Objective CRUD"
+statement = "Administrators can create, edit, and delete objectives with parent-child relationships"
+type = "behavioral"
+status = "active"
+
+# Initiative Management Rules
+[[rules]]
+id = "rule-initiative-list"
+feature_id = "feat-initiative-mgmt"
+name = "Initiative browsing"
+statement = "Signed-in users can browse initiatives with their linked KPIs"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-initiative-crud"
+feature_id = "feat-initiative-mgmt"
+name = "Initiative CRUD"
+statement = "Administrators can create, edit, and delete initiatives linked to KPIs"
+type = "behavioral"
+status = "active"
+
+# Activity Management Rules
+[[rules]]
+id = "rule-activity-list"
+feature_id = "feat-activity-mgmt"
+name = "Activity browsing"
+statement = "Signed-in users can browse activities with capacity and allocation information"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-activity-crud"
+feature_id = "feat-activity-mgmt"
+name = "Activity CRUD"
+statement = "Administrators can create, edit, and delete activities under initiatives"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-capacity-viz"
+feature_id = "feat-activity-mgmt"
+name = "Capacity visualization"
+statement = "The activities page must display capacity gap showing FTE required vs FTE allocated"
+type = "behavioral"
+status = "active"
+
+# Metrics and KPIs Rules
+[[rules]]
+id = "rule-metric-list"
+feature_id = "feat-metrics-kpis"
+name = "Metric browsing"
+statement = "Signed-in users can browse defined metrics with their units and targets"
+type = "behavioral"
+status = "active"
+
+[[rules]]
+id = "rule-kpi-list"
+feature_id = "feat-metrics-kpis"
+name = "KPI browsing"
+statement = "Signed-in users can browse KPIs with their target metrics and thresholds"
+type = "behavioral"
+status = "active"
+
+# --- Projects Module Scenarios ---
+
+# Solution Scenarios
+[[scenarios]]
+id = "scen-solution-list"
+rule_id = "rule-solution-list"
+name = "Browse solutions"
+narrative = "Given I am signed in as any user, when I navigate to the Services page, then I see a list of Solutions with their names, descriptions, and status"
+status = "active"
+
+[[scenarios]]
+id = "scen-solution-create"
+rule_id = "rule-solution-crud"
+name = "Create solution"
+narrative = "Given I am signed in as Global Administrator, when I click New Solution and fill in name and description and click Save, then the solution appears in the list"
+status = "active"
+
+# Project Scenarios
+[[scenarios]]
+id = "scen-project-list"
+rule_id = "rule-project-list"
+name = "Browse projects"
+narrative = "Given I am signed in as any user, when I navigate to the Projects page, then I see projects grouped or linked by their solution"
+status = "active"
+
+[[scenarios]]
+id = "scen-project-create"
+rule_id = "rule-project-crud"
+name = "Create project"
+narrative = "Given I am signed in as Global Administrator, when I click New Project, select a solution, fill in name and description, and click Save, then the project appears in the list"
+status = "active"
+
+# Objective Scenarios
+[[scenarios]]
+id = "scen-objective-list"
+rule_id = "rule-objective-list"
+name = "Browse objectives"
+narrative = "Given I am signed in as any user, when I navigate to the Objectives page, then I see objectives displayed in a hierarchical tree structure"
+status = "active"
+
+[[scenarios]]
+id = "scen-objective-create"
+rule_id = "rule-objective-crud"
+name = "Create objective"
+narrative = "Given I am signed in as Global Administrator, when I click New Objective, fill in title and description, optionally select a parent, and click Save, then the objective appears in the hierarchy"
+status = "active"
+
+# Initiative Scenarios
+[[scenarios]]
+id = "scen-initiative-list"
+rule_id = "rule-initiative-list"
+name = "Browse initiatives"
+narrative = "Given I am signed in as any user, when I navigate to the Initiatives page, then I see a list of initiatives with their linked KPIs and status"
+status = "active"
+
+[[scenarios]]
+id = "scen-initiative-create"
+rule_id = "rule-initiative-crud"
+name = "Create initiative"
+narrative = "Given I am signed in as Global Administrator, when I click New Initiative, fill in name, optionally link a KPI, and click Save, then the initiative appears in the list"
+status = "active"
+
+# Activity Scenarios
+[[scenarios]]
+id = "scen-activity-list"
+rule_id = "rule-activity-list"
+name = "Browse activities"
+narrative = "Given I am signed in as any user, when I navigate to the Activities page, then I see activities with their initiative, roles, and capacity information"
+status = "active"
+
+[[scenarios]]
+id = "scen-activity-capacity"
+rule_id = "rule-capacity-viz"
+name = "View capacity dashboard"
+narrative = "Given I am on the Activities page, then I see a capacity dashboard showing Capacity Filled percentage and FTE Required vs FTE Allocated"
+status = "active"
+
+[[scenarios]]
+id = "scen-activity-create"
+rule_id = "rule-activity-crud"
+name = "Create activity"
+narrative = "Given I am signed in as Global Administrator, when I click New Activity, select an initiative, fill in name, and click Save, then the activity appears in the list"
+status = "active"
+
+# Metrics Scenarios
+[[scenarios]]
+id = "scen-metric-list"
+rule_id = "rule-metric-list"
+name = "Browse metrics"
+narrative = "Given I am signed in as any user, when I navigate to the Metrics page, then I see a list of metrics with their units and current values"
+status = "active"
+
+[[scenarios]]
+id = "scen-kpi-view"
+rule_id = "rule-kpi-list"
+name = "View KPI details"
+narrative = "Given I am viewing the Metrics page, when a metric has linked KPIs, then I can see the KPI targets and thresholds"
+status = "active"
+
+# ============================================================================
 # SPECIFICATIONS - Non-functional and quality requirements
 # ============================================================================
 
