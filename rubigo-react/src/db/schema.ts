@@ -37,6 +37,18 @@ export const personnel = sqliteTable("personnel", {
     isGlobalAdmin: integer("is_global_admin", { mode: "boolean" }).default(false),
 });
 
+/**
+ * PhotoBlobs - Database storage for personnel photos
+ * Stores images as blobs with metadata for serving with cache headers
+ */
+export const photoBlobs = sqliteTable("photo_blobs", {
+    id: text("id").primaryKey(), // Used as filename/identifier
+    data: text("data").notNull(), // Base64 encoded image data
+    mimeType: text("mime_type").notNull(), // e.g., "image/jpeg"
+    size: integer("size").notNull(), // File size in bytes
+    createdAt: text("created_at").notNull(), // ISO timestamp for caching
+});
+
 // ============================================================================
 // Solution Space
 // ============================================================================

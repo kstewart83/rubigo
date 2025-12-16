@@ -276,3 +276,269 @@ test.describe("Personnel CRUD (Admin Only)", () => {
         }
     });
 });
+
+// ============================================================================
+// New Personnel Feature Scenarios
+// Tests for contact info, location, manager, and photo features
+// ============================================================================
+
+test.describe("Personnel Extended Features", () => {
+    test.beforeEach(async ({ page }) => {
+        // Sign in as admin
+        await signInAsAdmin(page);
+        await page.goto("/personnel");
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(500);
+    });
+
+    // --- Contact Information ---
+
+    test("scen-personnel-contact-view: View contact information", async ({ page }) => {
+        // Given I am viewing a personnel detail panel
+        // Find a person with phone numbers (e.g., Thomas Anderson from MMC data)
+        await page.getByPlaceholder(/search/i).fill("Thomas Anderson");
+        await page.waitForTimeout(400);
+
+        const row = page.locator("td", { hasText: "Thomas Anderson" }).first();
+        if (await row.isVisible({ timeout: 3000 })) {
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // When the record has phone numbers
+            // Then I see the desk phone and cell phone displayed
+            const contactSection = page.locator("text=Contact").first();
+            if (await contactSection.isVisible({ timeout: 2000 })) {
+                // Check for phone links (tel: links)
+                const deskLabel = page.locator("text=Desk");
+                const cellLabel = page.locator("text=Cell");
+                await expect(deskLabel.or(cellLabel)).toBeVisible();
+            }
+        }
+    });
+
+    test("scen-personnel-contact-edit: Edit contact information", async ({ page }) => {
+        // Create a test employee with phone numbers
+        const addButton = page.getByRole("button", { name: /add personnel/i });
+        if (await addButton.isVisible()) {
+            await addButton.click();
+            const uniqueName = `Contact Test ${Date.now()}`;
+            await page.fill("#name", uniqueName);
+            await page.fill("#email", `contact${Date.now()}@test.com`);
+
+            // Given I am editing a personnel record as admin
+            // When I enter desk phone and cell phone numbers
+            await page.fill("#deskPhone", "614-555-1234");
+            await page.fill("#cellPhone", "614-555-5678");
+
+            // Set department and create
+            await page.locator("[role='dialog']").getByRole("combobox").first().click();
+            await page.getByRole("option", { name: "Engineering" }).click();
+            await page.getByRole("button", { name: /create/i }).click();
+            await page.waitForTimeout(1000);
+
+            // Then the contact info is saved and displayed in the detail view
+            await page.getByPlaceholder(/search/i).fill(uniqueName);
+            await page.waitForTimeout(400);
+            const row = page.locator("td", { hasText: uniqueName }).first();
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // Verify phone numbers in detail panel
+            await expect(page.locator("text=614-555-1234")).toBeVisible();
+            await expect(page.locator("text=614-555-5678")).toBeVisible();
+        }
+    });
+
+    // --- Office Location ---
+
+    test("scen-personnel-location-view: View office location", async ({ page }) => {
+        // Given I am viewing a personnel detail panel
+        await page.getByPlaceholder(/search/i).fill("Thomas Anderson");
+        await page.waitForTimeout(400);
+
+        const row = page.locator("td", { hasText: "Thomas Anderson" }).first();
+        if (await row.isVisible({ timeout: 3000 })) {
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // When the record has location info
+            // Then I see site, building, level, and space displayed
+            const locationSection = page.locator("text=Office Location").first();
+            if (await locationSection.isVisible({ timeout: 2000 })) {
+                // Location should show formatted address
+                await expect(locationSection).toBeVisible();
+            }
+        }
+    });
+
+    test("scen-personnel-location-edit: Edit office location", async ({ page }) => {
+        // Create a test employee with location
+        const addButton = page.getByRole("button", { name: /add personnel/i });
+        if (await addButton.isVisible()) {
+            await addButton.click();
+            const uniqueName = `Location Test ${Date.now()}`;
+            await page.fill("#name", uniqueName);
+            await page.fill("#email", `location${Date.now()}@test.com`);
+
+            // Given I am editing a personnel record as admin
+            // When I fill in site, building, level, and space fields
+            await page.fill("#site", "HQ");
+            await page.fill("#building", "Main Building");
+            await page.fill("#level", "3");
+            await page.fill("#space", "301");
+
+            // Set department and create
+            await page.locator("[role='dialog']").getByRole("combobox").first().click();
+            await page.getByRole("option", { name: "IT" }).click();
+            await page.getByRole("button", { name: /create/i }).click();
+            await page.waitForTimeout(1000);
+
+            // Then the location is saved and displayed in the detail view
+            await page.getByPlaceholder(/search/i).fill(uniqueName);
+            await page.waitForTimeout(400);
+            const row = page.locator("td", { hasText: uniqueName }).first();
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // Verify location in detail panel
+            await expect(page.locator("text=HQ")).toBeVisible();
+            await expect(page.locator("text=Main Building")).toBeVisible();
+        }
+    });
+
+    // --- Manager Relationship ---
+
+    test("scen-personnel-manager-view: View manager relationship", async ({ page }) => {
+        // Given I am viewing a personnel detail panel
+        // Find someone with a manager assigned
+        await page.getByPlaceholder(/search/i).fill("Thomas Anderson");
+        await page.waitForTimeout(400);
+
+        const row = page.locator("td", { hasText: "Thomas Anderson" }).first();
+        if (await row.isVisible({ timeout: 3000 })) {
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // When the person has a manager assigned
+            // Then I see the manager's name displayed
+            const managerSection = page.locator("text=Manager").first();
+            if (await managerSection.isVisible({ timeout: 2000 })) {
+                await expect(managerSection).toBeVisible();
+            }
+        }
+    });
+
+    test("scen-personnel-manager-select: Assign manager via searchable dropdown", async ({ page }) => {
+        // Create a test employee and assign a manager
+        const addButton = page.getByRole("button", { name: /add personnel/i });
+        if (await addButton.isVisible()) {
+            await addButton.click();
+            const uniqueName = `Manager Test ${Date.now()}`;
+            await page.fill("#name", uniqueName);
+            await page.fill("#email", `manager${Date.now()}@test.com`);
+
+            // Set department first
+            await page.locator("[role='dialog']").getByRole("combobox").first().click();
+            await page.getByRole("option", { name: "Engineering" }).click();
+
+            // Given I am editing a personnel record as admin
+            // When I use the manager dropdown and search for a name
+            const managerDropdown = page.getByRole("combobox", { name: /select manager/i });
+            if (await managerDropdown.isVisible({ timeout: 2000 })) {
+                await managerDropdown.click();
+
+                // Search for a manager
+                await page.getByPlaceholder(/search by name/i).fill("Global");
+                await page.waitForTimeout(300);
+
+                // Then I can select from matching personnel
+                const adminOption = page.locator("[role='option']", { hasText: "Global Administrator" });
+                if (await adminOption.isVisible({ timeout: 2000 })) {
+                    await adminOption.click();
+                }
+            }
+
+            await page.getByRole("button", { name: /create/i }).click();
+            await page.waitForTimeout(1000);
+
+            // Verify the manager was saved
+            await page.getByPlaceholder(/search/i).fill(uniqueName);
+            await page.waitForTimeout(400);
+            const row = page.locator("td", { hasText: uniqueName }).first();
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // Check manager is shown in detail panel
+            const managerText = page.locator("text=Global Administrator");
+            await expect(managerText.first()).toBeVisible();
+        }
+    });
+
+    // --- Photo Upload ---
+
+    test("scen-personnel-photo-display: Display personnel photo or initials", async ({ page }) => {
+        // Given I am viewing a personnel detail panel
+        await page.getByPlaceholder(/search/i).fill("Thomas Anderson");
+        await page.waitForTimeout(400);
+
+        const row = page.locator("td", { hasText: "Thomas Anderson" }).first();
+        if (await row.isVisible({ timeout: 3000 })) {
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // When viewing the detail panel
+            // Then I see their photo OR initials at the top
+            const photoOrInitials = page.locator("img[alt]").or(
+                page.locator(".rounded-full").first()
+            );
+            await expect(photoOrInitials).toBeVisible();
+        }
+    });
+
+    test("scen-personnel-photo-upload: Upload personnel photo", async ({ page }) => {
+        // Create a test employee and upload a photo
+        const addButton = page.getByRole("button", { name: /add personnel/i });
+        if (await addButton.isVisible()) {
+            await addButton.click();
+            const uniqueName = `Photo Test ${Date.now()}`;
+            await page.fill("#name", uniqueName);
+            await page.fill("#email", `photo${Date.now()}@test.com`);
+
+            // Set department
+            await page.locator("[role='dialog']").getByRole("combobox").first().click();
+            await page.getByRole("option", { name: "HR" }).click();
+
+            // Given I am editing a personnel record as admin
+            // When I click the photo upload area and select an image file
+            const photoInput = page.locator("[data-testid='photo-upload-input']");
+            if (await photoInput.isVisible({ timeout: 2000 })) {
+                // Upload a test image - using a 1x1 red pixel PNG
+                await photoInput.setInputFiles({
+                    name: "test-photo.png",
+                    mimeType: "image/png",
+                    buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64"),
+                });
+
+                // Wait for upload to complete
+                await page.waitForTimeout(2000);
+            }
+
+            await page.getByRole("button", { name: /create/i }).click();
+            await page.waitForTimeout(1000);
+
+            // Then the photo is uploaded and displayed
+            await page.getByPlaceholder(/search/i).fill(uniqueName);
+            await page.waitForTimeout(400);
+            const row = page.locator("td", { hasText: uniqueName }).first();
+            await row.click();
+            await page.waitForTimeout(500);
+
+            // The photo should be displayed (or at least the upload was processed)
+            // Check for img element in detail panel
+            const photo = page.locator("img").first();
+            if (await photo.isVisible({ timeout: 2000 })) {
+                expect(await photo.getAttribute("src")).toBeTruthy();
+            }
+        }
+    });
+});

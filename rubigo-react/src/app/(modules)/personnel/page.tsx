@@ -47,6 +47,7 @@ export default async function PersonnelPage({ searchParams }: PageProps) {
                     totalPages={paginatedData.totalPages}
                     search={search}
                     department={department}
+                    allPersonnel={allPersonnel}
                 />
             </AppShell>
         </PersonaProvider>

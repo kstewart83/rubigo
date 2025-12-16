@@ -7,7 +7,7 @@
  * Receives paginated data from the server component.
  */
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -54,7 +54,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePersona } from "@/contexts/persona-context";
 import { createPersonnel, updatePersonnel, deletePersonnel } from "@/lib/personnel-actions";
-import type { Department } from "@/types/personnel";
+import { PersonnelSelector } from "@/components/personnel-selector";
+import { PhotoUpload } from "@/components/photo-upload";
+import type { Department, Person } from "@/types/personnel";
 
 interface PersonnelData {
     id: string;
@@ -82,6 +84,7 @@ interface Props {
     totalPages: number;
     search: string;
     department: string;
+    allPersonnel: Person[];
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -103,6 +106,7 @@ export function PersonnelPageContent({
     totalPages,
     search: initialSearch,
     department: initialDepartment,
+    allPersonnel,
 }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -112,6 +116,25 @@ export function PersonnelPageContent({
     // Local state for filters (debounced)
     const [searchInput, setSearchInput] = useState(initialSearch);
     const [selectedPerson, setSelectedPerson] = useState<PersonnelData | null>(null);
+
+    // Real-time search with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchInput !== initialSearch) {
+                const params = new URLSearchParams(searchParams.toString());
+                if (searchInput) {
+                    params.set("search", searchInput);
+                } else {
+                    params.delete("search");
+                }
+                params.set("page", "1");
+                startTransition(() => {
+                    router.push(`/personnel?${params.toString()}`);
+                });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput, initialSearch, searchParams, router]);
 
     // CRUD dialogs
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -124,6 +147,14 @@ export function PersonnelPageContent({
         title: "",
         department: "Engineering" as Department,
         bio: "",
+        deskPhone: "",
+        cellPhone: "",
+        site: "",
+        building: "",
+        level: "",
+        space: "",
+        manager: "",
+        photo: "",
     });
     const [formError, setFormError] = useState("");
 
@@ -180,6 +211,14 @@ export function PersonnelPageContent({
                 title: formData.title || undefined,
                 department: formData.department,
                 bio: formData.bio || undefined,
+                deskPhone: formData.deskPhone || undefined,
+                cellPhone: formData.cellPhone || undefined,
+                site: formData.site || undefined,
+                building: formData.building || undefined,
+                level: formData.level ? parseInt(formData.level) : undefined,
+                space: formData.space || undefined,
+                manager: formData.manager || undefined,
+                photo: formData.photo || undefined,
             },
             currentPersona.id,
             currentPersona.name
@@ -187,7 +226,7 @@ export function PersonnelPageContent({
 
         if (result.success) {
             setShowCreateDialog(false);
-            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "" });
+            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "" });
             router.refresh();
         } else {
             setFormError(result.error || "Failed to create");
@@ -205,6 +244,14 @@ export function PersonnelPageContent({
                 title: formData.title || undefined,
                 department: formData.department,
                 bio: formData.bio || undefined,
+                deskPhone: formData.deskPhone || undefined,
+                cellPhone: formData.cellPhone || undefined,
+                site: formData.site || undefined,
+                building: formData.building || undefined,
+                level: formData.level ? parseInt(formData.level) : undefined,
+                space: formData.space || undefined,
+                manager: formData.manager || undefined,
+                photo: formData.photo || undefined,
             },
             currentPersona.id,
             currentPersona.name
@@ -246,6 +293,14 @@ export function PersonnelPageContent({
             title: person.title || "",
             department: person.department as Department,
             bio: person.bio || "",
+            deskPhone: person.deskPhone || "",
+            cellPhone: person.cellPhone || "",
+            site: person.site || "",
+            building: person.building || "",
+            level: person.level?.toString() || "",
+            space: person.space || "",
+            manager: person.manager || "",
+            photo: person.photo || "",
         });
         setFormError("");
         setShowEditDialog(true);
@@ -273,7 +328,7 @@ export function PersonnelPageContent({
                 {isAdmin && (
                     <Button
                         onClick={() => {
-                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "" });
+                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "" });
                             setFormError("");
                             setShowCreateDialog(true);
                         }}
@@ -444,8 +499,55 @@ export function PersonnelPageContent({
                                         <div className="text-sm text-zinc-500">Email</div>
                                         <div>{selectedPerson.email}</div>
                                     </div>
+
+                                    {/* Contact Info */}
+                                    {(selectedPerson.deskPhone || selectedPerson.cellPhone) && (
+                                        <div className="pt-2 border-t">
+                                            <div className="text-sm font-medium mb-2">Contact</div>
+                                            {selectedPerson.deskPhone && (
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <span className="text-zinc-500">Desk:</span>
+                                                    <a href={`tel:${selectedPerson.deskPhone}`} className="text-blue-600 hover:underline">
+                                                        {selectedPerson.deskPhone}
+                                                    </a>
+                                                </div>
+                                            )}
+                                            {selectedPerson.cellPhone && (
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <span className="text-zinc-500">Cell:</span>
+                                                    <a href={`tel:${selectedPerson.cellPhone}`} className="text-blue-600 hover:underline">
+                                                        {selectedPerson.cellPhone}
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Location */}
+                                    {(selectedPerson.site || selectedPerson.building) && (
+                                        <div className="pt-2 border-t">
+                                            <div className="text-sm font-medium mb-2">Office Location</div>
+                                            <div className="text-sm">
+                                                {[
+                                                    selectedPerson.site,
+                                                    selectedPerson.building,
+                                                    selectedPerson.level && `Level ${selectedPerson.level}`,
+                                                    selectedPerson.space && `Space ${selectedPerson.space}`,
+                                                ].filter(Boolean).join(", ")}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Manager */}
+                                    {selectedPerson.manager && (
+                                        <div className="pt-2 border-t">
+                                            <div className="text-sm text-zinc-500">Manager</div>
+                                            <div>{selectedPerson.manager}</div>
+                                        </div>
+                                    )}
+
                                     {selectedPerson.bio && (
-                                        <div>
+                                        <div className="pt-2 border-t">
                                             <div className="text-sm text-zinc-500">Bio</div>
                                             <div className="text-sm">{selectedPerson.bio}</div>
                                         </div>
@@ -475,7 +577,15 @@ export function PersonnelPageContent({
                     <DialogHeader>
                         <DialogTitle>Add Personnel</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {/* Photo Upload */}
+                        <div className="flex justify-center">
+                            <PhotoUpload
+                                value={formData.photo}
+                                onChange={(url) => setFormData({ ...formData, photo: url })}
+                                size="lg"
+                            />
+                        </div>
                         {formError && (
                             <div className="text-sm text-red-600 dark:text-red-400 p-3 rounded-md bg-red-50 dark:bg-red-950">
                                 {formError}
@@ -532,6 +642,91 @@ export function PersonnelPageContent({
                                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                             />
                         </div>
+
+                        {/* Contact Info */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="deskPhone">Desk Phone</Label>
+                                <Input
+                                    id="deskPhone"
+                                    type="tel"
+                                    placeholder="614-555-1234"
+                                    value={formData.deskPhone}
+                                    onChange={(e) => setFormData({ ...formData, deskPhone: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="cellPhone">Cell Phone</Label>
+                                <Input
+                                    id="cellPhone"
+                                    type="tel"
+                                    placeholder="614-555-5678"
+                                    value={formData.cellPhone}
+                                    onChange={(e) => setFormData({ ...formData, cellPhone: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Location */}
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium">Office Location</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="site" className="text-xs text-zinc-500">Site</Label>
+                                    <Input
+                                        id="site"
+                                        placeholder="HQ"
+                                        value={formData.site}
+                                        onChange={(e) => setFormData({ ...formData, site: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="building" className="text-xs text-zinc-500">Building</Label>
+                                    <Input
+                                        id="building"
+                                        placeholder="Main Building"
+                                        value={formData.building}
+                                        onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="level" className="text-xs text-zinc-500">Level/Floor</Label>
+                                    <Input
+                                        id="level"
+                                        placeholder="3"
+                                        value={formData.level}
+                                        onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="space" className="text-xs text-zinc-500">Space/Room</Label>
+                                    <Input
+                                        id="space"
+                                        placeholder="301"
+                                        value={formData.space}
+                                        onChange={(e) => setFormData({ ...formData, space: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Manager */}
+                        <div>
+                            <Label>Manager</Label>
+                            <PersonnelSelector
+                                value={formData.manager}
+                                onChange={(v) => setFormData({ ...formData, manager: v })}
+                                placeholder="Select manager..."
+                                personnel={allPersonnel.map((p) => ({
+                                    id: p.id,
+                                    name: p.name,
+                                    title: p.title || null,
+                                    department: p.department,
+                                }))}
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -548,7 +743,16 @@ export function PersonnelPageContent({
                     <DialogHeader>
                         <DialogTitle>Edit Personnel</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {/* Photo Upload */}
+                        <div className="flex justify-center">
+                            <PhotoUpload
+                                value={formData.photo}
+                                onChange={(url) => setFormData({ ...formData, photo: url })}
+                                personnelId={editingPerson?.id}
+                                size="lg"
+                            />
+                        </div>
                         {formError && (
                             <div className="text-sm text-red-600 dark:text-red-400 p-3 rounded-md bg-red-50 dark:bg-red-950">
                                 {formError}
@@ -603,6 +807,92 @@ export function PersonnelPageContent({
                                 id="edit-bio"
                                 value={formData.bio}
                                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                            />
+                        </div>
+
+                        {/* Contact Info */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="edit-deskPhone">Desk Phone</Label>
+                                <Input
+                                    id="edit-deskPhone"
+                                    type="tel"
+                                    placeholder="614-555-1234"
+                                    value={formData.deskPhone}
+                                    onChange={(e) => setFormData({ ...formData, deskPhone: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="edit-cellPhone">Cell Phone</Label>
+                                <Input
+                                    id="edit-cellPhone"
+                                    type="tel"
+                                    placeholder="614-555-5678"
+                                    value={formData.cellPhone}
+                                    onChange={(e) => setFormData({ ...formData, cellPhone: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Location */}
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium">Office Location</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="edit-site" className="text-xs text-zinc-500">Site</Label>
+                                    <Input
+                                        id="edit-site"
+                                        placeholder="HQ"
+                                        value={formData.site}
+                                        onChange={(e) => setFormData({ ...formData, site: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit-building" className="text-xs text-zinc-500">Building</Label>
+                                    <Input
+                                        id="edit-building"
+                                        placeholder="Main Building"
+                                        value={formData.building}
+                                        onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="edit-level" className="text-xs text-zinc-500">Level/Floor</Label>
+                                    <Input
+                                        id="edit-level"
+                                        placeholder="3"
+                                        value={formData.level}
+                                        onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit-space" className="text-xs text-zinc-500">Space/Room</Label>
+                                    <Input
+                                        id="edit-space"
+                                        placeholder="301"
+                                        value={formData.space}
+                                        onChange={(e) => setFormData({ ...formData, space: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Manager */}
+                        <div>
+                            <Label>Manager</Label>
+                            <PersonnelSelector
+                                value={formData.manager}
+                                onChange={(v) => setFormData({ ...formData, manager: v })}
+                                placeholder="Select manager..."
+                                excludeId={editingPerson?.id}
+                                personnel={allPersonnel.map((p) => ({
+                                    id: p.id,
+                                    name: p.name,
+                                    title: p.title || null,
+                                    department: p.department,
+                                }))}
                             />
                         </div>
                     </div>

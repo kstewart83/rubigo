@@ -357,7 +357,7 @@ parent_id = "obj-it-business-systems"
 status = "active"
 
 [[objectives]]
-id = "obj-rubigo-personnel"
+id = "obj-personnel-org-structure"
 title = "Personnel Directory and Org Structure"
 description = "The organization must maintain an accurate, accessible directory of personnel with reporting relationships, roles, skills, and contact information"
 project_id = "d4e5f6"
@@ -577,6 +577,38 @@ requirement = "remove personnel records from the directory"
 reason = "maintain accuracy when employees leave the organization"
 status = "active"
 
+[[rules]]
+id = "rule-personnel-contact"
+feature_id = "feat-personnel-crud"
+role = "Platform User"
+requirement = "see phone numbers for personnel"
+reason = "reach colleagues by phone for urgent matters"
+status = "draft"
+
+[[rules]]
+id = "rule-personnel-location"
+feature_id = "feat-personnel-crud"
+role = "Platform User"
+requirement = "see where each person is located (site, building, floor, space)"
+reason = "find colleagues for in-person meetings"
+status = "draft"
+
+[[rules]]
+id = "rule-personnel-hierarchy"
+feature_id = "feat-personnel-crud"
+role = "Platform User"
+requirement = "see each person's manager relationship"
+reason = "understand organizational reporting structure"
+status = "draft"
+
+[[rules]]
+id = "rule-personnel-photo"
+feature_id = "feat-personnel-crud"
+role = "Platform Administrator"
+requirement = "upload and manage personnel photos"
+reason = "help employees identify colleagues by face"
+status = "draft"
+
 # ============================================================================
 # SCENARIOS - Behavioral test cases for rules
 # ============================================================================
@@ -645,6 +677,70 @@ rule_id = "rule-personnel-delete"
 name = "Remove employee from directory"
 narrative = "Given I am signed in as Global Administrator and viewing a personnel detail panel, when I click Delete and confirm, then the record no longer appears in the table"
 status = "active"
+
+# --- Personnel Contact Scenarios ---
+
+[[scenarios]]
+id = "scen-personnel-contact-view"
+rule_id = "rule-personnel-contact"
+name = "View contact information"
+narrative = "Given I am viewing a personnel detail panel, when the record has phone numbers, then I see the desk phone and cell phone displayed with clickable tel: links"
+status = "draft"
+
+[[scenarios]]
+id = "scen-personnel-contact-edit"
+rule_id = "rule-personnel-contact"
+name = "Edit contact information"
+narrative = "Given I am editing a personnel record as admin, when I enter desk phone and cell phone numbers, then the contact info is saved and displayed in the detail view"
+status = "draft"
+
+# --- Personnel Location Scenarios ---
+
+[[scenarios]]
+id = "scen-personnel-location-view"
+rule_id = "rule-personnel-location"
+name = "View office location"
+narrative = "Given I am viewing a personnel detail panel, when the record has location info, then I see site, building, level, and space displayed as a formatted address"
+status = "draft"
+
+[[scenarios]]
+id = "scen-personnel-location-edit"
+rule_id = "rule-personnel-location"
+name = "Edit office location"
+narrative = "Given I am editing a personnel record as admin, when I fill in site, building, level, and space fields, then the location is saved and displayed in the detail view"
+status = "draft"
+
+# --- Personnel Hierarchy Scenarios ---
+
+[[scenarios]]
+id = "scen-personnel-manager-view"
+rule_id = "rule-personnel-hierarchy"
+name = "View manager relationship"
+narrative = "Given I am viewing a personnel detail panel, when the person has a manager assigned, then I see the manager's name as a clickable link to their profile"
+status = "draft"
+
+[[scenarios]]
+id = "scen-personnel-manager-select"
+rule_id = "rule-personnel-hierarchy"
+name = "Assign manager"
+narrative = "Given I am editing a personnel record as admin, when I use the manager dropdown and search for a name, then I can select from matching personnel and save the relationship"
+status = "draft"
+
+# --- Personnel Photo Scenarios ---
+
+[[scenarios]]
+id = "scen-personnel-photo-display"
+rule_id = "rule-personnel-photo"
+name = "Display personnel photo"
+narrative = "Given I am viewing a personnel detail panel, when the person has a photo uploaded, then I see their photo at the top of the panel; otherwise I see initials"
+status = "draft"
+
+[[scenarios]]
+id = "scen-personnel-photo-upload"
+rule_id = "rule-personnel-photo"
+name = "Upload personnel photo"
+narrative = "Given I am editing a personnel record as admin, when I click the photo upload area and select an image file, then the photo is uploaded and displayed immediately"
+status = "draft"
 
 # ============================================================================
 # SPECIFICATIONS - Non-functional and quality requirements
