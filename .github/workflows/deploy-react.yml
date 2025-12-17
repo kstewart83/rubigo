@@ -6,6 +6,7 @@ on:
     paths:
       - 'rubigo-react/**'
       - 'common/**'
+      - '.github/workflows/deploy-react.yml'
 
 jobs:
   deploy:
@@ -74,10 +75,11 @@ jobs:
           DATABASE_URL="$DATABASE_URL" bunx drizzle-kit migrate
           
           # Checkpoint WAL and fully release locks before build
-          # Multiple checkpoints + sleep to ensure all connections are closed
+          # Multiple operations to ensure all connections are closed
           sqlite3 "$DATABASE_URL" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
           sqlite3 "$DATABASE_URL" "PRAGMA journal_mode=DELETE;" 2>/dev/null || true
-          sleep 2
+          # Wait for any background processes to release file handles
+          sleep 5
           echo "✅ Migrations applied"
 
       - name: Build application
@@ -85,8 +87,16 @@ jobs:
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Build with DATABASE_URL so Next.js can connect during page generation
-          DATABASE_URL="$DATABASE_URL" bun run build
+          # Create isolated build database using SQLite backup command
+          # This consolidates WAL into the main file and creates a completely 
+          # independent copy with no shared locks
+          BUILD_DB="$BUILD_DIR/rubigo.db"
+          sqlite3 "$DATABASE_URL" ".backup '$BUILD_DB'"
+          
+          # Override DATABASE_URL to use isolated build database
+          # Using export ensures all subprocesses (Next.js workers) use it
+          export DATABASE_URL="$BUILD_DB"
+          bun run build
           
           echo "Build complete in $BUILD_DIR"
 
