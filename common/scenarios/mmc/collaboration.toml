@@ -91,6 +91,13 @@ description = "Assign organizers and participants to events"
 objective_id = "obj-calendar-core"
 status = "planned"
 
+[[features]]
+id = "feat-calendar-timezone"
+name = "Event Timezone Management"
+description = "Select event timezone and display local time conversion when event timezone differs from user's local timezone"
+objective_id = "obj-calendar-core"
+status = "planned"
+
 # ============================================================================
 # RULES - Calendar Event Management
 # ============================================================================
@@ -109,8 +116,8 @@ status = "draft"
 id = "rule-calendar-create"
 feature_id = "feat-calendar-crud"
 role = "Platform User"
-requirement = "create a new calendar event with title, date, time, and type"
-reason = "schedule meetings and events"
+requirement = "create a new calendar event with title, date/time, and optional details"
+reason = "schedule meetings and appointments"
 status = "draft"
 
 [[rules]]
@@ -225,6 +232,32 @@ requirement = "add personnel as participants to an event"
 reason = "invite colleagues to meetings"
 status = "draft"
 
+# --- Timezone Rules ---
+
+[[rules]]
+id = "rule-calendar-timezone-select"
+feature_id = "feat-calendar-timezone"
+role = "Platform User"
+requirement = "select a timezone for a calendar event when creating or editing"
+reason = "schedule events in the appropriate timezone regardless of current location"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-timezone-local-preview"
+feature_id = "feat-calendar-timezone"
+role = "Platform User"
+requirement = "see a local time preview when the event timezone differs from my local timezone"
+reason = "understand when the event will occur in my local time without manual conversion"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-timezone-details"
+feature_id = "feat-calendar-timezone"
+role = "Platform User"
+requirement = "see both event timezone time and my local time in the event details panel when timezones differ"
+reason = "quickly understand event timing in both the organizer's and my own timezone"
+status = "draft"
+
 # ============================================================================
 # SCENARIOS - Calendar BDD Test Cases
 # ============================================================================
@@ -242,7 +275,14 @@ status = "draft"
 id = "scen-calendar-month-nav"
 rule_id = "rule-calendar-navigate"
 name = "Navigate between months"
-narrative = "Given I am viewing the calendar, when I click the next arrow, then the display advances to the next month"
+narrative = "Given I am viewing the calendar in month view, when I click the next arrow, then the display advances to the next month"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-week-nav"
+rule_id = "rule-calendar-navigate"
+name = "Navigate between weeks"
+narrative = "Given I am viewing the calendar in week view, when I click the next arrow, then the display advances by one week"
 status = "draft"
 
 [[scenarios]]
@@ -264,8 +304,52 @@ status = "draft"
 [[scenarios]]
 id = "scen-calendar-workweek-toggle"
 rule_id = "rule-calendar-workweek"
-name = "Toggle work week mode"
-narrative = "Given I am viewing the calendar, when I enable work week mode, then only Monday through Friday are displayed"
+name = "Toggle work week mode in week view"
+narrative = "Given I am viewing the calendar in week view, when I enable work week mode, then only Monday through Friday columns are displayed"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-workweek-month"
+rule_id = "rule-calendar-workweek"
+name = "Toggle work week mode in month view"
+narrative = "Given I am viewing the calendar in month view, when I enable work week mode, then the month grid shows only Monday through Friday columns"
+status = "draft"
+
+# --- Timezone Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-timezone-select"
+rule_id = "rule-calendar-timezone-select"
+name = "Select event timezone"
+narrative = "Given I am creating or editing an event, when I select a timezone from the timezone dropdown, then the event is saved with that timezone"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-timezone-local-preview"
+rule_id = "rule-calendar-timezone-local-preview"
+name = "Display local time preview in edit mode"
+narrative = "Given I am editing an event with a timezone different from my local timezone, when I view the event form, then I see a local time preview showing the event time converted to my local timezone"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-timezone-same-tz-no-preview"
+rule_id = "rule-calendar-timezone-local-preview"
+name = "Hide local time preview when timezones match"
+narrative = "Given I am editing an event with a timezone matching my local timezone, when I view the event form, then no local time preview is shown"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-timezone-details-display"
+rule_id = "rule-calendar-timezone-details"
+name = "Display local time in details panel"
+narrative = "Given I am viewing details of an event with a timezone different from my local timezone, when the details panel opens, then I see both the event time in its original timezone and my local time"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-timezone-details-same-tz"
+rule_id = "rule-calendar-timezone-details"
+name = "Hide local time in details when timezones match"
+narrative = "Given I am viewing details of an event with a timezone matching my local timezone, when the details panel opens, then only the event time is shown without a separate local time row"
 status = "draft"
 
 # --- Event Creation Scenarios ---
