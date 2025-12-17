@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "./sidebar";
-import { Toolbar } from "./toolbar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { PersonaSwitcher } from "@/components/persona-switcher";
 import { InitializationForm } from "@/components/initialization-form";
 import { usePersona } from "@/contexts/persona-context";
@@ -343,15 +343,15 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
         );
     }
 
+    // Main application layout with new ShadCN sidebar
     return (
-        <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
-            <Sidebar version={version} />
-            <div className="flex-1 flex flex-col">
-                <Toolbar personnel={personnel} />
+        <SidebarProvider>
+            <AppSidebar personnel={personnel} version={version} />
+            <SidebarInset>
                 <main className="flex-1 p-6 overflow-auto">
                     {children}
                 </main>
-            </div>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }
