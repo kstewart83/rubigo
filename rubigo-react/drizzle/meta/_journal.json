@@ -8,6 +8,13 @@
       "when": 1765856004379,
       "tag": "0000_unique_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1765977120000,
+      "tag": "0001_add_missing_tables",
+      "breakpoints": true
     }
   ]
 }
