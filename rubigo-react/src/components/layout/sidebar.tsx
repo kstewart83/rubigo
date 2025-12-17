@@ -80,7 +80,11 @@ const sidebarModules: SidebarModule[] = [
 // Sidebar Component
 // ============================================================================
 
-export function Sidebar() {
+interface SidebarProps {
+    version?: string;
+}
+
+export function Sidebar({ version = "0.1.0" }: SidebarProps) {
     const pathname = usePathname();
     const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
@@ -119,6 +123,7 @@ export function Sidebar() {
                     >
                         Rubigo
                     </span>
+                    <span className="ml-1 text-xs text-zinc-400">v{version}</span>
                 </Link>
             </div>
 
@@ -186,12 +191,7 @@ export function Sidebar() {
                 </ul>
             </nav>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
-                <p className="text-xs text-zinc-400">
-                    Enterprise Resource Management
-                </p>
-            </div>
+
         </aside>
     );
 }
