@@ -34,6 +34,10 @@ jobs:
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
           
+          # Rebuild native modules for current Node.js version
+          # Required because better-sqlite3 (used by drizzle-kit) needs Node.js
+          npm rebuild better-sqlite3
+          
           echo "Dependencies installed in $BUILD_DIR"
 
       - name: Stop current service
@@ -65,7 +69,7 @@ jobs:
           cd "$BUILD_DIR"
           
           # Apply committed migration files (safe, deterministic)
-          # Fails if no migration files exist for pending schema changes
+          # Uses Node.js via drizzle-kit (native modules rebuilt in prepare step)
           DATABASE_URL="$DATABASE_URL" bun run db:migrate
           
           # Checkpoint WAL and release locks before build
