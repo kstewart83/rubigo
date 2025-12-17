@@ -1,6 +1,7 @@
 /**
  * Specifications REST API
  * 
+ * GET /api/specifications - List all specifications
  * POST /api/specifications - Create a new specification (NFR)
  * 
  * Requires Authorization: Bearer <token> header
@@ -48,6 +49,31 @@ interface SpecificationInput {
     narrative: string;
     category: SpecCategory;
     status?: "draft" | "active" | "deprecated";
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.specifications);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET specifications error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list specifications" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {
