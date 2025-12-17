@@ -34,6 +34,11 @@ jobs:
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
           
+          # Rebuild native modules for current Node.js version
+          # Required because drizzle-kit uses #!/usr/bin/env node shebang and
+          # better-sqlite3 needs to match the runner's Node.js version
+          npm rebuild better-sqlite3
+          
           echo "Dependencies installed in $BUILD_DIR"
 
       - name: Stop current service
