@@ -32,14 +32,14 @@ jobs:
           
           echo "Dependencies installed in $BUILD_DIR"
 
-      - name: Run database migrations
+      - name: Sync database schema
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Run migrations (creates DB if needed)
-          DATABASE_URL="$DATABASE_URL" bun run db:migrate
-          echo "Migrations complete"
+          # Push schema directly (creates/updates tables as needed)
+          DATABASE_URL="$DATABASE_URL" bun run db:push
+          echo "Schema sync complete"
 
       - name: Build application
         run: |
