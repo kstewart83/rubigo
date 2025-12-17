@@ -1,6 +1,7 @@
 /**
  * Allocations REST API
  * 
+ * GET /api/allocations - List all allocations
  * POST /api/allocations - Create a new allocation
  * 
  * Requires Authorization: Bearer <token> header
@@ -46,6 +47,31 @@ interface AllocationInput {
     quantity_contributed: number;
     start_date?: string;
     end_date?: string;
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.allocations);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET allocations error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list allocations" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {
