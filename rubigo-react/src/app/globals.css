@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* 
+ * Explicit content paths for Tailwind v4 
+ * Required because auto-detection fails in CI builds without .git directory
+ */
+@source "../";
+@source "../../components";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -119,6 +126,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
