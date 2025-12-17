@@ -178,6 +178,38 @@ requirement = "modify a single instance of a recurring event"
 reason = "change the time or location for one occurrence"
 status = "draft"
 
+[[rules]]
+id = "rule-calendar-recurrence-until"
+feature_id = "feat-calendar-recurrence"
+role = "Platform User"
+requirement = "set an end date for recurring events"
+reason = "limit recurring events to a specific time period"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-series-edit"
+feature_id = "feat-calendar-recurrence"
+role = "Event Organizer"
+requirement = "edit all instances of a recurring event series at once"
+reason = "update recurring event details without modifying each instance separately"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-recurring-delete-choice"
+feature_id = "feat-calendar-recurrence"
+role = "Event Organizer"
+requirement = "be presented with options to delete just this occurrence or all occurrences when deleting a recurring event"
+reason = "avoid accidentally deleting an entire series when intending to skip one meeting"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-recurring-edit-choice"
+feature_id = "feat-calendar-recurrence"
+role = "Event Organizer"
+requirement = "be presented with options to edit just this occurrence or all occurrences when editing a recurring event"
+reason = "clearly distinguish between modifying one instance vs changing the entire series"
+status = "draft"
+
 # --- View Rules ---
 
 [[rules]]
@@ -368,6 +400,13 @@ name = "Create recurring weekly event"
 narrative = "Given I am creating an event, when I enable recurrence with Weekly frequency and select Mon/Wed/Fri, then events appear on those days"
 status = "draft"
 
+[[scenarios]]
+id = "scen-calendar-recurrence-until"
+rule_id = "rule-calendar-recurrence-until"
+name = "Set recurrence end date"
+narrative = "Given I am creating a recurring event, when I set an end date using the Until date picker, then events only appear up to that date"
+status = "draft"
+
 # --- Event Details Scenarios ---
 
 [[scenarios]]
@@ -405,6 +444,36 @@ id = "scen-calendar-modify-instance"
 rule_id = "rule-calendar-instance-modify"
 name = "Modify single recurrence instance"
 narrative = "Given I am editing one instance of a recurring event, when I change the time and save for This Instance Only, then only that occurrence is updated"
+status = "draft"
+
+# --- Delete/Edit Choice Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-delete-instance"
+rule_id = "rule-calendar-recurring-delete-choice"
+name = "Delete only this occurrence"
+narrative = "Given I click delete on a recurring event, when the dialog appears and I select 'Just This Occurrence', then only that date is removed while other instances remain"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-delete-series"
+rule_id = "rule-calendar-recurring-delete-choice"
+name = "Delete all occurrences"
+narrative = "Given I click delete on a recurring event, when the dialog appears and I select 'All Occurrences', then the entire series is removed from the calendar"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-edit-instance-only"
+rule_id = "rule-calendar-recurring-edit-choice"
+name = "Edit only this occurrence"
+narrative = "Given I click edit on a recurring event, when the dialog appears and I select 'This Occurrence Only', then I can modify just that instance while others remain unchanged"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-edit-series"
+rule_id = "rule-calendar-recurring-edit-choice"
+name = "Edit entire series"
+narrative = "Given I click edit on a recurring event, when the dialog appears and I select 'All Occurrences', then my changes apply to all instances of the series"
 status = "draft"
 
 # ============================================================================
