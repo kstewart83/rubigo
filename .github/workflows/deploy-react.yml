@@ -73,8 +73,11 @@ jobs:
           # Use bunx per drizzle-kit docs: https://orm.drizzle.team/docs/kit-overview
           DATABASE_URL="$DATABASE_URL" bunx drizzle-kit migrate
           
-          # Checkpoint WAL and release locks before build
+          # Checkpoint WAL and fully release locks before build
+          # Multiple checkpoints + sleep to ensure all connections are closed
           sqlite3 "$DATABASE_URL" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+          sqlite3 "$DATABASE_URL" "PRAGMA journal_mode=DELETE;" 2>/dev/null || true
+          sleep 2
           echo "✅ Migrations applied"
 
       - name: Build application
