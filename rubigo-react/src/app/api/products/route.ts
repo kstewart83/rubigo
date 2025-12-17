@@ -1,6 +1,7 @@
 /**
  * Products REST API
  * 
+ * GET /api/products - List all products
  * POST /api/products - Create a new product
  * 
  * Requires Authorization: Bearer <token> header
@@ -43,6 +44,31 @@ interface ProductInput {
     id?: string;
     solution_id: string;
     version?: string;
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.products);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET products error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list products" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

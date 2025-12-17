@@ -1,6 +1,7 @@
 /**
  * KPIs REST API
  * 
+ * GET /api/kpis - List all kpis
  * POST /api/kpis - Create a new KPI
  * 
  * Requires Authorization: Bearer <token> header
@@ -47,6 +48,31 @@ interface KpiInput {
     direction: "increase" | "decrease" | "maintain";
     threshold_warning?: number;
     threshold_critical?: number;
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.kpis);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET kpis error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list kpis" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

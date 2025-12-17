@@ -1,6 +1,7 @@
 /**
  * Scenarios REST API
  * 
+ * GET /api/scenarios - List all scenarios
  * POST /api/scenarios - Create a new scenario (Gherkin-like)
  * 
  * Requires Authorization: Bearer <token> header
@@ -45,6 +46,31 @@ interface ScenarioInput {
     name: string;
     narrative: string;
     status?: "draft" | "active" | "deprecated";
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.scenarios);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET scenarios error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list scenarios" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

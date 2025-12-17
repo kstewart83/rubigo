@@ -1,6 +1,7 @@
 /**
  * Objectives REST API
  * 
+ * GET /api/objectives - List all objectives
  * POST /api/objectives - Create a new objective
  * 
  * Requires Authorization: Bearer <token> header
@@ -46,6 +47,31 @@ interface ObjectiveInput {
     project_id?: string;
     parent_id?: string;
     status?: "draft" | "active" | "achieved" | "deferred";
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.objectives);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET objectives error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list objectives" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

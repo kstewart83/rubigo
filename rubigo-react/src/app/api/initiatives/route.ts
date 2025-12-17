@@ -1,6 +1,7 @@
 /**
  * Initiatives REST API
  * 
+ * GET /api/initiatives - List all initiatives
  * POST /api/initiatives - Create a new initiative
  * 
  * Requires Authorization: Bearer <token> header
@@ -47,6 +48,31 @@ interface InitiativeInput {
     status?: "planned" | "active" | "complete" | "cancelled";
     start_date?: string;
     end_date?: string;
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.initiatives);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET initiatives error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list initiatives" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

@@ -1,6 +1,7 @@
 /**
  * Releases REST API
  * 
+ * GET /api/releases - List all releases
  * POST /api/releases - Create a new release
  * 
  * Requires Authorization: Bearer <token> header
@@ -45,6 +46,31 @@ interface ReleaseInput {
     version: string;
     release_date?: string;
     status?: "planned" | "released" | "deprecated";
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.releases);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET releases error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list releases" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {
