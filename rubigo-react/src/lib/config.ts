@@ -1,6 +1,7 @@
 import { parse } from "@iarna/toml";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { execSync } from "child_process";
 
 export interface AppConfig {
     app: {
@@ -29,10 +30,39 @@ export function getConfig(): AppConfig {
 }
 
 /**
+ * Get the current git branch name
+ * Returns null if not in a git repo or git command fails
+ * Only active when RUBIGO_SHOW_COMMIT=true (set by dev scripts)
+ */
+export function getGitBranch(): string | null {
+    if (process.env.RUBIGO_SHOW_COMMIT !== "true") {
+        return null;
+    }
+
+    try {
+        const branch = execSync("git branch --show-current", {
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
+        return branch || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Get the application version string
+ * Automatically includes git branch name in dev mode when RUBIGO_SHOW_COMMIT=true
+ * Returns "0.1.4" in production or "0.1.4 (feature/foo)" in dev
  */
 export function getVersion(): string {
-    return getConfig().app.version;
+    const version = getConfig().app.version;
+    const branch = getGitBranch();
+
+    if (branch) {
+        return `${version} (${branch})`;
+    }
+    return version;
 }
 
 /**

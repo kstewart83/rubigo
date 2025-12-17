@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
     return (
         <PersonaProvider>
-            <AppShell personnel={personnel}>
+            <AppShell personnel={personnel} version={version}>
                 <DashboardContent personnelCount={personnel.length} version={version} />
             </AppShell>
         </PersonaProvider>

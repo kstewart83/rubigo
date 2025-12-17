@@ -3,6 +3,7 @@ import { PersonaProvider } from "@/contexts/persona-context";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getPersonnelPage } from "@/lib/personnel-actions";
 import { PersonnelPageContent } from "@/components/personnel-page-content";
+import { getVersion } from "@/lib/config";
 
 // Force dynamic rendering - personnel data must be fetched at request time
 export const dynamic = "force-dynamic";
@@ -35,10 +36,11 @@ export default async function PersonnelPage({ searchParams }: PageProps) {
 
     // Also get all personnel for AppShell (persona switcher)
     const allPersonnel = getAllPersonnel();
+    const version = getVersion();
 
     return (
         <PersonaProvider>
-            <AppShell personnel={allPersonnel}>
+            <AppShell personnel={allPersonnel} version={version}>
                 <PersonnelPageContent
                     data={paginatedData.data}
                     total={paginatedData.total}
