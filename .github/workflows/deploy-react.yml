@@ -36,6 +36,14 @@ jobs:
           
           echo "Dependencies installed in $BUILD_DIR"
 
+      - name: Stop current service
+        run: |
+          PLIST="$HOME/Library/LaunchAgents/net.kwip.rubigo-react.plist"
+          launchctl unload "$PLIST" 2>/dev/null || true
+          pkill -f "bun.*4430" 2>/dev/null || true
+          sleep 2
+          echo "Service stopped for build"
+
       - name: Sync database schema
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
@@ -58,15 +66,10 @@ jobs:
           
           echo "Build complete in $BUILD_DIR"
 
-      - name: Deploy (stop, swap, start)
+      - name: Deploy (swap symlink and start)
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           PLIST="$HOME/Library/LaunchAgents/net.kwip.rubigo-react.plist"
-          
-          # Stop current service
-          launchctl unload "$PLIST" 2>/dev/null || true
-          pkill -f "bun.*4430" 2>/dev/null || true
-          sleep 2
           
           # Swap symlink to new build
           ln -sfn "$BUILD_DIR" "$BASE/current"
