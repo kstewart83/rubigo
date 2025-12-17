@@ -345,7 +345,7 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
 
     return (
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
-            <Sidebar />
+            <Sidebar version={version} />
             <div className="flex-1 flex flex-col">
                 <Toolbar personnel={personnel} />
                 <main className="flex-1 p-6 overflow-auto">
