@@ -1,6 +1,7 @@
 /**
  * Assignments REST API
  * 
+ * GET /api/assignments - List all assignments
  * POST /api/assignments - Create a new assignment
  * 
  * Requires Authorization: Bearer <token> header
@@ -46,6 +47,31 @@ interface AssignmentInput {
     quantity: number;
     unit?: string;
     raci_type?: "responsible" | "accountable" | "consulted" | "informed";
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.assignments);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET assignments error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list assignments" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

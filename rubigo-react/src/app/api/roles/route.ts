@@ -1,6 +1,7 @@
 /**
  * Roles REST API
  * 
+ * GET /api/roles - List all roles
  * POST /api/roles - Create a new role
  * 
  * Requires Authorization: Bearer <token> header
@@ -43,6 +44,31 @@ interface RoleInput {
     id?: string;
     name: string;
     description?: string;
+}
+
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const items = await db.select().from(schema.roles);
+        return NextResponse.json({ success: true, data: items });
+    } catch (error) {
+        console.error("GET roles error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list roles" },
+            { status: 500 }
+        );
+    }
 }
 
 export async function POST(request: NextRequest) {

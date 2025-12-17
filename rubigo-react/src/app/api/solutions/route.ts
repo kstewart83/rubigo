@@ -1,6 +1,7 @@
 /**
  * Solutions REST API
  * 
+ * GET /api/solutions - List all solutions
  * POST /api/solutions - Create a new solution
  * 
  * Requires Authorization: Bearer <token> header
@@ -45,6 +46,31 @@ interface SolutionInput {
     description?: string;
     status?: "pipeline" | "catalog" | "retired";
 }
+
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const solutions = await db.select().from(schema.solutions);
+        return NextResponse.json({ success: true, data: solutions });
+    } catch (error) {
+        console.error("GET solutions error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list solutions" },
+            { status: 500 }
+        );
+    }
+}
+
 
 export async function POST(request: NextRequest) {
     // Validate API token

@@ -2,11 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Playwright configuration for E2E tests
+ * 
+ * Test structure:
+ * - e2e/ui/ - Browser-based UI tests
+ * - e2e/api/ - API tests using Playwright's request context
+ * 
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-    testDir: "./e2e/tests",
-
     /* Run tests in files in parallel */
     fullyParallel: true,
 
@@ -25,7 +28,7 @@ export default defineConfig({
         ["list"],
     ],
 
-    /* Shared settings for all the projects below */
+    /* Shared settings for all projects */
     use: {
         /* Base URL to use in actions like `await page.goto('/')` */
         baseURL: process.env.E2E_BASE_URL || "http://localhost:3100",
@@ -40,11 +43,22 @@ export default defineConfig({
         video: "retain-on-failure",
     },
 
-    /* Configure projects for major browsers */
+    /* Configure projects for different test types */
     projects: [
+        // UI Tests - Browser-based tests
         {
-            name: "chromium",
+            name: "ui",
+            testDir: "./e2e/ui",
             use: { ...devices["Desktop Chrome"] },
+        },
+        // API Tests - Direct HTTP request tests
+        {
+            name: "api",
+            testDir: "./e2e/api",
+            use: {
+                // API tests don't need a browser
+                baseURL: process.env.RUBIGO_API_URL || "http://localhost:3000",
+            },
         },
     ],
 
@@ -59,3 +73,4 @@ export default defineConfig({
     //     reuseExistingServer: !process.env.CI,
     // },
 });
+
