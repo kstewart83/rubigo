@@ -3,6 +3,13 @@
  * 
  * A typed client library for interacting with the Rubigo API.
  * Can be used by scripts and third-party applications.
+ * 
+ * Supports full CRUD operations for all entities:
+ * - list() - Get all records
+ * - get(id) - Get single record by ID
+ * - create(input) - Create new record
+ * - update(id, updates) - Update existing record
+ * - delete(id) - Delete record
  */
 
 export interface RubigoClientConfig {
@@ -24,6 +31,13 @@ export interface PersonnelInput {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
+}
+
+export interface PersonnelListParams {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    department?: string;
 }
 
 // Solution Space types
@@ -172,9 +186,25 @@ export interface AllocationInput {
     end_date?: string;
 }
 
+// API Response types
 export interface ApiResult {
     success: boolean;
     id?: string;
+    error?: string;
+}
+
+export interface ListResult<T> {
+    success: boolean;
+    data: T[];
+    total?: number;
+    page?: number;
+    pageSize?: number;
+    error?: string;
+}
+
+export interface GetResult<T> {
+    success: boolean;
+    data?: T;
     error?: string;
 }
 
@@ -215,92 +245,386 @@ export class RubigoClient {
     // Personnel API
     // ========================================================================
 
+    async listPersonnel(params?: PersonnelListParams): Promise<ListResult<unknown>> {
+        const query = new URLSearchParams();
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+        if (params?.search) query.set("search", params.search);
+        if (params?.department) query.set("department", params.department);
+        const queryStr = query.toString();
+        return this.request<ListResult<unknown>>("GET", `/api/personnel${queryStr ? `?${queryStr}` : ""}`);
+    }
+
+    async getPersonnel(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/personnel/${id}`);
+    }
+
     async createPersonnel(input: PersonnelInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/personnel", input);
+    }
+
+    async updatePersonnel(id: string, updates: Partial<PersonnelInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/personnel/${id}`, updates);
+    }
+
+    async deletePersonnel(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/personnel/${id}`);
     }
 
     // ========================================================================
     // Solution Space API
     // ========================================================================
 
+    async listSolutions(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/solutions");
+    }
+
+    async getSolution(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/solutions/${id}`);
+    }
+
     async createSolution(input: SolutionInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/solutions", input);
+    }
+
+    async updateSolution(id: string, updates: Partial<SolutionInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/solutions/${id}`, updates);
+    }
+
+    async deleteSolution(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/solutions/${id}`);
+    }
+
+    async listProducts(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/products");
+    }
+
+    async getProduct(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/products/${id}`);
     }
 
     async createProduct(input: ProductInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/products", input);
     }
 
+    async updateProduct(id: string, updates: Partial<ProductInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/products/${id}`, updates);
+    }
+
+    async deleteProduct(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/products/${id}`);
+    }
+
+    async listServices(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/services");
+    }
+
+    async getService(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/services/${id}`);
+    }
+
     async createService(input: ServiceInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/services", input);
+    }
+
+    async updateService(id: string, updates: Partial<ServiceInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/services/${id}`, updates);
+    }
+
+    async deleteService(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/services/${id}`);
+    }
+
+    async listReleases(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/releases");
+    }
+
+    async getRelease(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/releases/${id}`);
     }
 
     async createRelease(input: ReleaseInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/releases", input);
     }
 
+    async updateRelease(id: string, updates: Partial<ReleaseInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/releases/${id}`, updates);
+    }
+
+    async deleteRelease(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/releases/${id}`);
+    }
+
     // ========================================================================
     // Strategy Space API
     // ========================================================================
 
+    async listProjects(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/projects");
+    }
+
+    async getProject(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/projects/${id}`);
+    }
+
     async createProject(input: ProjectInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/projects", input);
+    }
+
+    async updateProject(id: string, updates: Partial<ProjectInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/projects/${id}`, updates);
+    }
+
+    async deleteProject(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/projects/${id}`);
+    }
+
+    async listObjectives(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/objectives");
+    }
+
+    async getObjective(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/objectives/${id}`);
     }
 
     async createObjective(input: ObjectiveInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/objectives", input);
     }
 
+    async updateObjective(id: string, updates: Partial<ObjectiveInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/objectives/${id}`, updates);
+    }
+
+    async deleteObjective(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/objectives/${id}`);
+    }
+
+    async listMetrics(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/metrics");
+    }
+
+    async getMetric(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/metrics/${id}`);
+    }
+
     async createMetric(input: MetricInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/metrics", input);
+    }
+
+    async updateMetric(id: string, updates: Partial<MetricInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/metrics/${id}`, updates);
+    }
+
+    async deleteMetric(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/metrics/${id}`);
+    }
+
+    async listKpis(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/kpis");
+    }
+
+    async getKpi(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/kpis/${id}`);
     }
 
     async createKpi(input: KpiInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/kpis", input);
     }
 
+    async updateKpi(id: string, updates: Partial<KpiInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/kpis/${id}`, updates);
+    }
+
+    async deleteKpi(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/kpis/${id}`);
+    }
+
     // ========================================================================
     // Requirements Space API
     // ========================================================================
 
+    async listFeatures(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/features");
+    }
+
+    async getFeature(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/features/${id}`);
+    }
+
     async createFeature(input: FeatureInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/features", input);
+    }
+
+    async updateFeature(id: string, updates: Partial<FeatureInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/features/${id}`, updates);
+    }
+
+    async deleteFeature(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/features/${id}`);
+    }
+
+    async listRules(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/rules");
+    }
+
+    async getRule(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/rules/${id}`);
     }
 
     async createRule(input: RuleInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/rules", input);
     }
 
+    async updateRule(id: string, updates: Partial<RuleInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/rules/${id}`, updates);
+    }
+
+    async deleteRule(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/rules/${id}`);
+    }
+
+    async listSpecifications(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/specifications");
+    }
+
+    async getSpecification(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/specifications/${id}`);
+    }
+
     async createSpecification(input: SpecificationInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/specifications", input);
+    }
+
+    async updateSpecification(id: string, updates: Partial<SpecificationInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/specifications/${id}`, updates);
+    }
+
+    async deleteSpecification(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/specifications/${id}`);
+    }
+
+    async listScenarios(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/scenarios");
+    }
+
+    async getScenario(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/scenarios/${id}`);
     }
 
     async createScenario(input: ScenarioInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/scenarios", input);
     }
 
+    async updateScenario(id: string, updates: Partial<ScenarioInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/scenarios/${id}`, updates);
+    }
+
+    async deleteScenario(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/scenarios/${id}`);
+    }
+
     // ========================================================================
     // Execution Space API
     // ========================================================================
 
+    async listInitiatives(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/initiatives");
+    }
+
+    async getInitiative(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/initiatives/${id}`);
+    }
+
     async createInitiative(input: InitiativeInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/initiatives", input);
+    }
+
+    async updateInitiative(id: string, updates: Partial<InitiativeInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/initiatives/${id}`, updates);
+    }
+
+    async deleteInitiative(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/initiatives/${id}`);
+    }
+
+    async listActivities(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/activities");
+    }
+
+    async getActivity(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/activities/${id}`);
     }
 
     async createActivity(input: ActivityInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/activities", input);
     }
 
+    async updateActivity(id: string, updates: Partial<ActivityInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/activities/${id}`, updates);
+    }
+
+    async deleteActivity(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/activities/${id}`);
+    }
+
+    async listRoles(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/roles");
+    }
+
+    async getRole(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/roles/${id}`);
+    }
+
     async createRole(input: RoleInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/roles", input);
+    }
+
+    async updateRole(id: string, updates: Partial<RoleInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/roles/${id}`, updates);
+    }
+
+    async deleteRole(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/roles/${id}`);
+    }
+
+    async listAssignments(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/assignments");
+    }
+
+    async getAssignment(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/assignments/${id}`);
     }
 
     async createAssignment(input: AssignmentInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/assignments", input);
     }
 
+    async updateAssignment(id: string, updates: Partial<AssignmentInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/assignments/${id}`, updates);
+    }
+
+    async deleteAssignment(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/assignments/${id}`);
+    }
+
+    async listAllocations(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/allocations");
+    }
+
+    async getAllocation(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/allocations/${id}`);
+    }
+
     async createAllocation(input: AllocationInput): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/allocations", input);
+    }
+
+    async updateAllocation(id: string, updates: Partial<AllocationInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/allocations/${id}`, updates);
+    }
+
+    async deleteAllocation(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/allocations/${id}`);
     }
 }
 
@@ -320,3 +644,4 @@ export function createClient(options?: {
 
     return new RubigoClient({ baseUrl, apiToken });
 }
+
