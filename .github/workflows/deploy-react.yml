@@ -44,17 +44,37 @@ jobs:
           sleep 2
           echo "Service stopped for build"
 
+      - name: Backup database
+        run: |
+          DB_FILE="$BASE/data/rubigo.db"
+          if [ -f "$DB_FILE" ]; then
+            BACKUP_DIR="$BASE/backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/rubigo-${{ github.run_id }}-$(date +%Y%m%d_%H%M%S).db"
+            cp "$DB_FILE" "$BACKUP_FILE"
+            echo "✅ Database backed up to: $BACKUP_FILE"
+            # Keep last 10 backups
+            ls -t "$BACKUP_DIR"/*.db 2>/dev/null | tail -n +11 | xargs rm -f || true
+          else
+            echo "⚠️ No existing database to backup (fresh install)"
+          fi
+
       - name: Sync database schema
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Push schema directly (creates/updates tables as needed)
-          DATABASE_URL="$DATABASE_URL" bun run db:push
+          # Push schema with --strict to require confirmation for destructive changes
+          # In CI, this will fail if there are data-loss statements, alerting us to review
+          DATABASE_URL="$DATABASE_URL" bunx drizzle-kit push --strict 2>&1 || {
+            echo "❌ Schema push failed - may require manual migration review"
+            echo "Check the destructive statements and create explicit migrations if needed"
+            exit 1
+          }
           
           # Checkpoint WAL and release locks before build
           sqlite3 "$DATABASE_URL" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
-          echo "Schema sync complete"
+          echo "✅ Schema sync complete"
 
       - name: Build application
         run: |
