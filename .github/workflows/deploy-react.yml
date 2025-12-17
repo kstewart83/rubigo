@@ -39,6 +39,9 @@ jobs:
           
           # Push schema directly (creates/updates tables as needed)
           DATABASE_URL="$DATABASE_URL" bun run db:push
+          
+          # Checkpoint WAL and release locks before build
+          sqlite3 "$DATABASE_URL" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
           echo "Schema sync complete"
 
       - name: Build application
