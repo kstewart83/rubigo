@@ -3,11 +3,13 @@ import { PersonaProvider } from "@/contexts/persona-context";
 import { LoggingProjectDataProvider } from "@/contexts/logging-project-data-provider";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getProjectData } from "@/lib/projects";
+import { getVersion } from "@/lib/config";
 import { ProjectOverviewWithCRUD } from "./project-overview-crud";
 
 // Get data at build time
 const personnel = getAllPersonnel();
 const projectData = getProjectData();
+const version = getVersion();
 
 function ProjectsContent() {
     return (
@@ -30,7 +32,7 @@ export default function ProjectsPage() {
     return (
         <PersonaProvider>
             <LoggingProjectDataProvider initialData={projectData}>
-                <AppShell personnel={personnel}>
+                <AppShell personnel={personnel} version={version}>
                     <ProjectsContent />
                 </AppShell>
             </LoggingProjectDataProvider>
