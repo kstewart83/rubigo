@@ -55,14 +55,29 @@ version = "x.y.z"
 > [!TIP]
 > A change is **breaking** if existing E2E tests had to be modified to pass (not just new tests added).
 
-## Step 3: Build Verification
+## Step 3: Check Database Migrations
+
+If you modified `src/db/schema.ts`, ensure migrations are generated:
+
+// turbo
+```bash
+# Check for uncommitted schema changes
+bun run db:generate
+```
+
+If new migration files were created, commit them with your schema changes. See `/migrations` workflow for details.
+
+> [!IMPORTANT]
+> Production deployments use `db:migrate`, not `db:push`. Changes without migrations will not be applied.
+
+## Step 4: Build Verification
 
 // turbo
 ```
 bun run build
 ```
 
-## Step 4: Run Unit Tests
+## Step 5: Run Unit Tests
 
 // turbo
 ```
@@ -72,7 +87,7 @@ bun test
 > [!NOTE]
 > E2E tests are run separately using the `/e2e` workflow or `bun run test:e2e:full`.
 
-## Step 5: Commit and Push
+## Step 6: Commit and Push
 
 Commit with a conventional commit message:
 ```
