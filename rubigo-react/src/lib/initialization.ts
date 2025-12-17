@@ -250,12 +250,19 @@ export async function initializeSystem(words: string[]): Promise<boolean> {
     // Clear the token (no longer needed)
     clearTokenFromEnv();
 
+    // Generate API token for programmatic access
+    const apiToken = await getOrCreateApiToken();
+
     console.log("\n" + "=".repeat(60));
     console.log("✅ SYSTEM INITIALIZED");
     console.log("=".repeat(60));
     console.log("\nGlobal Administrator account created successfully.");
-    console.log("The system is now ready for use.\n");
-    console.log("=".repeat(60) + "\n");
+    console.log("The system is now ready for use.");
+    if (apiToken) {
+        console.log(`\n   API TOKEN: ${apiToken}\n`);
+        console.log("Use this token for programmatic API access.");
+    }
+    console.log("\n" + "=".repeat(60) + "\n");
 
     return true;
 }
