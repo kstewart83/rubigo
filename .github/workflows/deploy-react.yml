@@ -26,6 +26,10 @@ jobs:
           # Copy app source
           cp -r rubigo-react/* "$BUILD_DIR/"
           
+          # Create .git marker for Tailwind v4 content auto-detection
+          # Without this, Tailwind can't find the project root and generates incomplete CSS
+          mkdir -p "$BUILD_DIR/.git"
+          
           # Install dependencies
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
