@@ -4,5 +4,6 @@
 # But track these specific files (override parent's ignore)
 !.gitignore
 !README.md
+!SOP.md
 !scripts/
 !scripts/**
