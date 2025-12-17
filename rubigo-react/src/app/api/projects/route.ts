@@ -1,6 +1,7 @@
 /**
  * Projects REST API
  * 
+ * GET /api/projects - List all projects
  * POST /api/projects - Create a new project
  * 
  * Requires Authorization: Bearer <token> header
@@ -48,6 +49,35 @@ interface ProjectInput {
     start_date?: string;
     end_date?: string;
 }
+
+/**
+ * GET /api/projects
+ * Returns all projects
+ */
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { success: false, error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const projects = await db.select().from(schema.projects);
+        return NextResponse.json({ success: true, data: projects });
+    } catch (error) {
+        console.error("GET projects error:", error);
+        return NextResponse.json(
+            { success: false, error: "Failed to list projects" },
+            { status: 500 }
+        );
+    }
+}
+
 
 export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("Authorization");
