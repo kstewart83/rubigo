@@ -18,28 +18,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build in new directory
+      - name: Prepare build directory
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          mkdir -p "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR" "$BASE/data"
           
           # Copy app source
           cp -r rubigo-react/* "$BUILD_DIR/"
           
-          # Install and build
+          # Install dependencies
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
-          bun run build
           
-          echo "Build complete in $BUILD_DIR"
+          echo "Dependencies installed in $BUILD_DIR"
 
       - name: Run database migrations
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          mkdir -p "$BASE/data"
           cd "$BUILD_DIR"
+          
+          # Run migrations (creates DB if needed)
           DATABASE_URL="$DATABASE_URL" bun run db:migrate
           echo "Migrations complete"
+
+      - name: Build application
+        run: |
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          cd "$BUILD_DIR"
+          
+          # Build with DATABASE_URL so Next.js can connect during page generation
+          DATABASE_URL="$DATABASE_URL" bun run build
+          
+          echo "Build complete in $BUILD_DIR"
 
       - name: Deploy (stop, swap, start)
         run: |
