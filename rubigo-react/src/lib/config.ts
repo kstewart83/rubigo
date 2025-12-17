@@ -30,21 +30,21 @@ export function getConfig(): AppConfig {
 }
 
 /**
- * Get the current git commit short hash (first 6 chars)
+ * Get the current git branch name
  * Returns null if not in a git repo or git command fails
  * Only active when RUBIGO_SHOW_COMMIT=true (set by dev scripts)
  */
-export function getGitCommit(): string | null {
+export function getGitBranch(): string | null {
     if (process.env.RUBIGO_SHOW_COMMIT !== "true") {
         return null;
     }
 
     try {
-        const commit = execSync("git rev-parse --short=6 HEAD", {
+        const branch = execSync("git branch --show-current", {
             encoding: "utf-8",
             stdio: ["pipe", "pipe", "pipe"],
         }).trim();
-        return commit || null;
+        return branch || null;
     } catch {
         return null;
     }
@@ -52,15 +52,15 @@ export function getGitCommit(): string | null {
 
 /**
  * Get the application version string
- * Automatically includes git commit hash in dev mode when RUBIGO_SHOW_COMMIT=true
- * Returns "0.1.4" in production or "0.1.4 (abc123)" in dev
+ * Automatically includes git branch name in dev mode when RUBIGO_SHOW_COMMIT=true
+ * Returns "0.1.4" in production or "0.1.4 (feature/foo)" in dev
  */
 export function getVersion(): string {
     const version = getConfig().app.version;
-    const commit = getGitCommit();
+    const branch = getGitBranch();
 
-    if (commit) {
-        return `${version} (${commit})`;
+    if (branch) {
+        return `${version} (${branch})`;
     }
     return version;
 }
