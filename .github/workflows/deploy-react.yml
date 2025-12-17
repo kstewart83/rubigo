@@ -57,17 +57,18 @@ jobs:
       - name: Deploy (stop, swap, start)
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          PLIST="$HOME/Library/LaunchAgents/net.kwip.rubigo-react.plist"
           
-          # Stop current service (launchctl or manual process)
-          launchctl unload ~/Library/LaunchAgents/net.kwip.rubigo-react.plist 2>/dev/null || true
-          pkill -f "bun.*rubigo-react.*start" || true
+          # Stop current service
+          launchctl unload "$PLIST" 2>/dev/null || true
+          pkill -f "bun.*4430" 2>/dev/null || true
+          sleep 2
           
           # Swap symlink to new build
           ln -sfn "$BUILD_DIR" "$BASE/current"
           
-          # Start service
-          cd "$BASE/current"
-          DATABASE_URL="$DATABASE_URL" PORT=4430 nohup bun run start > "$BASE/stdout.log" 2> "$BASE/stderr.log" &
+          # Start service via launchctl (persists after workflow)
+          launchctl load "$PLIST"
           sleep 3
           
           echo "Deployed: $(readlink $BASE/current)"
