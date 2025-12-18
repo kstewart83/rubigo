@@ -27,7 +27,8 @@
     "pre-push-check": "bun scripts/pre-push-check.ts",
     "deploy:monitor": "bun scripts/deploy-monitor.ts",
     "incident:triage": "bun scripts/incident-triage.ts",
-    "wip:init": "bun scripts/wip-init.ts"
+    "wip:init": "bun scripts/wip-init.ts",
+    "sync:scenario": "bun src/scripts/sync-scenario.ts"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",

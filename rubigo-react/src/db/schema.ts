@@ -78,6 +78,7 @@ export const products = sqliteTable("products", {
  */
 export const services = sqliteTable("services", {
     id: text("id").primaryKey(),
+    name: text("name").notNull(),
     solutionId: text("solution_id").references(() => solutions.id).notNull(),
     serviceLevel: text("service_level"),
 });

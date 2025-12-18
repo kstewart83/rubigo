@@ -209,6 +209,7 @@ interface RawProduct {
 
 interface RawService {
     id: string;
+    name?: string;
     solution_id: string;
     service_level?: string;
 }
@@ -306,6 +307,7 @@ async function seedSolutionSpace(client: RubigoClient): Promise<{
             try {
                 const result = await client.createService({
                     id: s.id,
+                    name: s.name || s.id,
                     solution_id: s.solution_id,
                     service_level: s.service_level,
                 });

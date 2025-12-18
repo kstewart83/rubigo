@@ -42,6 +42,7 @@ async function logAction(
 
 interface ServiceInput {
     id?: string;
+    name: string;
     solution_id: string;
     service_level?: string;
 }
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
 
         await db.insert(schema.services).values({
             id,
+            name: input.name,
             solutionId: input.solution_id,
             serviceLevel: input.service_level || null,
         });
@@ -121,8 +123,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, id }, { status: 201 });
     } catch (error) {
         console.error("Create service error:", error);
+        const message = error instanceof Error ? error.message : "Failed to create service";
         return NextResponse.json(
-            { success: false, error: "Failed to create service" },
+            { success: false, error: message },
             { status: 500 }
         );
     }

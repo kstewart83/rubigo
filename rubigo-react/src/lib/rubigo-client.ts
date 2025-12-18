@@ -56,6 +56,7 @@ export interface ProductInput {
 
 export interface ServiceInput {
     id?: string;
+    name: string;
     solution_id: string;
     service_level?: string;
 }
@@ -184,6 +185,24 @@ export interface AllocationInput {
     quantity_contributed: number;
     start_date?: string;
     end_date?: string;
+}
+
+// Calendar types
+export interface CalendarEventInput {
+    id?: string;
+    title: string;
+    description?: string;
+    startTime: string;  // ISO 8601
+    endTime: string;
+    eventType?: "meeting" | "standup" | "allHands" | "oneOnOne" | "training"
+    | "interview" | "holiday" | "conference" | "review" | "planning"
+    | "appointment" | "reminder" | "outOfOffice";
+    recurrence?: "none" | "daily" | "weekly" | "monthly" | "yearly";
+    recurrenceDays?: string[];  // ["Mon", "Wed", "Fri"]
+    recurrenceUntil?: string;
+    timezone?: string;
+    location?: string;
+    virtualUrl?: string;
 }
 
 // API Response types
@@ -625,6 +644,30 @@ export class RubigoClient {
 
     async deleteAllocation(id: string): Promise<ApiResult> {
         return this.request<ApiResult>("DELETE", `/api/allocations/${id}`);
+    }
+
+    // ========================================================================
+    // Calendar API
+    // ========================================================================
+
+    async listCalendarEvents(startDate: string, endDate: string): Promise<{ success: boolean; events?: unknown[]; error?: string }> {
+        return this.request("GET", `/api/calendar?startDate=${startDate}&endDate=${endDate}`);
+    }
+
+    async getCalendarEvent(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/calendar/${id}`);
+    }
+
+    async createCalendarEvent(input: CalendarEventInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/calendar", input);
+    }
+
+    async updateCalendarEvent(id: string, updates: Partial<CalendarEventInput>): Promise<ApiResult> {
+        return this.request<ApiResult>("PATCH", `/api/calendar/${id}`, updates);
+    }
+
+    async deleteCalendarEvent(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/calendar/${id}`);
     }
 }
 

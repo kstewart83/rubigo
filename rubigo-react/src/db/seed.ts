@@ -106,6 +106,7 @@ async function seed() {
         for (const s of data.services) {
             await db.insert(schema.services).values({
                 id: s.id as string,
+                name: s.name as string,
                 solutionId: s.solution_id as string,
                 serviceLevel: s.service_level as string | undefined,
             });
