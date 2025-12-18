@@ -1,6 +1,7 @@
 name: Deploy rubigo-react
 
 on:
+  workflow_dispatch:  # Allow manual triggers
   push:
     branches: [main]
     paths:
