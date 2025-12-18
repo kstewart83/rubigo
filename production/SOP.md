@@ -94,3 +94,72 @@ Logs are inside the runner's work directory, not the top-level production folder
 ```
 production/runner/_work/rubigo/rubigo/production/rubigo-react/
 ```
+
+## Finding the API Token
+
+The API token is used for programmatic access (MCP, REST API). Unlike the init token, the API token:
+- **Regenerates on every server restart** (not persisted to database)
+- Is logged to stdout.log on startup
+- Is required for all `/api/*` endpoints
+
+### Retrieving the Current API Token
+
+```bash
+cat production/runner/_work/rubigo/rubigo/production/rubigo-react/stdout.log | grep "API Token"
+```
+
+Look for output like:
+```
+API Token: 27d33ff9bc044fe74b70d95457ba38b2
+Use this token for programmatic API access.
+```
+
+### After Deployment
+
+Each deployment restarts the service, generating a new API token. Check stdout.log after every deployment to get the new token.
+
+## MCP Server Configuration
+
+The MCP endpoint is available at `https://rubigo.kwip.net/api/mcp`. Configuration:
+
+```json
+{
+  "mcpServers": {
+    "rubigo": {
+      "type": "http",
+      "url": "https://rubigo.kwip.net/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <API_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+Test with curl:
+```bash
+curl -X POST https://rubigo.kwip.net/api/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <API_TOKEN>" \
+  -d '{"jsonrpc":"2.0","method":"resources/list","id":1}'
+```
+
+## Lessons Learned
+
+### SQLite Concurrent Access (Dec 2024)
+
+**Problem:** Next.js builds with 7+ workers accessing SQLite simultaneously caused `SQLITE_BUSY` errors.
+
+**Solution:** Set `PRAGMA busy_timeout = 30000` in `src/db/index.ts`. This makes SQLite wait up to 30 seconds for locks instead of immediately failing.
+
+**Key insight:** WAL mode alone isn't sufficient for concurrent access during builds. The busy_timeout pragma is essential.
+
+### API Token Persistence (Dec 2024)
+
+**Problem:** API returned "system not initialized" after server restarts, even though the system was initialized.
+
+**Cause:** API token was stored in `process.env` (ephemeral) rather than database.
+
+**Solution:** Modified `generateAndLogToken()` to call `getOrCreateApiToken()` for initialized systems, regenerating the token on each startup.
+
+**Key insight:** Any secrets stored in environment variables are lost on restart. Either persist to database or regenerate on startup.
