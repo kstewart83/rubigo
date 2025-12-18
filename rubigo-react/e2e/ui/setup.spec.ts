@@ -16,18 +16,18 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("System Setup", () => {
     test("initialize system via API", async ({ request }) => {
-        // This test MUST pass for other tests to run
-        const tokenWords = INIT_TOKEN.split(" ");
-        test.fail(tokenWords.length !== 4, `E2E_INIT_TOKEN invalid: "${INIT_TOKEN}"`);
-
-        // Check if system is already initialized
+        // Check if system is already initialized (e.g., RUBIGO_AUTO_INIT=true)
         const statusResponse = await request.get(`${BASE_URL}/api/init`);
         const statusData = await statusResponse.json();
 
         if (statusData.initialized) {
-            // Already initialized, skip
+            // System already initialized (auto-init mode), skip manual initialization
             return;
         }
+
+        // System not initialized - we need a valid token
+        const tokenWords = INIT_TOKEN.split(" ");
+        test.fail(tokenWords.length !== 4, `E2E_INIT_TOKEN invalid: "${INIT_TOKEN}"`);
 
         // Initialize via API
         const initResponse = await request.post(`${BASE_URL}/api/init`, {
