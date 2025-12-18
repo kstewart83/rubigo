@@ -158,6 +158,7 @@ async function sync(): Promise<SyncStats> {
             if (!found) {
                 await db.insert(schema.services).values({
                     id,
+                    name: s.name as string,
                     solutionId: s.solution_id as string,
                     serviceLevel: s.service_level as string | undefined,
                 });

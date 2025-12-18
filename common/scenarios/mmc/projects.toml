@@ -74,11 +74,13 @@ version = "2024.2"
 
 [[services]]
 id = "svc-hvac-platform"
+name = "HVAC Solutions Platform Service"
 solution_id = "a1b2c3"
 service_level = "enterprise"
 
 [[services]]
 id = "svc-rubigo-svc"
+name = "Rubigo ERM Platform Service"
 solution_id = "svc-rubigo"
 service_level = "internal"
 
@@ -796,110 +798,110 @@ status = "active"
 [[rules]]
 id = "rule-solution-list"
 feature_id = "feat-solution-mgmt"
-name = "Solution browsing"
-statement = "Signed-in users can browse the solution catalog showing all products and services"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse the solution catalog showing all products and services"
+reason = "understand what offerings are available"
 status = "active"
 
 [[rules]]
 id = "rule-solution-crud"
 feature_id = "feat-solution-mgmt"
-name = "Solution CRUD"
-statement = "Administrators can create, edit, and delete solutions in the catalog"
-type = "behavioral"
+role = "Platform Administrator"
+requirement = "create, edit, and delete solutions in the catalog"
+reason = "manage the portfolio of products and services"
 status = "active"
 
 # Project Management Rules
 [[rules]]
 id = "rule-project-list"
 feature_id = "feat-project-mgmt"
-name = "Project browsing"
-statement = "Signed-in users can browse projects organized by solution"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse projects organized by solution"
+reason = "understand what initiatives are underway"
 status = "active"
 
 [[rules]]
 id = "rule-project-crud"
 feature_id = "feat-project-mgmt"
-name = "Project CRUD"
-statement = "Administrators can create, edit, and delete projects linked to solutions"
-type = "behavioral"
+role = "Platform Administrator"
+requirement = "create, edit, and delete projects linked to solutions"
+reason = "manage strategic initiatives and their alignment"
 status = "active"
 
 # Objective Management Rules
 [[rules]]
 id = "rule-objective-list"
 feature_id = "feat-objective-mgmt"
-name = "Objective browsing"
-statement = "Signed-in users can browse objectives for a project in hierarchical view"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse objectives for a project in hierarchical view"
+reason = "understand the strategic goals and their breakdown"
 status = "active"
 
 [[rules]]
 id = "rule-objective-crud"
 feature_id = "feat-objective-mgmt"
-name = "Objective CRUD"
-statement = "Administrators can create, edit, and delete objectives with parent-child relationships"
-type = "behavioral"
+role = "Platform Administrator"
+requirement = "create, edit, and delete objectives with parent-child relationships"
+reason = "define and maintain the strategic objective hierarchy"
 status = "active"
 
 # Initiative Management Rules
 [[rules]]
 id = "rule-initiative-list"
 feature_id = "feat-initiative-mgmt"
-name = "Initiative browsing"
-statement = "Signed-in users can browse initiatives with their linked KPIs"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse initiatives with their linked KPIs"
+reason = "understand tactical efforts and how they're measured"
 status = "active"
 
 [[rules]]
 id = "rule-initiative-crud"
 feature_id = "feat-initiative-mgmt"
-name = "Initiative CRUD"
-statement = "Administrators can create, edit, and delete initiatives linked to KPIs"
-type = "behavioral"
+role = "Platform Administrator"
+requirement = "create, edit, and delete initiatives linked to KPIs"
+reason = "manage tactical execution and performance tracking"
 status = "active"
 
 # Activity Management Rules
 [[rules]]
 id = "rule-activity-list"
 feature_id = "feat-activity-mgmt"
-name = "Activity browsing"
-statement = "Signed-in users can browse activities with capacity and allocation information"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse activities with capacity and allocation information"
+reason = "understand workload and resource assignments"
 status = "active"
 
 [[rules]]
 id = "rule-activity-crud"
 feature_id = "feat-activity-mgmt"
-name = "Activity CRUD"
-statement = "Administrators can create, edit, and delete activities under initiatives"
-type = "behavioral"
+role = "Platform Administrator"
+requirement = "create, edit, and delete activities under initiatives"
+reason = "manage work breakdown and task planning"
 status = "active"
 
 [[rules]]
 id = "rule-capacity-viz"
 feature_id = "feat-activity-mgmt"
-name = "Capacity visualization"
-statement = "The activities page must display capacity gap showing FTE required vs FTE allocated"
-type = "behavioral"
+role = "Platform User"
+requirement = "see capacity gap showing FTE required vs FTE allocated"
+reason = "identify understaffed activities that need attention"
 status = "active"
 
 # Metrics and KPIs Rules
 [[rules]]
 id = "rule-metric-list"
 feature_id = "feat-metrics-kpis"
-name = "Metric browsing"
-statement = "Signed-in users can browse defined metrics with their units and targets"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse defined metrics with their units and current values"
+reason = "understand operational measurements being tracked"
 status = "active"
 
 [[rules]]
 id = "rule-kpi-list"
 feature_id = "feat-metrics-kpis"
-name = "KPI browsing"
-statement = "Signed-in users can browse KPIs with their target metrics and thresholds"
-type = "behavioral"
+role = "Platform User"
+requirement = "browse KPIs with their target metrics and thresholds"
+reason = "monitor performance against strategic goals"
 status = "active"
 
 # --- Projects Module Scenarios ---
