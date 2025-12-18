@@ -187,6 +187,14 @@ reason = "limit recurring events to a specific time period"
 status = "draft"
 
 [[rules]]
+id = "rule-calendar-instance-move"
+feature_id = "feat-calendar-recurrence"
+role = "Event Organizer"
+requirement = "move a single instance of a recurring event to a different date"
+reason = "reschedule one occurrence without affecting the rest of the series"
+status = "draft"
+
+[[rules]]
 id = "rule-calendar-series-edit"
 feature_id = "feat-calendar-recurrence"
 role = "Event Organizer"
@@ -474,6 +482,34 @@ id = "scen-calendar-edit-series"
 rule_id = "rule-calendar-recurring-edit-choice"
 name = "Edit entire series"
 narrative = "Given I click edit on a recurring event, when the dialog appears and I select 'All Occurrences', then my changes apply to all instances of the series"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-edit-series-recurrence-loaded"
+rule_id = "rule-calendar-series-edit"
+name = "Recurrence info loads when editing series"
+narrative = "Given a weekly event recurring on Mon/Wed/Fri, when editing all occurrences, then the edit modal shows Mon/Wed/Fri selected"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-move-instance"
+rule_id = "rule-calendar-instance-move"
+name = "Move recurring instance to different date"
+narrative = "Given a Mon/Wed recurring event starting Jan 6, when I edit Wed Jan 15 and change the date to Thu Jan 16, then Wed Jan 15 shows no event and Thu Jan 16 shows the event"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-moved-instance-survives-pattern-change"
+rule_id = "rule-calendar-series-edit"
+name = "Moved instance persists through recurrence pattern change"
+narrative = "Given a Mon/Wed recurring event where I moved Wed Jan 15 to Thu Jan 16, when I change the series recurrence to Tue/Thu, then Thu Jan 16 still shows only one event (not duplicated)"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-cancelled-instance-reactivates"
+rule_id = "rule-calendar-instance-cancel"
+name = "Cancelled instance remains cancelled after pattern change and restore"
+narrative = "Given a Mon/Wed recurring event where I cancelled Wed Jan 15, when I change the series to Tue/Thu and then back to Mon/Wed, then Wed Jan 15 is still cancelled"
 status = "draft"
 
 # ============================================================================
