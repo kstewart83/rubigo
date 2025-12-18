@@ -90,7 +90,8 @@ async function startServer(): Promise<{ proc: Subprocess; logContent: string }> 
 }
 
 function extractInitToken(logContent: string): string | null {
-    const match = logContent.match(/INIT TOKEN:\s*(\S+)/);
+    // Token format: "INIT TOKEN: word1 word2 word3 word4"
+    const match = logContent.match(/INIT TOKEN:\s*(\S+\s+\S+\s+\S+\s+\S+)/);
     return match ? match[1] : null;
 }
 

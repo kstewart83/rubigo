@@ -4,13 +4,13 @@ import { defineConfig, devices } from "@playwright/test";
  * Playwright configuration for E2E tests
  * 
  * Test structure:
- * - e2e/ui/ - Browser-based UI tests
+ * - e2e/ui/ - Browser-based UI tests (setup runs first, then modules)
  * - e2e/api/ - API tests using Playwright's request context
  * 
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-    /* Run tests in files in parallel */
+    /* Run tests in files in parallel (within a project) */
     fullyParallel: true,
 
     /* Fail the build on CI if you accidentally left test.only in the source code */
@@ -43,12 +43,22 @@ export default defineConfig({
         video: "retain-on-failure",
     },
 
-    /* Configure projects for different test types */
+    /* Configure projects - setup runs first, then modules, then API */
     projects: [
-        // UI Tests - Browser-based tests
+        // Setup project - runs initialization first
+        {
+            name: "setup",
+            testDir: "./e2e/ui",
+            testMatch: /setup\.spec\.ts/,
+            fullyParallel: false, // Run setup tests serially
+            use: { ...devices["Desktop Chrome"] },
+        },
+        // UI Tests - Browser-based tests (depends on setup)
         {
             name: "ui",
             testDir: "./e2e/ui",
+            testIgnore: /setup\.spec\.ts/,
+            dependencies: ["setup"], // Wait for setup to complete
             use: { ...devices["Desktop Chrome"] },
         },
         // API Tests - Direct HTTP request tests
@@ -73,4 +83,3 @@ export default defineConfig({
     //     reuseExistingServer: !process.env.CI,
     // },
 });
-

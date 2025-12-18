@@ -3,13 +3,26 @@
  * Event scheduling, meetings, and time management
  */
 
-export default function CalendarPage() {
+import { AppShell } from "@/components/layout/app-shell";
+import { PersonaProvider } from "@/contexts/persona-context";
+import { getAllPersonnel } from "@/lib/personnel";
+import { getVersion } from "@/lib/config";
+import { CalendarPageContent } from "@/components/calendar-page-content";
+
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
+export default async function CalendarPage() {
+    const allPersonnel = getAllPersonnel();
+    const version = getVersion();
+
     return (
-        <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold mb-4">Calendar</h1>
-            <p className="text-muted-foreground">
-                Schedule events, meetings, and manage time effectively.
-            </p>
-        </div>
+        <PersonaProvider>
+            <AppShell personnel={allPersonnel} version={version}>
+                <div className="container mx-auto py-8 h-[calc(100vh-8rem)]">
+                    <CalendarPageContent />
+                </div>
+            </AppShell>
+        </PersonaProvider>
     );
 }

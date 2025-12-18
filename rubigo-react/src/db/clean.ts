@@ -13,6 +13,16 @@ async function clean() {
     console.log("🗑️  Cleaning database...\n");
 
     // Delete in reverse dependency order
+    // Calendar module tables
+    console.log("   Deleting calendar deviations...");
+    await db.delete(schema.calendarDeviations);
+
+    console.log("   Deleting calendar participants...");
+    await db.delete(schema.calendarParticipants);
+
+    console.log("   Deleting calendar events...");
+    await db.delete(schema.calendarEvents);
+
     console.log("   Deleting action logs...");
     await db.delete(schema.actionLogs);
 

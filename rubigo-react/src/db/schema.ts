@@ -319,6 +319,171 @@ export const actionLogs = sqliteTable("action_logs", {
 });
 
 // ============================================================================
+// Collaboration: Calendar
+// ============================================================================
+
+/**
+ * Calendar Events - Scheduled events and meetings
+ */
+export const calendarEvents = sqliteTable("calendar_events", {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    description: text("description"),
+    startTime: text("start_time").notNull(), // ISO 8601 datetime
+    endTime: text("end_time").notNull(), // ISO 8601 datetime
+    allDay: integer("all_day", { mode: "boolean" }).default(false),
+    eventType: text("event_type", {
+        enum: ["meeting", "standup", "allHands", "oneOnOne", "training",
+            "interview", "holiday", "conference", "review", "planning",
+            "appointment", "reminder", "outOfOffice"]
+    }).default("meeting"),
+    recurrence: text("recurrence", {
+        enum: ["none", "daily", "weekly", "monthly", "yearly"]
+    }).default("none"),
+    recurrenceInterval: integer("recurrence_interval").default(1), // e.g., 2 = every 2 weeks
+    recurrenceDays: text("recurrence_days"), // JSON array ["Mon", "Wed", "Fri"]
+    recurrenceUntil: text("recurrence_until"), // ISO date
+    timezone: text("timezone").default("America/New_York"),
+    location: text("location"),
+    virtualUrl: text("virtual_url"), // Video conference link
+    organizerId: text("organizer_id").references(() => personnel.id),
+    deleted: integer("deleted", { mode: "boolean" }).default(false),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+});
+
+/**
+ * Calendar Participants - Event attendees
+ */
+export const calendarParticipants = sqliteTable("calendar_participants", {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").references(() => calendarEvents.id).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    role: text("role", { enum: ["organizer", "participant"] }).default("participant"),
+});
+
+/**
+ * Calendar Deviations - Exceptions for recurring events
+ * 
+ * Two types of deviations:
+ * - Anchored: originalDate set, newDate null - modifies/cancels a recurrence instance
+ * - Unanchored: originalDate null, newDate set - standalone event from a "moved" instance
+ */
+export const calendarDeviations = sqliteTable("calendar_deviations", {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").references(() => calendarEvents.id).notNull(),
+    // Anchored identity: the recurrence date being modified (null for unanchored)
+    originalDate: text("original_date"),
+    // Unanchored identity: independent date for "moved" instances (null for anchored)
+    newDate: text("new_date"),
+    cancelled: integer("cancelled", { mode: "boolean" }).default(false),
+    overrideStartTime: text("override_start_time"),
+    overrideEndTime: text("override_end_time"),
+    overrideTitle: text("override_title"),
+    overrideDescription: text("override_description"),
+    overrideLocation: text("override_location"),
+    overrideTimezone: text("override_timezone"),
+});
+
+// ============================================================================
+// Collaboration: Email
+// ============================================================================
+
+/**
+ * Emails - Internal messages
+ */
+export const emails = sqliteTable("emails", {
+    id: text("id").primaryKey(),
+    threadId: text("thread_id").notNull(), // Groups conversations
+    fromId: text("from_id").references(() => personnel.id).notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(), // HTML content
+    sentAt: text("sent_at").notNull(), // ISO 8601
+    folder: text("folder", {
+        enum: ["inbox", "sent", "drafts", "trash"]
+    }).default("inbox"),
+    isDraft: integer("is_draft", { mode: "boolean" }).default(false),
+});
+
+/**
+ * Email Recipients - To, CC, BCC
+ */
+export const emailRecipients = sqliteTable("email_recipients", {
+    id: text("id").primaryKey(),
+    emailId: text("email_id").references(() => emails.id).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    type: text("type", { enum: ["to", "cc", "bcc"] }).default("to"),
+    read: integer("read", { mode: "boolean" }).default(false),
+});
+
+// ============================================================================
+// Collaboration: Chat
+// ============================================================================
+
+/**
+ * Chat Channels - Group conversations or DMs
+ */
+export const chatChannels = sqliteTable("chat_channels", {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    description: text("description"),
+    type: text("type", { enum: ["channel", "dm"] }).notNull(),
+    createdBy: text("created_by").references(() => personnel.id),
+    createdAt: text("created_at").notNull(),
+});
+
+/**
+ * Chat Members - Channel/DM participants
+ */
+export const chatMembers = sqliteTable("chat_members", {
+    id: text("id").primaryKey(),
+    channelId: text("channel_id").references(() => chatChannels.id).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    lastRead: text("last_read"), // ISO datetime for unread tracking
+    joinedAt: text("joined_at").notNull(),
+});
+
+/**
+ * Chat Messages - Individual messages
+ */
+export const chatMessages = sqliteTable("chat_messages", {
+    id: text("id").primaryKey(),
+    channelId: text("channel_id").references(() => chatChannels.id).notNull(),
+    senderId: text("sender_id").references(() => personnel.id).notNull(),
+    content: text("content").notNull(),
+    threadId: text("thread_id"), // Parent message ID for threads
+    sentAt: text("sent_at").notNull(),
+    editedAt: text("edited_at"),
+    deleted: integer("deleted", { mode: "boolean" }).default(false),
+});
+
+/**
+ * Chat Reactions - Emoji reactions to messages
+ */
+export const chatReactions = sqliteTable("chat_reactions", {
+    id: text("id").primaryKey(),
+    messageId: text("message_id").references(() => chatMessages.id).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    emoji: text("emoji").notNull(), // Unicode emoji
+    createdAt: text("created_at").notNull(),
+});
+
+// ============================================================================
+// Collaboration: Screen Share
+// ============================================================================
+
+/**
+ * Screen Share Sessions
+ */
+export const screenShareSessions = sqliteTable("screen_share_sessions", {
+    id: text("id").primaryKey(),
+    hostId: text("host_id").references(() => personnel.id).notNull(),
+    chatChannelId: text("chat_channel_id").references(() => chatChannels.id),
+    startedAt: text("started_at").notNull(),
+    endedAt: text("ended_at"), // Null if active
+});
+
+// ============================================================================
 // Type Exports for Drizzle
 // ============================================================================
 
@@ -388,3 +553,37 @@ export type NewAllocation = typeof allocations.$inferInsert;
 // Audit Trail
 export type ActionLog = typeof actionLogs.$inferSelect;
 export type NewActionLog = typeof actionLogs.$inferInsert;
+
+// Collaboration: Calendar
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type NewCalendarEvent = typeof calendarEvents.$inferInsert;
+
+export type CalendarParticipant = typeof calendarParticipants.$inferSelect;
+export type NewCalendarParticipant = typeof calendarParticipants.$inferInsert;
+
+export type CalendarDeviation = typeof calendarDeviations.$inferSelect;
+export type NewCalendarDeviation = typeof calendarDeviations.$inferInsert;
+
+// Collaboration: Email
+export type Email = typeof emails.$inferSelect;
+export type NewEmail = typeof emails.$inferInsert;
+
+export type EmailRecipient = typeof emailRecipients.$inferSelect;
+export type NewEmailRecipient = typeof emailRecipients.$inferInsert;
+
+// Collaboration: Chat
+export type ChatChannel = typeof chatChannels.$inferSelect;
+export type NewChatChannel = typeof chatChannels.$inferInsert;
+
+export type ChatMember = typeof chatMembers.$inferSelect;
+export type NewChatMember = typeof chatMembers.$inferInsert;
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;
+
+export type ChatReaction = typeof chatReactions.$inferSelect;
+export type NewChatReaction = typeof chatReactions.$inferInsert;
+
+// Collaboration: Screen Share
+export type ScreenShareSession = typeof screenShareSessions.$inferSelect;
+export type NewScreenShareSession = typeof screenShareSessions.$inferInsert;
