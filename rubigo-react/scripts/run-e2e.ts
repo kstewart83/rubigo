@@ -9,7 +9,7 @@ import { spawn, type Subprocess } from "bun";
 import { unlink } from "fs/promises";
 
 const LOG_FILE = ".e2e-server.log";
-const PORT = 3100;
+const PORT = 3600;
 const SERVER_STARTUP_DELAY = 8000;
 
 async function sleep(ms: number): Promise<void> {
