@@ -1,191 +1,198 @@
 /**
- * MCP Streamable HTTP Endpoint
+ * MCP HTTP Endpoint
  * 
- * Implements MCP protocol over HTTP using Streamable HTTP transport.
- * Supports POST for messages, GET for SSE stream, DELETE for session termination.
+ * Implements MCP protocol over HTTP.
+ * Handles JSON-RPC messages directly for compatibility with Next.js App Router.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createMcpServer } from "@/lib/mcp-server";
+import { validateApiToken } from "@/lib/initialization";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { tools, handleToolCall, type McpActorContext } from "@/lib/mcp-tools";
 
 // ============================================================================
-// Session Management
+// MCP Protocol Types
 // ============================================================================
 
-// In-memory session storage (for development - production should use Redis/DB)
-const sessions = new Map<string, StreamableHTTPServerTransport>();
-
-// ============================================================================
-// Authentication Helper
-// ============================================================================
-
-interface AuthResult {
-    success: boolean;
-    error?: string;
-    actorId?: string;
-    actorName?: string;
-    isAdmin?: boolean;
+interface JsonRpcRequest {
+    jsonrpc: "2.0";
+    method: string;
+    params?: Record<string, unknown>;
+    id?: number | string;
 }
 
-async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
-    const authHeader = request.headers.get("authorization");
+interface JsonRpcResponse {
+    jsonrpc: "2.0";
+    result?: unknown;
+    error?: { code: number; message: string };
+    id?: number | string;
+}
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return { success: false, error: "Missing or invalid Authorization header" };
+// ============================================================================
+// Resource Handlers
+// ============================================================================
+
+async function readResource(uri: string): Promise<{ contents: Array<{ uri: string; mimeType: string; text: string }> }> {
+    const handlers: Record<string, () => Promise<unknown[]>> = {
+        "rubigo://personnel": async () => db.select().from(schema.personnel),
+        "rubigo://projects": async () => db.select().from(schema.projects),
+        "rubigo://objectives": async () => db.select().from(schema.objectives),
+        "rubigo://features": async () => db.select().from(schema.features),
+        "rubigo://rules": async () => db.select().from(schema.rules),
+        "rubigo://scenarios": async () => db.select().from(schema.scenarios),
+        "rubigo://solutions": async () => db.select().from(schema.solutions),
+        "rubigo://activities": async () => db.select().from(schema.activities),
+        "rubigo://initiatives": async () => db.select().from(schema.initiatives),
+        "rubigo://metrics": async () => db.select().from(schema.metrics),
+        "rubigo://kpis": async () => db.select().from(schema.kpis),
+        "rubigo://roles": async () => db.select().from(schema.roles),
+    };
+
+    const handler = handlers[uri];
+    if (!handler) {
+        throw new Error(`Unknown resource: ${uri}`);
     }
 
-    const token = authHeader.slice(7);
-    const expectedToken = process.env.RUBIGO_API_TOKEN;
-
-    if (!expectedToken) {
-        return { success: false, error: "Server not configured with API token" };
-    }
-
-    if (token !== expectedToken) {
-        return { success: false, error: "Invalid API token" };
-    }
-
-    // Find the Global Administrator
-    const admins = await db.select()
-        .from(schema.personnel)
-        .where(eq(schema.personnel.isGlobalAdmin, true))
-        .limit(1);
-
-    if (admins.length === 0) {
-        return { success: false, error: "No Global Administrator found" };
-    }
-
-    const admin = admins[0];
-
+    const data = await handler();
     return {
-        success: true,
-        actorId: admin.id,
-        actorName: admin.name,
-        isAdmin: true,
+        contents: [{
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(data, null, 2),
+        }],
     };
 }
 
 // ============================================================================
-// POST Handler - Process MCP messages
+// MCP Method Handlers
+// ============================================================================
+
+async function handleMcpRequest(
+    method: string,
+    params: Record<string, unknown> | undefined,
+    actor: McpActorContext
+): Promise<unknown> {
+    switch (method) {
+        case "initialize":
+            return {
+                protocolVersion: "2024-11-05",
+                capabilities: {
+                    resources: { subscribe: false, listChanged: false },
+                    tools: { listChanged: false },
+                },
+                serverInfo: {
+                    name: "rubigo",
+                    version: "0.1.0",
+                },
+            };
+
+        case "initialized":
+            return {};
+
+        case "resources/list":
+            return {
+                resources: [
+                    { uri: "rubigo://personnel", name: "Personnel Directory", mimeType: "application/json" },
+                    { uri: "rubigo://projects", name: "Projects", mimeType: "application/json" },
+                    { uri: "rubigo://objectives", name: "Objectives", mimeType: "application/json" },
+                    { uri: "rubigo://features", name: "Features", mimeType: "application/json" },
+                    { uri: "rubigo://rules", name: "Rules", mimeType: "application/json" },
+                    { uri: "rubigo://scenarios", name: "Scenarios", mimeType: "application/json" },
+                    { uri: "rubigo://solutions", name: "Solutions", mimeType: "application/json" },
+                    { uri: "rubigo://activities", name: "Activities", mimeType: "application/json" },
+                    { uri: "rubigo://initiatives", name: "Initiatives", mimeType: "application/json" },
+                    { uri: "rubigo://metrics", name: "Metrics", mimeType: "application/json" },
+                    { uri: "rubigo://kpis", name: "KPIs", mimeType: "application/json" },
+                    { uri: "rubigo://roles", name: "Roles", mimeType: "application/json" },
+                ],
+            };
+
+        case "resources/read":
+            const uri = params?.uri as string;
+            if (!uri) {
+                throw new Error("Missing uri parameter");
+            }
+            return readResource(uri);
+
+        case "tools/list":
+            return { tools };
+
+        case "tools/call":
+            const name = params?.name as string;
+            const args = (params?.arguments || {}) as Record<string, unknown>;
+            if (!name) {
+                throw new Error("Missing name parameter");
+            }
+            return handleToolCall(name, args, actor);
+
+        default:
+            throw new Error(`Unknown method: ${method}`);
+    }
+}
+
+// ============================================================================
+// POST Handler
 // ============================================================================
 
 export async function POST(request: NextRequest) {
     // Authenticate
-    const auth = await authenticateRequest(request);
-    if (!auth.success) {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
         return NextResponse.json(
             { error: auth.error },
             { status: 401 }
         );
     }
 
-    // Get or create session
-    const sessionId = request.headers.get("mcp-session-id") || crypto.randomUUID();
-
-    let transport = sessions.get(sessionId);
-    if (!transport) {
-        // Create new transport and server for this session
-        transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => sessionId,
-        });
-
-        const server = createMcpServer({
-            actorId: auth.actorId!,
-            actorName: auth.actorName!,
-            isAdmin: auth.isAdmin!,
-        });
-
-        // Connect server to transport
-        await server.connect(transport);
-
-        sessions.set(sessionId, transport);
-    }
-
-    // Handle the request
+    // Parse JSON-RPC request
+    let rpcRequest: JsonRpcRequest;
     try {
-        const body = await request.json();
-        const response = await transport.handleRequest(request, body);
-
-        // Add session ID header to response
-        const headers = new Headers();
-        headers.set("mcp-session-id", sessionId);
-        headers.set("content-type", "application/json");
-
-        return new NextResponse(JSON.stringify(response), { headers });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
+        rpcRequest = await request.json();
+    } catch {
         return NextResponse.json(
-            { error: message },
-            { status: 500 }
-        );
-    }
-}
-
-// ============================================================================
-// GET Handler - SSE stream for server-initiated messages
-// ============================================================================
-
-export async function GET(request: NextRequest) {
-    // Authenticate
-    const auth = await authenticateRequest(request);
-    if (!auth.success) {
-        return NextResponse.json(
-            { error: auth.error },
-            { status: 401 }
-        );
-    }
-
-    const sessionId = request.headers.get("mcp-session-id");
-    if (!sessionId) {
-        return NextResponse.json(
-            { error: "Missing mcp-session-id header" },
+            { jsonrpc: "2.0", error: { code: -32700, message: "Parse error" } },
             { status: 400 }
         );
     }
 
-    const transport = sessions.get(sessionId);
-    if (!transport) {
+    // Validate JSON-RPC format
+    if (rpcRequest.jsonrpc !== "2.0" || !rpcRequest.method) {
         return NextResponse.json(
-            { error: "Session not found" },
-            { status: 404 }
-        );
-    }
-
-    // Return SSE stream
-    try {
-        const response = await transport.handleSSERequest(request);
-        return response;
-    } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        return NextResponse.json(
-            { error: message },
-            { status: 500 }
-        );
-    }
-}
-
-// ============================================================================
-// DELETE Handler - Session termination
-// ============================================================================
-
-export async function DELETE(request: NextRequest) {
-    const sessionId = request.headers.get("mcp-session-id");
-    if (!sessionId) {
-        return NextResponse.json(
-            { error: "Missing mcp-session-id header" },
+            { jsonrpc: "2.0", error: { code: -32600, message: "Invalid Request" }, id: rpcRequest.id },
             { status: 400 }
         );
     }
 
-    const transport = sessions.get(sessionId);
-    if (transport) {
-        await transport.close();
-        sessions.delete(sessionId);
-    }
+    // Create actor context
+    const actor: McpActorContext = {
+        actorId: auth.actorId!,
+        actorName: auth.actorName!,
+        isAdmin: true,
+    };
 
-    return NextResponse.json({ success: true });
+    // Handle MCP method
+    try {
+        const result = await handleMcpRequest(rpcRequest.method, rpcRequest.params, actor);
+
+        const response: JsonRpcResponse = {
+            jsonrpc: "2.0",
+            result,
+            id: rpcRequest.id,
+        };
+
+        return NextResponse.json(response);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Internal error";
+        const response: JsonRpcResponse = {
+            jsonrpc: "2.0",
+            error: { code: -32603, message },
+            id: rpcRequest.id,
+        };
+
+        return NextResponse.json(response, { status: 500 });
+    }
 }
