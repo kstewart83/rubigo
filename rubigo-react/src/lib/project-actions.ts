@@ -193,6 +193,7 @@ export async function createSolutionViewAction(
         serviceId = generateId();
         await db.insert(schema.services).values({
             id: serviceId,
+            name: `${view.name} Service`,
             solutionId,
             serviceLevel: view.serviceLevel,
         });
@@ -268,8 +269,10 @@ export async function updateSolutionViewAction(
         if (updates.isService && !currentService) {
             // Create new Service
             const serviceId = generateId();
+            const serviceName = updates.name ?? solution.name;
             await db.insert(schema.services).values({
                 id: serviceId,
+                name: `${serviceName} Service`,
                 solutionId: id,
                 serviceLevel: updates.serviceLevel,
             });

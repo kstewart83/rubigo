@@ -56,6 +56,7 @@ export interface ProductInput {
 
 export interface ServiceInput {
     id?: string;
+    name: string;
     solution_id: string;
     service_level?: string;
 }
