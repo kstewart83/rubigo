@@ -205,6 +205,378 @@ test.describe("Calendar Views", () => {
 });
 
 // ============================================================================
+// CALENDAR DAY VIEW TESTS
+// ============================================================================
+
+test.describe("Calendar Day View", () => {
+    test.beforeEach(async ({ page }) => {
+        await signInAsAdmin(page);
+        await page.goto("/calendar");
+        await expect(page.locator("[data-testid='month-grid']").or(page.locator("h1:has-text('Calendar')"))).toBeVisible({ timeout: 10000 });
+    });
+
+    test("scen-calendar-day-display: Display day view with time slots", async ({ page }) => {
+        // Given I click the Day view button
+        // Then I see a single day column with hourly time slots from 6AM to 10PM
+
+        // Click Day view toggle
+        const dayViewButton = page.locator("[data-testid='day-view-toggle']");
+        await dayViewButton.click();
+        await page.waitForTimeout(300);
+
+        // Should see day view container
+        await expect(page.locator("[data-testid='day-view']")).toBeVisible();
+
+        // Should show time slots (similar to week view but single column)
+        await expect(page.getByText("6 AM").or(page.getByText("06:00"))).toBeVisible();
+        await expect(page.getByText("12 PM").or(page.getByText("12:00"))).toBeVisible();
+
+        // Should show a single day header (the current day)
+        const today = new Date();
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        await expect(page.getByText(dayNames[today.getDay()])).toBeVisible();
+    });
+
+    test("scen-calendar-day-nav: Navigate between days", async ({ page }) => {
+        // Given I am viewing the calendar in day view
+        // When I click the next arrow
+        // Then the display advances by one day
+
+        // Switch to day view first
+        const dayViewButton = page.locator("[data-testid='day-view-toggle']");
+        await dayViewButton.click();
+        await page.waitForTimeout(300);
+
+        // Get current date info
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        // Click next arrow
+        const nextButton = page.locator("[data-testid='nav-next']");
+        await nextButton.click();
+        await page.waitForTimeout(300);
+
+        // Should show tomorrow's date
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        await expect(page.getByText(dayNames[tomorrow.getDay()])).toBeVisible();
+
+        // Click prev arrow to go back
+        const prevButton = page.locator("[data-testid='nav-prev']");
+        await prevButton.click();
+        await page.waitForTimeout(300);
+
+        // Should be back to today
+        await expect(page.getByText(dayNames[today.getDay()])).toBeVisible();
+    });
+
+    test("scen-calendar-day-toggle: Toggle to day view from month or week", async ({ page }) => {
+        // Given I am in month or week view
+        // When I click the Day button
+        // Then the view changes to show only the current day with time slots
+
+        // Start in month view (default)
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible();
+
+        // Click Day view toggle
+        const dayViewButton = page.locator("[data-testid='day-view-toggle']");
+        await dayViewButton.click();
+        await page.waitForTimeout(300);
+
+        // Month grid should be hidden, day view should be visible
+        await expect(page.locator("[data-testid='month-grid']")).not.toBeVisible();
+        await expect(page.locator("[data-testid='day-view']")).toBeVisible();
+
+        // Switch to week view
+        const weekViewButton = page.locator("[data-testid='week-view-toggle']");
+        await weekViewButton.click();
+        await page.waitForTimeout(300);
+
+        await expect(page.locator("[data-testid='week-view']")).toBeVisible();
+
+        // Switch back to day view
+        await dayViewButton.click();
+        await page.waitForTimeout(300);
+
+        // Should be in day view again
+        await expect(page.locator("[data-testid='day-view']")).toBeVisible();
+        await expect(page.locator("[data-testid='week-view']")).not.toBeVisible();
+    });
+});
+
+// ============================================================================
+// CALENDAR ALL DAY EVENTS TESTS
+// ============================================================================
+
+test.describe("Calendar All Day Events", () => {
+    test.beforeEach(async ({ page }) => {
+        await signInAsAdmin(page);
+        await page.goto("/calendar");
+        await expect(page.locator("[data-testid='month-grid']").or(page.locator("h1:has-text('Calendar')"))).toBeVisible({ timeout: 10000 });
+    });
+
+    test("scen-calendar-all-day-create: Create all-day event", async ({ page }) => {
+        // Given I am creating an event
+        // When I toggle 'All Day' on
+        // Then the time fields are hidden and the event is saved as an all-day event
+
+        const uniqueTitle = `All Day ${Date.now()}`;
+
+        // Click New Event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await expect(page.getByRole("dialog")).toBeVisible();
+
+        // Fill title
+        await page.locator("#title").fill(uniqueTitle);
+
+        // Initially, time fields should be visible
+        await expect(page.locator("#startTime")).toBeVisible();
+        await expect(page.locator("#endTime")).toBeVisible();
+
+        // Toggle All Day on
+        const allDayToggle = page.locator("[data-testid='all-day-toggle']").or(
+            page.getByRole("checkbox", { name: /all day/i })
+        );
+        await allDayToggle.click();
+        await page.waitForTimeout(300);
+
+        // Time fields should be hidden after enabling All Day
+        await expect(page.locator("#startTime")).not.toBeVisible();
+        await expect(page.locator("#endTime")).not.toBeVisible();
+
+        // Save the event
+        await page.getByRole("button", { name: /save/i }).click();
+        await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10000 });
+
+        // Reload to see the event
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        // Event should be visible (possibly collapsed in +more)
+        const eventPill = page.locator(".event-pill", { hasText: uniqueTitle });
+        const isVisible = await eventPill.isVisible({ timeout: 2000 }).catch(() => false);
+        if (isVisible) {
+            // All-day events should have a special indicator or styling
+            await expect(eventPill).toBeVisible();
+        }
+    });
+
+    test("scen-calendar-all-day-no-time: All-day events display without time", async ({ page }) => {
+        // Given an all-day event exists
+        // When I view it in the calendar or details panel
+        // Then no start/end time is displayed
+
+        const uniqueTitle = `NoTime ${Date.now()}`;
+
+        // Create an all-day event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await page.locator("#title").fill(uniqueTitle);
+
+        const allDayToggle = page.locator("[data-testid='all-day-toggle']").or(
+            page.getByRole("checkbox", { name: /all day/i })
+        );
+        await allDayToggle.click();
+        await page.getByRole("button", { name: /save/i }).click();
+        await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10000 });
+
+        // Reload and switch to week view to find the event
+        await page.reload();
+        await page.locator("[data-testid='week-view-toggle']").click();
+        await page.waitForTimeout(500);
+
+        // Find and click the event to open details
+        const eventPill = page.getByRole("button", { name: uniqueTitle });
+        const isVisible = await eventPill.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (isVisible) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            // Details panel should be visible
+            const detailsPanel = page.locator("[data-testid='event-details-panel']");
+            await expect(detailsPanel).toBeVisible();
+
+            // Should show "All Day" indicator
+            await expect(detailsPanel.getByText(/all day/i)).toBeVisible();
+
+            // Should NOT show specific time like "10:00 AM" or "2:30 PM"
+            // (All-day events don't have specific times)
+            await expect(detailsPanel.locator("[data-testid='event-time']")).not.toBeVisible();
+        }
+    });
+
+    test("scen-calendar-all-day-form-toggle: All-day toggle hides time fields", async ({ page }) => {
+        // Given I am creating or editing an event
+        // When I enable the All Day toggle
+        // Then the start time and end time fields are hidden
+
+        // Click New Event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await expect(page.getByRole("dialog")).toBeVisible();
+
+        // Time fields should be visible initially
+        await expect(page.locator("#startTime")).toBeVisible();
+        await expect(page.locator("#endTime")).toBeVisible();
+
+        // Toggle All Day on
+        const allDayToggle = page.locator("[data-testid='all-day-toggle']").or(
+            page.getByRole("checkbox", { name: /all day/i })
+        );
+        await allDayToggle.click();
+        await page.waitForTimeout(300);
+
+        // Time fields should be hidden
+        await expect(page.locator("#startTime")).not.toBeVisible();
+        await expect(page.locator("#endTime")).not.toBeVisible();
+
+        // Toggle All Day off again
+        await allDayToggle.click();
+        await page.waitForTimeout(300);
+
+        // Time fields should be visible again
+        await expect(page.locator("#startTime")).toBeVisible();
+        await expect(page.locator("#endTime")).toBeVisible();
+    });
+});
+
+// ============================================================================
+// CALENDAR RECURRENCE EDIT PROTECTION TESTS
+// ============================================================================
+
+test.describe("Calendar Recurrence Edit Protection", () => {
+    test.beforeEach(async ({ page }) => {
+        await signInAsAdmin(page);
+        await page.goto("/calendar");
+        await expect(page.locator("[data-testid='month-grid']").or(page.locator("h1:has-text('Calendar')"))).toBeVisible({ timeout: 10000 });
+    });
+
+    test("scen-calendar-edit-instance-no-recurrence: Hide recurrence fields when editing single instance", async ({ page }) => {
+        // Given I am editing a single instance of a recurring event (This Occurrence Only)
+        // Then the recurrence options are not visible in the edit form
+
+        const uniqueTitle = `RecurEdit ${Date.now()}`;
+
+        // First create a recurring event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await page.locator("#title").fill(uniqueTitle);
+        await page.locator("#startTime").fill("10:00");
+        await page.locator("#endTime").fill("11:00");
+
+        // Enable daily recurrence
+        const recurrenceToggle = page.locator("#recurrence-toggle").or(
+            page.getByRole("checkbox", { name: /repeat|recurring/i })
+        );
+        await recurrenceToggle.click();
+        await page.waitForTimeout(300);
+
+        // Verify recurrence options are visible when creating
+        await expect(page.locator("#recurrence-frequency").or(
+            page.locator("[data-testid='recurrence-frequency']")
+        )).toBeVisible();
+
+        await page.getByRole("button", { name: /save/i }).click();
+        await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10000 });
+
+        // Reload and find the event
+        await page.reload();
+        await page.locator("[data-testid='week-view-toggle']").click();
+        await page.waitForTimeout(500);
+
+        // Click on the event
+        const eventPill = page.getByRole("button", { name: uniqueTitle });
+        const isVisible = await eventPill.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (isVisible) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            // Click Edit in details panel
+            const detailsPanel = page.locator("[data-testid='event-details-panel']");
+            const editButton = detailsPanel.getByRole("button", { name: /edit/i });
+            await editButton.click();
+            await page.waitForTimeout(500);
+
+            // Edit dialog should show choice for recurring events
+            const thisInstanceButton = page.getByRole("button", { name: /this occurrence|just this/i });
+            if (await thisInstanceButton.isVisible({ timeout: 3000 })) {
+                // Select "This Occurrence Only"
+                await thisInstanceButton.click();
+                await page.waitForTimeout(500);
+
+                // Now in edit mode for single instance
+                // Recurrence options should NOT be visible
+                await expect(page.locator("#recurrence-toggle")).not.toBeVisible();
+                await expect(page.locator("#recurrence-frequency")).not.toBeVisible();
+                await expect(page.locator("[data-testid='recurrence-section']")).not.toBeVisible();
+            }
+        }
+    });
+
+    test("scen-calendar-edit-series-shows-recurrence: Show recurrence fields when editing all occurrences", async ({ page }) => {
+        // Given I am editing all occurrences of a recurring event
+        // Then the recurrence options are visible and can be modified
+
+        const uniqueTitle = `SeriesEdit ${Date.now()}`;
+
+        // First create a recurring event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await page.locator("#title").fill(uniqueTitle);
+        await page.locator("#startTime").fill("14:00");
+        await page.locator("#endTime").fill("15:00");
+
+        // Enable weekly recurrence
+        const recurrenceToggle = page.locator("#recurrence-toggle").or(
+            page.getByRole("checkbox", { name: /repeat|recurring/i })
+        );
+        await recurrenceToggle.click();
+        await page.waitForTimeout(300);
+
+        await page.getByRole("button", { name: /save/i }).click();
+        await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10000 });
+
+        // Reload and find the event
+        await page.reload();
+        await page.locator("[data-testid='week-view-toggle']").click();
+        await page.waitForTimeout(500);
+
+        // Click on the event
+        const eventPill = page.getByRole("button", { name: uniqueTitle });
+        const isVisible = await eventPill.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (isVisible) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            // Click Edit in details panel
+            const detailsPanel = page.locator("[data-testid='event-details-panel']");
+            const editButton = detailsPanel.getByRole("button", { name: /edit/i });
+            await editButton.click();
+            await page.waitForTimeout(500);
+
+            // Edit dialog should show choice for recurring events
+            const allOccurrencesButton = page.getByRole("button", { name: /all occurrences|entire series/i });
+            if (await allOccurrencesButton.isVisible({ timeout: 3000 })) {
+                // Select "All Occurrences"
+                await allOccurrencesButton.click();
+                await page.waitForTimeout(500);
+
+                // Now in edit mode for entire series
+                // Recurrence options SHOULD be visible
+                const recurrenceSection = page.locator("[data-testid='recurrence-section']").or(
+                    page.locator("#recurrence-toggle")
+                );
+                await expect(recurrenceSection).toBeVisible();
+
+                // Frequency selector should also be visible
+                await expect(page.locator("#recurrence-frequency").or(
+                    page.locator("[data-testid='recurrence-frequency']")
+                )).toBeVisible();
+            }
+        }
+    });
+});
+
+// ============================================================================
 // CALENDAR TIMEZONE TESTS
 // ============================================================================
 

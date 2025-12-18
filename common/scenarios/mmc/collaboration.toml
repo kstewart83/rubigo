@@ -39,7 +39,7 @@ status = "planned"
 [[objectives]]
 id = "obj-calendar-views"
 title = "Calendar Visualization"
-description = "Users must be able to view their schedule in multiple formats (month, week) to effectively plan and manage their time"
+description = "Users must be able to view their schedule in multiple formats (month, week, day) to effectively plan and manage their time"
 project_id = "d4e5f6"
 parent_id = "obj-rubigo-events"
 status = "planned"
@@ -73,7 +73,7 @@ status = "planned"
 [[features]]
 id = "feat-calendar-views"
 name = "Calendar View Modes"
-description = "Month view grid and week view with time slots"
+description = "Month view grid, week view, and day view with time slots"
 objective_id = "obj-calendar-views"
 status = "planned"
 
@@ -97,6 +97,34 @@ name = "Event Timezone Management"
 description = "Select event timezone and display local time conversion when event timezone differs from user's local timezone"
 objective_id = "obj-calendar-core"
 status = "planned"
+
+[[features]]
+id = "feat-calendar-day-view"
+name = "Day View Mode"
+description = "Single day view with hourly time slots for detailed daily schedule"
+objective_id = "obj-calendar-views"
+status = "planned"
+
+[[features]]
+id = "feat-calendar-all-day"
+name = "All Day Events"
+description = "Mark events as all-day to display without specific times"
+objective_id = "obj-calendar-core"
+status = "planned"
+
+[[features]]
+id = "feat-calendar-overlap"
+name = "Overlapping Event Display"
+description = "Display overlapping events side-by-side in day and week views with proper lane assignment"
+objective_id = "obj-calendar-views"
+status = "in_progress"
+
+[[features]]
+id = "feat-calendar-current-time"
+name = "Current Time Indicator"
+description = "Display a real-time indicator showing the current time in Day view, automatically updating without page refresh"
+objective_id = "obj-calendar-views"
+status = "in_progress"
 
 # ============================================================================
 # RULES - Calendar Event Management
@@ -244,6 +272,112 @@ requirement = "toggle between full week and work week (Mon-Fri) display"
 reason = "focus on business days without weekend clutter"
 status = "draft"
 
+# --- Day View Rules ---
+
+[[rules]]
+id = "rule-calendar-day-view"
+feature_id = "feat-calendar-day-view"
+role = "Platform User"
+requirement = "view the calendar in single day format with hourly time slots"
+reason = "focus on one day's detailed schedule"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-day-nav"
+feature_id = "feat-calendar-day-view"
+role = "Platform User"
+requirement = "navigate forward and backward through individual days"
+reason = "view past and future daily schedules"
+status = "draft"
+
+# --- All Day Event Rules ---
+
+[[rules]]
+id = "rule-calendar-all-day-toggle"
+feature_id = "feat-calendar-all-day"
+role = "Platform User"
+requirement = "toggle an event as 'All Day' when creating or editing"
+reason = "schedule events that span the entire day without specific times"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-all-day-display"
+feature_id = "feat-calendar-all-day"
+role = "Platform User"
+requirement = "see all-day events displayed without time information"
+reason = "quickly identify full-day events vs timed events"
+status = "draft"
+
+[[rules]]
+id = "rule-calendar-all-day-form"
+feature_id = "feat-calendar-all-day"
+role = "Platform User"
+requirement = "have time fields hidden when creating an all-day event"
+reason = "simplify the form when times are not relevant"
+status = "draft"
+
+# --- Recurrence Edit Protection Rules ---
+
+[[rules]]
+id = "rule-calendar-instance-no-recurrence"
+feature_id = "feat-calendar-recurrence"
+role = "Event Organizer"
+requirement = "not see recurrence options when editing a single instance"
+reason = "avoid confusion by only allowing recurrence changes when editing all occurrences"
+status = "draft"
+
+# --- Overlapping Event Display Rules ---
+
+[[rules]]
+id = "rule-calendar-overlap-side-by-side"
+feature_id = "feat-calendar-overlap"
+role = "Platform User"
+requirement = "see overlapping events displayed side-by-side in day and week views"
+reason = "quickly identify scheduling conflicts and compare overlapping commitments"
+status = "active"
+
+[[rules]]
+id = "rule-calendar-overlap-duration-height"
+feature_id = "feat-calendar-overlap"
+role = "Platform User"
+requirement = "see event height proportional to duration in day and week views"
+reason = "visually understand how much time each event occupies"
+status = "active"
+
+[[rules]]
+id = "rule-calendar-overlap-lanes"
+feature_id = "feat-calendar-overlap"
+role = "Platform User"
+requirement = "see overlapping events split into equal-width columns (lanes)"
+reason = "make the most efficient use of horizontal space for conflicting events"
+status = "active"
+
+# --- Current Time Indicator Rules ---
+
+[[rules]]
+id = "rule-calendar-time-indicator-visible"
+feature_id = "feat-calendar-current-time"
+role = "Platform User"
+requirement = "see a colored bar indicating the current time when viewing today in Day view"
+reason = "quickly understand where I am in the day relative to my scheduled events"
+status = "active"
+
+[[rules]]
+id = "rule-calendar-time-indicator-realtime"
+feature_id = "feat-calendar-current-time"
+role = "Platform User"
+requirement = "see the time indicator update automatically without refreshing the page"
+reason = "always have an accurate view of the current time without manual action"
+status = "active"
+
+[[rules]]
+id = "rule-calendar-time-indicator-today-only"
+feature_id = "feat-calendar-current-time"
+role = "Platform User"
+requirement = "only see the time indicator when viewing today's date"
+reason = "avoid confusion when viewing past or future days"
+status = "active"
+
 # --- Navigation Rules ---
 
 [[rules]]
@@ -354,6 +488,121 @@ rule_id = "rule-calendar-workweek"
 name = "Toggle work week mode in month view"
 narrative = "Given I am viewing the calendar in month view, when I enable work week mode, then the month grid shows only Monday through Friday columns"
 status = "draft"
+
+# --- Day View Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-day-display"
+rule_id = "rule-calendar-day-view"
+name = "Display day view with time slots"
+narrative = "Given I click the Day view button, then I see a single day column with hourly time slots from 6AM to 10PM"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-day-nav"
+rule_id = "rule-calendar-day-nav"
+name = "Navigate between days"
+narrative = "Given I am viewing the calendar in day view, when I click the next arrow, then the display advances by one day"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-day-toggle"
+rule_id = "rule-calendar-day-view"
+name = "Toggle to day view from month or week"
+narrative = "Given I am in month or week view, when I click the Day button, then the view changes to show only the current day with time slots"
+status = "draft"
+
+# --- All Day Event Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-all-day-create"
+rule_id = "rule-calendar-all-day-toggle"
+name = "Create all-day event"
+narrative = "Given I am creating an event, when I toggle 'All Day' on, then the time fields are hidden and the event is saved as an all-day event"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-all-day-no-time"
+rule_id = "rule-calendar-all-day-display"
+name = "All-day events display without time"
+narrative = "Given an all-day event exists, when I view it in the calendar or details panel, then no start/end time is displayed"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-all-day-form-toggle"
+rule_id = "rule-calendar-all-day-form"
+name = "All-day toggle hides time fields"
+narrative = "Given I am creating or editing an event, when I enable the All Day toggle, then the start time and end time fields are hidden"
+status = "draft"
+
+# --- Recurrence Edit Protection Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-edit-instance-no-recurrence"
+rule_id = "rule-calendar-instance-no-recurrence"
+name = "Hide recurrence fields when editing single instance"
+narrative = "Given I am editing a single instance of a recurring event (This Occurrence Only), then the recurrence options are not visible in the edit form"
+status = "draft"
+
+[[scenarios]]
+id = "scen-calendar-edit-series-shows-recurrence"
+rule_id = "rule-calendar-series-edit"
+name = "Show recurrence fields when editing all occurrences"
+narrative = "Given I am editing all occurrences of a recurring event, then the recurrence options are visible and can be modified"
+status = "draft"
+
+# --- Overlapping Event Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-overlap-side-by-side"
+rule_id = "rule-calendar-overlap-side-by-side"
+name = "Display two overlapping events side-by-side"
+narrative = "Given two events overlap in time (e.g., Interview 14:00-16:00 and Sprint Review 15:00-16:30 on Dec 19), when I view the day in day or week view, then both events display side-by-side in separate columns"
+status = "active"
+
+[[scenarios]]
+id = "scen-calendar-overlap-three-events"
+rule_id = "rule-calendar-overlap-lanes"
+name = "Display three overlapping events in three columns"
+narrative = "Given three events all overlap in time, when I view the day, then the events display in three equal-width columns"
+status = "active"
+
+[[scenarios]]
+id = "scen-calendar-overlap-duration-visible"
+rule_id = "rule-calendar-overlap-duration-height"
+name = "Longer events appear taller than shorter events"
+narrative = "Given a 2-hour event and a 30-minute event, when I view them in day or week view, then the 2-hour event has approximately 4x the height of the 30-minute event"
+status = "active"
+
+[[scenarios]]
+id = "scen-calendar-overlap-recurring"
+rule_id = "rule-calendar-overlap-side-by-side"
+name = "Recurring events on same day display side-by-side"
+narrative = "Given two bi-weekly recurring events that fall on the same day (e.g., Interview Block and Sprint Review both on Dec 19), when I view that day, then both instances display side-by-side"
+status = "active"
+
+# --- Current Time Indicator Scenarios ---
+
+[[scenarios]]
+id = "scen-calendar-time-indicator-display"
+rule_id = "rule-calendar-time-indicator-visible"
+name = "Time indicator visible on today's Day view"
+narrative = "Given I am viewing today's date in Day view, then I see a colored horizontal bar indicating the current time positioned at the correct hour/minute"
+status = "active"
+
+[[scenarios]]
+id = "scen-calendar-time-indicator-updates"
+rule_id = "rule-calendar-time-indicator-realtime"
+name = "Time indicator updates in real-time"
+narrative = "Given I am viewing today's Day view, when time passes, then the indicator moves down automatically without page refresh"
+status = "active"
+
+[[scenarios]]
+id = "scen-calendar-time-indicator-hidden-other-days"
+rule_id = "rule-calendar-time-indicator-today-only"
+name = "Time indicator hidden on other days"
+narrative = "Given I am viewing a date other than today in Day view, then no time indicator is displayed"
+status = "active"
 
 # --- Timezone Scenarios ---
 
