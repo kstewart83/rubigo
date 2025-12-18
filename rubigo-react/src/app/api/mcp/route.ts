@@ -3,12 +3,13 @@
  * 
  * Implements MCP protocol over HTTP.
  * Handles JSON-RPC messages directly for compatibility with Next.js App Router.
+ * 
+ * Note: Database imports are done lazily inside handlers to avoid SQLite lock
+ * issues during Next.js build (which runs multiple workers).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiToken } from "@/lib/initialization";
-import { db } from "@/db";
-import * as schema from "@/db/schema";
 import { tools, handleToolCall, type McpActorContext } from "@/lib/mcp-tools";
 
 // ============================================================================
@@ -30,10 +31,14 @@ interface JsonRpcResponse {
 }
 
 // ============================================================================
-// Resource Handlers
+// Resource Handlers (lazy db import to avoid build-time SQLite locks)
 // ============================================================================
 
 async function readResource(uri: string): Promise<{ contents: Array<{ uri: string; mimeType: string; text: string }> }> {
+    // Lazy import to avoid SQLite lock during build
+    const { db } = await import("@/db");
+    const schema = await import("@/db/schema");
+
     const handlers: Record<string, () => Promise<unknown[]>> = {
         "rubigo://personnel": async () => db.select().from(schema.personnel),
         "rubigo://projects": async () => db.select().from(schema.projects),
@@ -83,7 +88,7 @@ async function handleMcpRequest(
                 },
                 serverInfo: {
                     name: "rubigo",
-                    version: "0.1.0",
+                    version: "0.3.0",
                 },
             };
 
