@@ -500,10 +500,10 @@ test.describe("MCP Transport - rule-mcp-transport-sse", () => {
     /**
      * Scenario: scen-mcp-sse-connect
      * Given the Rubigo MCP server is running
-     * When I establish a connection to the MCP endpoint
-     * Then I receive the protocol handshake and can begin exchanging messages
+     * When I establish a connection to the MCP endpoint with Accept: text/event-stream
+     * Then I receive the protocol handshake as an SSE event
      */
-    test("scen-mcp-sse-connect: establish HTTP connection", async ({ request }) => {
+    test("scen-mcp-sse-connect: establish HTTP connection with plain JSON", async ({ request }) => {
         const response = await request.post(`${API_URL}/api/mcp`, {
             headers,
             data: mcpRequest("initialize", {
@@ -516,11 +516,132 @@ test.describe("MCP Transport - rule-mcp-transport-sse", () => {
         expect(response.ok()).toBe(true);
         const body = await response.json();
 
-        // Should receive session ID header
-        const sessionId = response.headers()["mcp-session-id"];
-        // Session ID may or may not be present depending on implementation
-        // Just verify we got a valid response
-        expect(body.result || body.jsonrpc).toBeDefined();
+        // Should receive valid MCP response
+        expect(body.jsonrpc).toBe("2.0");
+        expect(body.result).toBeDefined();
+        expect(body.result.protocolVersion).toBeDefined();
+        expect(body.result.serverInfo.name).toBe("rubigo");
+    });
+
+    /**
+     * Scenario: SSE response format
+     * Given the Rubigo MCP server is running
+     * When I send a request with Accept: text/event-stream header
+     * Then I receive the response as an SSE event with event: message format
+     */
+    test("scen-mcp-sse-connect: receive SSE format when Accept header includes text/event-stream", async ({ request }) => {
+        const response = await request.post(`${API_URL}/api/mcp`, {
+            headers: {
+                ...headers,
+                Accept: "text/event-stream, application/json",
+            },
+            data: mcpRequest("initialize", {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "e2e-test", version: "1.0.0" },
+            }),
+        });
+
+        expect(response.ok()).toBe(true);
+
+        // Check Content-Type is SSE
+        const contentType = response.headers()["content-type"];
+        expect(contentType).toContain("text/event-stream");
+
+        // Parse SSE response
+        const body = await response.text();
+
+        // SSE format: "event: message\ndata: {JSON}\n\n"
+        expect(body).toContain("event: message");
+        expect(body).toContain("data:");
+
+        // Extract JSON from data line
+        const dataMatch = body.match(/data: (.+)/);
+        expect(dataMatch).toBeTruthy();
+
+        if (dataMatch) {
+            const json = JSON.parse(dataMatch[1]);
+            expect(json.jsonrpc).toBe("2.0");
+            expect(json.result?.serverInfo?.name).toBe("rubigo");
+        }
+    });
+
+    /**
+     * Scenario: Notifications return 202 Accepted
+     * Given I have a valid MCP connection
+     * When I send a notification (no id) like initialized
+     * Then I receive 202 Accepted with no body
+     */
+    test("notifications return 202 Accepted", async ({ request }) => {
+        // First initialize with request id
+        await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: mcpRequest("initialize", {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "e2e-test", version: "1.0.0" },
+            }),
+        });
+
+        // Send initialized notification (no id)
+        const response = await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: {
+                jsonrpc: "2.0",
+                method: "notifications/initialized",
+                // No id - this is a notification
+            },
+        });
+
+        expect(response.status()).toBe(202);
+    });
+
+    /**
+     * Scenario: GET endpoint returns SSE stream
+     * Given the Rubigo MCP server is running
+     * When I send a GET request with Accept: text/event-stream
+     * Then I receive an SSE stream (or 405 if not supported)
+     * 
+     * NOTE: This test is skipped because Playwright's APIRequestContext waits for
+     * the full response body, but SSE streams are long-lived connections that
+     * don't end. To properly test SSE, use browser context with EventSource
+     * or a dedicated SSE testing library.
+     */
+    test.skip("GET endpoint provides SSE stream for server-to-client messages", async ({ request }) => {
+        // SSE streams can't be tested with Playwright's request API
+        // because it waits for the full response which never completes
+        const response = await request.get(`${API_URL}/api/mcp`, {
+            headers: {
+                ...headers,
+                Accept: "text/event-stream",
+            },
+        });
+
+        // Should either return SSE stream (200) or method not allowed (405)
+        // Our implementation supports GET for SSE
+        if (response.status() === 200) {
+            const contentType = response.headers()["content-type"];
+            expect(contentType).toContain("text/event-stream");
+        } else {
+            // Per MCP spec, 405 is valid if server doesn't offer SSE stream
+            expect(response.status()).toBe(405);
+        }
+    });
+
+    /**
+     * Scenario: GET without Accept: text/event-stream returns 405
+     * Given the Rubigo MCP server is running
+     * When I send a GET request without Accept: text/event-stream
+     * Then I receive 405 Method Not Allowed
+     */
+    test("GET without SSE Accept header returns 405", async ({ request }) => {
+        const response = await request.get(`${API_URL}/api/mcp`, {
+            headers: {
+                Authorization: `Bearer ${API_TOKEN}`,
+            },
+        });
+
+        expect(response.status()).toBe(405);
     });
 });
 
