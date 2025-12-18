@@ -146,25 +146,27 @@ async function main() {
         console.log(`   Server running on http://localhost:${PORT}`);
         console.log();
 
-        // Step 4: Extract initialization token
-        console.log("🔑 Step 4: Extracting initialization token...");
+        // Step 4: Extract tokens (API token for auto-init, init token for manual init)
+        console.log("🔑 Step 4: Extracting tokens...");
 
-        // Wait a bit more and re-read log file for token
+        // Wait a bit more and re-read log file for tokens
         await sleep(2000);
         const fullLogContent = await Bun.file(LOG_FILE).text().catch(() => logContent);
+
+        // With RUBIGO_AUTO_INIT=true, we get API Token directly
+        const apiToken = extractApiToken(fullLogContent);
         const initToken = extractInitToken(fullLogContent);
 
-        if (!initToken) {
+        // In auto-init mode, we only need the API token
+        if (!apiToken && !initToken) {
             console.log("   Log content for debugging:");
             console.log(fullLogContent.substring(0, 500));
-            throw new Error("Failed to extract init token from logs");
+            throw new Error("Failed to extract any tokens from logs");
         }
 
-        console.log(`   Token: ${initToken}`);
-        console.log();
-
-        // Also extract API token for API/MCP tests
-        const apiToken = extractApiToken(fullLogContent);
+        if (initToken) {
+            console.log(`   Init Token: ${initToken}`);
+        }
         if (apiToken) {
             console.log(`   API Token: ${apiToken}`);
         }
@@ -175,7 +177,7 @@ async function main() {
         console.log();
 
         testExitCode = await runCommand("bunx", ["playwright", "test", "--reporter=list"], {
-            E2E_INIT_TOKEN: initToken,
+            E2E_INIT_TOKEN: initToken || "",
             RUBIGO_API_TOKEN: apiToken || "",
             RUBIGO_API_URL: `http://localhost:${PORT}`,
         });

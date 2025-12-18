@@ -1,8 +1,9 @@
 /**
- * MCP HTTP Endpoint
+ * MCP HTTP Endpoint - Streamable HTTP Transport
  * 
- * Implements MCP protocol over HTTP.
- * Handles JSON-RPC messages directly for compatibility with Next.js App Router.
+ * Implements MCP protocol over HTTP with support for both:
+ * - application/json responses (simple mode)
+ * - text/event-stream responses (SSE mode for Streamable HTTP Transport)
  * 
  * Note: Database imports are done lazily inside handlers to avoid SQLite lock
  * issues during Next.js build (which runs multiple workers).
@@ -28,6 +29,36 @@ interface JsonRpcResponse {
     result?: unknown;
     error?: { code: number; message: string };
     id?: number | string;
+}
+
+// ============================================================================
+// SSE Helper Functions
+// ============================================================================
+
+/**
+ * Format a JSON-RPC message as an SSE event
+ */
+function formatSseEvent(data: unknown, eventType?: string): string {
+    const lines: string[] = [];
+    if (eventType) {
+        lines.push(`event: ${eventType}`);
+    }
+    lines.push(`data: ${JSON.stringify(data)}`);
+    lines.push(""); // Empty line to terminate the event
+    return lines.join("\n") + "\n";
+}
+
+/**
+ * Create an SSE response with proper headers
+ */
+function createSseResponse(body: string): Response {
+    return new Response(body, {
+        headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    });
 }
 
 // ============================================================================
@@ -95,6 +126,10 @@ async function handleMcpRequest(
         case "initialized":
             return {};
 
+        case "notifications/initialized":
+            // Client notification after initialization - just acknowledge
+            return null; // Return null for notifications (no response needed)
+
         case "resources/list":
             return {
                 resources: [
@@ -137,7 +172,7 @@ async function handleMcpRequest(
 }
 
 // ============================================================================
-// POST Handler
+// POST Handler - Streamable HTTP Transport
 // ============================================================================
 
 export async function POST(request: NextRequest) {
@@ -179,9 +214,18 @@ export async function POST(request: NextRequest) {
         isAdmin: true,
     };
 
+    // Check if client accepts SSE (Streamable HTTP Transport)
+    const acceptHeader = request.headers.get("accept") || "";
+    const wantsSse = acceptHeader.includes("text/event-stream");
+
     // Handle MCP method
     try {
         const result = await handleMcpRequest(rpcRequest.method, rpcRequest.params, actor);
+
+        // For notifications (no id), return 202 Accepted with no body
+        if (rpcRequest.id === undefined || result === null) {
+            return new Response(null, { status: 202 });
+        }
 
         const response: JsonRpcResponse = {
             jsonrpc: "2.0",
@@ -189,6 +233,15 @@ export async function POST(request: NextRequest) {
             id: rpcRequest.id,
         };
 
+        // Return SSE format if client prefers it
+        if (wantsSse) {
+            // For Streamable HTTP Transport, wrap response in SSE event
+            // The "message" event type signals a JSON-RPC message
+            const sseBody = formatSseEvent(response, "message");
+            return createSseResponse(sseBody);
+        }
+
+        // Return plain JSON for simple clients
         return NextResponse.json(response);
     } catch (error) {
         const message = error instanceof Error ? error.message : "Internal error";
@@ -198,6 +251,72 @@ export async function POST(request: NextRequest) {
             id: rpcRequest.id,
         };
 
+        if (wantsSse) {
+            const sseBody = formatSseEvent(response, "message");
+            return createSseResponse(sseBody);
+        }
+
         return NextResponse.json(response, { status: 500 });
     }
+}
+
+// ============================================================================
+// GET Handler - SSE Stream for Server-to-Client Messages
+// ============================================================================
+
+export async function GET(request: NextRequest) {
+    // Authenticate
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    const auth = await validateApiToken(token);
+    if (!auth.valid) {
+        return NextResponse.json(
+            { error: auth.error },
+            { status: 401 }
+        );
+    }
+
+    // Check if client wants SSE
+    const acceptHeader = request.headers.get("accept") || "";
+    if (!acceptHeader.includes("text/event-stream")) {
+        // Per MCP spec: return 405 if client doesn't want SSE
+        return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    // For now, we don't have server-initiated messages, so just keep the connection open
+    // This satisfies the Streamable HTTP Transport spec requirement
+    // In the future, this could be used for server push notifications
+
+    // Create a stream that sends a heartbeat and stays open
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        start(controller) {
+            // Send initial comment to establish connection
+            controller.enqueue(encoder.encode(": connected\n\n"));
+
+            // Keep-alive ping every 30 seconds (optional)
+            const interval = setInterval(() => {
+                try {
+                    controller.enqueue(encoder.encode(": ping\n\n"));
+                } catch {
+                    clearInterval(interval);
+                }
+            }, 30000);
+
+            // Clean up on close
+            request.signal.addEventListener("abort", () => {
+                clearInterval(interval);
+                controller.close();
+            });
+        },
+    });
+
+    return new Response(stream, {
+        headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    });
 }
