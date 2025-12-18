@@ -1,16 +1,51 @@
 /**
  * E2E Test Runner for Rubigo
  * Runs the full end-to-end test suite
- * 
+ *
  * Usage: bun run scripts/run-e2e.ts
+ *
+ * Port configuration is read from ../wip.toml if running in a WIP worktree,
+ * otherwise falls back to default port 3600.
  */
 
 import { spawn, type Subprocess } from "bun";
-import { unlink } from "fs/promises";
+import { unlink, readFile } from "fs/promises";
+import { parse as parseToml } from "@iarna/toml";
+import { join } from "path";
 
 const LOG_FILE = ".e2e-server.log";
-const PORT = 3600;
+const DEFAULT_PORT = 3600;
 const SERVER_STARTUP_DELAY = 8000;
+
+interface WipConfig {
+    ports?: {
+        e2e?: number;
+        base?: number;
+    };
+}
+
+/**
+ * Load port configuration from wip.toml
+ * Uses the e2e port if specified, otherwise base+1, otherwise default
+ */
+async function getPort(): Promise<number> {
+    try {
+        // Look for wip.toml in parent directory (worktree root)
+        const wipTomlPath = join(process.cwd(), "..", "wip.toml");
+        const content = await readFile(wipTomlPath, "utf-8");
+        const config = parseToml(content) as WipConfig;
+
+        if (config.ports?.e2e) {
+            return config.ports.e2e;
+        }
+        if (config.ports?.base) {
+            return config.ports.base + 1; // e2e uses base+1 by convention
+        }
+    } catch {
+        // wip.toml not found or invalid - use default
+    }
+    return DEFAULT_PORT;
+}
 
 async function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -39,7 +74,7 @@ async function runCommand(command: string, args: string[], env?: Record<string, 
     return await proc.exited;
 }
 
-async function startServer(): Promise<{ proc: Subprocess; logContent: string }> {
+async function startServer(port: number): Promise<{ proc: Subprocess; logContent: string }> {
     const logFile = Bun.file(LOG_FILE);
     const logWriter = logFile.writer();
 
@@ -47,7 +82,7 @@ async function startServer(): Promise<{ proc: Subprocess; logContent: string }> 
         cmd: ["bun", "--bun", "run", "start"],
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, PORT: String(PORT), RUBIGO_AUTO_INIT: "true" },
+        env: { ...process.env, PORT: String(port), RUBIGO_AUTO_INIT: "true" },
     });
 
     // Collect output for token extraction
@@ -136,14 +171,15 @@ async function main() {
         console.log();
 
         // Step 3: Start production server
-        console.log("🚀 Step 3: Starting production server...");
-        await killProcessOnPort(PORT);
+        const port = await getPort();
+        console.log(`🚀 Step 3: Starting production server on port ${port}...`);
+        await killProcessOnPort(port);
 
         console.log("   Starting server...");
-        const { proc, logContent } = await startServer();
+        const { proc, logContent } = await startServer(port);
         serverProc = proc;
 
-        console.log(`   Server running on http://localhost:${PORT}`);
+        console.log(`   Server running on http://localhost:${port}`);
         console.log();
 
         // Step 4: Extract tokens (API token for auto-init, init token for manual init)
@@ -176,10 +212,11 @@ async function main() {
         console.log("🎭 Step 5: Running Playwright E2E tests...");
         console.log();
 
-        testExitCode = await runCommand("bunx", ["playwright", "test", "--reporter=list"], {
+        testExitCode = await runCommand("bunx", ["playwright", "test", "--reporter=list", ...process.argv.slice(2)], {
             E2E_INIT_TOKEN: initToken || "",
             RUBIGO_API_TOKEN: apiToken || "",
-            RUBIGO_API_URL: `http://localhost:${PORT}`,
+            RUBIGO_API_URL: `http://localhost:${port}`,
+            E2E_BASE_URL: `http://localhost:${port}`,
         });
 
         console.log();
