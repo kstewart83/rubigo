@@ -25,21 +25,13 @@ const migrations: Migration[] = [
     `,
     },
     // Add module-specific migrations below
-    // Example:
-    // {
-    //   version: 2,
-    //   name: "create_personnel_table",
-    //   up: `
-    //     CREATE TABLE personnel (
-    //       id INTEGER PRIMARY KEY AUTOINCREMENT,
-    //       first_name TEXT NOT NULL,
-    //       last_name TEXT NOT NULL,
-    //       email TEXT UNIQUE,
-    //       created_at TEXT DEFAULT (datetime('now')),
-    //       updated_at TEXT DEFAULT (datetime('now'))
-    //     )
-    //   `,
-    // },
+    {
+        version: 2,
+        name: "add_new_date_to_calendar_deviations",
+        up: `
+            ALTER TABLE calendar_deviations ADD COLUMN new_date TEXT;
+        `,
+    },
 ];
 
 /**
