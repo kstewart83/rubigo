@@ -56,18 +56,36 @@ test.describe("System Initialization", () => {
         // Enter correct words
         const wordInputs = page.locator('input[placeholder="type to search..."]');
         for (let i = 0; i < 4; i++) {
-            await wordInputs.nth(i).fill(INIT_TOKEN[i]);
-            // Wait for autocomplete dropdown
-            await page.waitForTimeout(200);
-            // Click the matching word in dropdown
-            const dropdown = page.locator(`button:has-text("${INIT_TOKEN[i]}")`).first();
-            if (await dropdown.isVisible()) {
+            const input = wordInputs.nth(i);
+            await input.click();
+            await input.fill(INIT_TOKEN[i]);
+
+            // Wait for autocomplete dropdown to appear
+            await page.waitForTimeout(300);
+
+            // Try to click the matching word in dropdown
+            // Look for button or div containing the word
+            const dropdown = page.locator(`[role="listbox"] button:has-text("${INIT_TOKEN[i]}")`).or(
+                page.locator(`button:has-text("${INIT_TOKEN[i]}")`).first()
+            ).or(
+                page.locator(`[data-value="${INIT_TOKEN[i]}"]`)
+            );
+
+            if (await dropdown.isVisible({ timeout: 1000 }).catch(() => false)) {
                 await dropdown.click();
+            } else {
+                // If no dropdown, just press Enter to confirm
+                await input.press("Enter");
             }
+
+            await page.waitForTimeout(200);
         }
 
         // Click initialize
         await page.getByRole("button", { name: "Initialize System" }).click();
+
+        // Wait for navigation or state change
+        await page.waitForTimeout(2000);
 
         // Should redirect and show Sign In (system is now initialized)
         await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible({ timeout: 10000 });

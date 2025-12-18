@@ -69,11 +69,18 @@ const sidebarModules: SidebarModule[] = [
             { id: "actions", label: "Actions", href: "/logs/actions" },
         ]
     },
-    // Future modules with sub-pages
-    // { id: "calendar", label: "Calendar", href: "/calendar", icon: "📅" },
-    // { id: "chat", label: "Chat", href: "/chat", icon: "💬" },
-    // { id: "security", label: "Security", href: "/security", icon: "🔐" },
-    // { id: "logistics", label: "Logistics", href: "/logistics", icon: "📦" },
+    {
+        id: "collaboration",
+        label: "Collaboration",
+        href: "/calendar",
+        icon: "🤝",
+        subPages: [
+            { id: "calendar", label: "Calendar", href: "/calendar" },
+            { id: "email", label: "Email", href: "/email" },
+            { id: "chat", label: "Chat", href: "/chat" },
+            { id: "screen-share", label: "Screen Share", href: "/screen-share" },
+        ]
+    },
 ];
 
 // ============================================================================
