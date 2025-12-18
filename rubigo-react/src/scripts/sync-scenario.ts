@@ -16,7 +16,7 @@
 import { parse } from "@iarna/toml";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
-import { RubigoClient } from "../lib/rubigo-client";
+import { RubigoClient, type CalendarEventInput } from "../lib/rubigo-client";
 
 // ============================================================================
 // CLI Argument Parsing
@@ -419,6 +419,30 @@ interface ProjectsToml {
     }>;
 }
 
+// Events TOML structure
+interface EventsToml {
+    description?: { overview?: string };
+    events?: Array<{
+        title: string;
+        description?: string;
+        start_time: string;
+        end_time: string;
+        event_type?: string;
+        recurrence?: string;
+        recurrence_interval?: number;
+        recurrence_days?: string[];
+        recurrence_until?: string;
+        organizer_id?: string;
+        participant_ids?: string[];
+        location?: string;
+        virtual_url?: string;
+        timezone?: string;
+        // Fields not yet synced (TODO):
+        // - all_day
+        // - participant_ids (requires CalendarParticipant sync)
+    }>;
+}
+
 // Generic sync function for simple entities
 async function syncSimpleEntity<T extends { id: string }>(
     entityName: string,
@@ -508,6 +532,126 @@ async function syncSimpleEntity<T extends { id: string }>(
                     } else {
                         stats.failed++;
                         console.log(`   ❌ Failed to delete ${name}: ${result.error}`);
+                    }
+                }
+            }
+        }
+    }
+
+    return stats;
+}
+
+// ============================================================================
+// Calendar Events Sync
+// ============================================================================
+
+type EventEntry = NonNullable<EventsToml["events"]>[number];
+
+async function syncCalendarEvents(
+    client: RubigoClient,
+    events: EventEntry[],
+    mode: CliArgs["mode"],
+    dryRun: boolean
+): Promise<SyncStats> {
+    const stats = initStats();
+
+    if (!events.length) {
+        return stats;
+    }
+
+    console.log(`\n📅 Syncing ${events.length} calendar events...`);
+
+    // Get existing events (use a wide date range to capture all)
+    // Note: This is a simplified approach - in production you might want pagination
+    const existingResult = await client.listCalendarEvents("2024-01-01", "2030-01-01");
+    const existingMap = new Map<string, Record<string, unknown>>();
+
+    if (existingResult.success && existingResult.events) {
+        for (const event of existingResult.events as Array<{ id: string; title: string; startTime: string;[key: string]: unknown }>) {
+            // Key by title + start_time for matching
+            const key = `${event.title}|${event.startTime}`;
+            existingMap.set(key, event);
+        }
+    }
+
+    const seedKeys = new Set<string>();
+
+    for (const event of events) {
+        const key = `${event.title}|${event.start_time}`;
+        seedKeys.add(key);
+        const existing = existingMap.get(key);
+
+        // Map TOML snake_case to API camelCase
+        const apiEvent = {
+            title: event.title,
+            description: event.description,
+            startTime: event.start_time,
+            endTime: event.end_time,
+            eventType: event.event_type as CalendarEventInput["eventType"],
+            recurrence: event.recurrence as CalendarEventInput["recurrence"] || "none",
+            recurrenceDays: event.recurrence_days,
+            recurrenceUntil: event.recurrence_until,
+            timezone: event.timezone || "America/New_York",
+            location: event.location,
+            virtualUrl: event.virtual_url,
+            // TODO: participant_ids not synced yet
+        };
+
+        if (!existing) {
+            if (dryRun) {
+                console.log(`   🆕 [DRY-RUN] Would create: ${event.title}`);
+                stats.created++;
+            } else {
+                const result = await client.createCalendarEvent(apiEvent);
+                if (result.success) {
+                    stats.created++;
+                    console.log(`   ✅ Created: ${event.title}`);
+                } else {
+                    stats.failed++;
+                    console.log(`   ❌ Failed to create ${event.title}: ${result.error}`);
+                }
+            }
+        } else if (mode === "upsert" || mode === "full") {
+            // Check for changes
+            const compareFields = ["title", "description", "eventType", "recurrence", "location", "timezone"];
+            if (hasChanges(existing, apiEvent as unknown as Record<string, unknown>, compareFields)) {
+                if (dryRun) {
+                    console.log(`   📝 [DRY-RUN] Would update: ${event.title}`);
+                    stats.updated++;
+                } else {
+                    const result = await client.updateCalendarEvent(existing.id as string, apiEvent);
+                    if (result.success) {
+                        stats.updated++;
+                        console.log(`   📝 Updated: ${event.title}`);
+                    } else {
+                        stats.failed++;
+                        console.log(`   ❌ Failed to update ${event.title}: ${result.error}`);
+                    }
+                }
+            } else {
+                stats.skipped++;
+            }
+        } else {
+            stats.skipped++;
+        }
+    }
+
+    // Delete extras in full mode
+    if (mode === "full") {
+        for (const [key, event] of existingMap) {
+            if (!seedKeys.has(key)) {
+                const title = event.title as string;
+                if (dryRun) {
+                    console.log(`   🗑️  [DRY-RUN] Would delete: ${title}`);
+                    stats.deleted++;
+                } else {
+                    const result = await client.deleteCalendarEvent(event.id as string);
+                    if (result.success) {
+                        stats.deleted++;
+                        console.log(`   🗑️  Deleted: ${title}`);
+                    } else {
+                        stats.failed++;
+                        console.log(`   ❌ Failed to delete ${title}: ${result.error}`);
                     }
                 }
             }
@@ -954,6 +1098,15 @@ async function main() {
         (a) => a.id
     );
 
+    // 19. Calendar Events (no deps)
+    const eventsData = loadToml<EventsToml>(args.scenario, "events.toml");
+    allStats.calendarEvents = await syncCalendarEvents(
+        client,
+        eventsData?.events || [],
+        args.mode,
+        args.dryRun
+    );
+
     // Print summary
     console.log("\n" + "=".repeat(60));
     console.log("📊 Sync Summary");
@@ -982,7 +1135,7 @@ async function main() {
     console.log("   - infrastructure.toml: racks, desks");
     console.log("   - assets.toml: network assets");
     console.log("   - components.toml: components");
-    console.log("   - events.toml: calendar events (TODO)");
+    console.log("   - events.toml: participant_ids, all_day (TODO)");
 
     if (args.dryRun) {
         console.log("\n🔵 DRY RUN - No changes were made.");
