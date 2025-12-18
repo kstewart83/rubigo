@@ -115,11 +115,17 @@ export async function generateAndLogToken(): Promise<void> {
 
     if (initialized) {
         clearTokenFromEnv();
+        // Regenerate API token on restart (ephemeral env var is lost on restart)
+        const apiToken = await getOrCreateApiToken();
         console.log("\n" + "=".repeat(60));
         console.log("✅ SYSTEM INITIALIZED");
         console.log("=".repeat(60));
-        console.log("\nThe system is ready. Users can sign in.\n");
-        console.log("=".repeat(60) + "\n");
+        console.log("\nThe system is ready. Users can sign in.");
+        if (apiToken) {
+            console.log(`\nAPI Token: ${apiToken}`);
+            console.log("Use this token for programmatic API access.");
+        }
+        console.log("\n" + "=".repeat(60) + "\n");
         return;
     }
 
