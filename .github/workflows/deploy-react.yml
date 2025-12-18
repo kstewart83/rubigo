@@ -18,6 +18,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Preserve gitignored files (like production/rubigo-react/data/rubigo.db)
+          # between deployments. Default 'clean: true' runs git clean -ffdx which
+          # deletes untracked files, causing the production database to be wiped.
+          clean: false
 
       - name: Prepare build directory
         run: |
