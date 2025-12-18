@@ -5,6 +5,9 @@ Thumbs.db
 # WIP worktrees for multi-agent development
 wip/
 
+# WIP configuration files (created by /wip workflow)
+wip.toml
+
 # Production deployment folder
 production/*
 !production/.gitignore
