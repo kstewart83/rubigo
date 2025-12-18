@@ -9,7 +9,7 @@ import { spawn, type Subprocess } from "bun";
 import { unlink } from "fs/promises";
 
 const LOG_FILE = ".e2e-server.log";
-const PORT = 3100;
+const PORT = 3600;
 const SERVER_STARTUP_DELAY = 8000;
 
 async function sleep(ms: number): Promise<void> {
@@ -47,7 +47,7 @@ async function startServer(): Promise<{ proc: Subprocess; logContent: string }> 
         cmd: ["bun", "--bun", "run", "start"],
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, PORT: String(PORT) },
+        env: { ...process.env, PORT: String(PORT), RUBIGO_AUTO_INIT: "true" },
     });
 
     // Collect output for token extraction
@@ -91,6 +91,11 @@ async function startServer(): Promise<{ proc: Subprocess; logContent: string }> 
 
 function extractInitToken(logContent: string): string | null {
     const match = logContent.match(/INIT TOKEN:\s*(\S+)/);
+    return match ? match[1] : null;
+}
+
+function extractApiToken(logContent: string): string | null {
+    const match = logContent.match(/API Token:\s*(\S+)/);
     return match ? match[1] : null;
 }
 
@@ -157,12 +162,21 @@ async function main() {
         console.log(`   Token: ${initToken}`);
         console.log();
 
+        // Also extract API token for API/MCP tests
+        const apiToken = extractApiToken(fullLogContent);
+        if (apiToken) {
+            console.log(`   API Token: ${apiToken}`);
+        }
+        console.log();
+
         // Step 5: Run Playwright tests
         console.log("🎭 Step 5: Running Playwright E2E tests...");
         console.log();
 
         testExitCode = await runCommand("bunx", ["playwright", "test", "--reporter=list"], {
             E2E_INIT_TOKEN: initToken,
+            RUBIGO_API_TOKEN: apiToken || "",
+            RUBIGO_API_URL: `http://localhost:${PORT}`,
         });
 
         console.log();

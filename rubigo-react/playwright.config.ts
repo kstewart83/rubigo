@@ -57,7 +57,7 @@ export default defineConfig({
             testDir: "./e2e/api",
             use: {
                 // API tests don't need a browser
-                baseURL: process.env.RUBIGO_API_URL || "http://localhost:3000",
+                baseURL: process.env.RUBIGO_API_URL || "http://localhost:3600",
             },
         },
     ],
