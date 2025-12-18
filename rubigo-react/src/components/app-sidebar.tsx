@@ -24,6 +24,11 @@ import {
     Laptop,
     ChevronsLeft,
     ChevronsRight,
+    Handshake,
+    Calendar,
+    Mail,
+    MessageCircle,
+    MonitorPlay,
 } from "lucide-react";
 
 import {
@@ -118,6 +123,18 @@ const sidebarModules: SidebarModule[] = [
         icon: FileText,
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
+        ],
+    },
+    {
+        id: "collaboration",
+        label: "Collaboration",
+        href: "/calendar",
+        icon: Handshake,
+        subPages: [
+            { id: "calendar", label: "Calendar", href: "/calendar", icon: Calendar },
+            { id: "email", label: "Email", href: "/email", icon: Mail },
+            { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
+            { id: "screen-share", label: "Screen Share", href: "/screen-share", icon: MonitorPlay },
         ],
     },
 ];
