@@ -13,62 +13,64 @@ Abandon a WIP branch, close any associated PR, and cleanup resources.
 
 ## Step 1: Get Context
 
-Determine branch and repo info:
-```
-# From the WIP worktree
-git branch --show-current
+Read `wip.toml` from the WIP worktree:
+- `worktree.branch` - Branch name
+- `worktree.slug` - Worktree slug
+- `pr_number` - GitHub PR number (if exists)
 
-# Get repo remote URL to extract owner/repo
+Get repo info:
+```bash
 git remote get-url origin
 ```
 
-## Step 2: Find and Close PR (if exists)
+## Step 2: Close PR (if exists)
 
-Search for existing PR:
-```
-mcp_github-mcp-server_search_pull_requests
-  query: "repo:<owner>/<repo> head:<branch>"
-```
+If `pr_number` is set in `wip.toml`:
 
-If a PR exists, close it:
 ```
 mcp_github-mcp-server_update_pull_request
   owner: <owner>
   repo: <repo>
-  pullNumber: <PR number>
+  pullNumber: <pr_number>
   state: closed
 ```
 
 ## Step 3: Remove Worktree
 
 From the main repo checkout (not the worktree):
-```
+```bash
 git worktree remove wip/<slug>
 ```
 
 If there are uncommitted changes, force removal:
-```
+```bash
 git worktree remove --force wip/<slug>
 ```
 
 ## Step 4: Delete Local Branch
 
-```
-git branch -D <type>/<slug>
+```bash
+git branch -D <branch>
 ```
 
 ## Step 5: Delete Remote Branch
 
-```
-git push origin --delete <type>/<slug>
+```bash
+git push origin --delete <branch>
 ```
 
-## Confirmation
+## Step 6: Verify Cleanup
 
-Verify cleanup is complete:
-```
+Confirm cleanup is complete:
+```bash
 git worktree list
 git branch -a | grep <slug>
 ```
 
 Both commands should show no results for the deleted branch/worktree.
+
+## Notes
+
+- This workflow is for abandoning work, not completing it
+- Use `/wip-merge` to complete and merge work
+- Uncommitted changes will be lost when using `--force`
