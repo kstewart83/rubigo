@@ -130,6 +130,190 @@ function formatTime12h(hour: number, minute: number): string {
 }
 
 // ============================================================================
+// Event Positioning Utilities
+// ============================================================================
+
+const HOUR_HEIGHT_PX = 48; // Height of one hour in pixels
+const START_HOUR = 6; // Grid starts at 6 AM
+
+interface PositionedEvent {
+    event: CalendarEvent;
+    top: number;      // px from top of grid
+    height: number;   // px height based on duration
+    lane: number;     // 0-indexed lane for horizontal positioning
+    totalLanes: number; // Total lanes in this overlap group
+}
+
+/**
+ * Calculate the vertical position and height of an event based on its time
+ */
+function getEventTimePosition(event: CalendarEvent): { top: number; height: number } {
+    const { start, end } = getInstanceDateTime(event);
+
+    const startHour = start.getHours() + start.getMinutes() / 60;
+    const endHour = end.getHours() + end.getMinutes() / 60;
+
+    // Position relative to START_HOUR
+    const top = (startHour - START_HOUR) * HOUR_HEIGHT_PX;
+    const height = Math.max((endHour - startHour) * HOUR_HEIGHT_PX, 20); // Minimum 20px height
+
+    return { top, height };
+}
+
+/**
+ * Get the actual start/end datetime for an event instance
+ * For recurring events, combines instanceDate with the time portion of startTime/endTime
+ */
+function getInstanceDateTime(event: CalendarEvent): { start: Date; end: Date } {
+    if (event.isRecurring && event.instanceDate) {
+        const origStart = new Date(event.startTime);
+        const origEnd = new Date(event.endTime);
+
+        const startStr = `${event.instanceDate}T${origStart.toTimeString().substring(0, 8)}`;
+        const endStr = `${event.instanceDate}T${origEnd.toTimeString().substring(0, 8)}`;
+
+        return {
+            start: new Date(startStr),
+            end: new Date(endStr),
+        };
+    }
+
+    return {
+        start: new Date(event.startTime),
+        end: new Date(event.endTime),
+    };
+}
+
+/**
+ * Check if two events overlap in time
+ */
+function eventsOverlap(a: CalendarEvent, b: CalendarEvent): boolean {
+    const aTimes = getInstanceDateTime(a);
+    const bTimes = getInstanceDateTime(b);
+
+    return aTimes.start < bTimes.end && bTimes.start < aTimes.end;
+}
+
+/**
+ * Assign lanes to overlapping events using a greedy algorithm
+ */
+function assignLanes(events: CalendarEvent[]): PositionedEvent[] {
+    if (events.length === 0) return [];
+
+    // Sort by start time, then by end time (longer events first)
+    const sorted = [...events].sort((a, b) => {
+        const aStart = new Date(a.startTime).getTime();
+        const bStart = new Date(b.startTime).getTime();
+        if (aStart !== bStart) return aStart - bStart;
+        // For same start time, put longer events first
+        const aDuration = new Date(a.endTime).getTime() - aStart;
+        const bDuration = new Date(b.endTime).getTime() - bStart;
+        return bDuration - aDuration;
+    });
+
+    // Find overlap groups (connected components)
+    const groups: CalendarEvent[][] = [];
+    const visited = new Set<string>();
+
+    for (const event of sorted) {
+        if (visited.has(event.id + event.instanceDate)) continue;
+
+        // Find all events that overlap with this one (transitively)
+        const group: CalendarEvent[] = [];
+        const stack = [event];
+
+        while (stack.length > 0) {
+            const current = stack.pop()!;
+            const key = current.id + current.instanceDate;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            group.push(current);
+
+            // Find all events that overlap with current
+            for (const other of sorted) {
+                const otherKey = other.id + other.instanceDate;
+                if (!visited.has(otherKey) && eventsOverlap(current, other)) {
+                    stack.push(other);
+                }
+            }
+        }
+
+        if (group.length > 0) {
+            groups.push(group);
+        }
+    }
+
+    // Assign lanes within each group
+    const result: PositionedEvent[] = [];
+
+    for (const group of groups) {
+        // Sort group by start time (using instance times)
+        group.sort((a, b) => {
+            const aTime = getInstanceDateTime(a);
+            const bTime = getInstanceDateTime(b);
+            return aTime.start.getTime() - bTime.start.getTime();
+        });
+
+        // Track end times for each lane
+        const laneEndTimes: number[] = [];
+        const eventLanes = new Map<string, number>();
+
+        for (const event of group) {
+            const times = getInstanceDateTime(event);
+            const eventStart = times.start.getTime();
+            const eventEnd = times.end.getTime();
+
+            // Find first available lane
+            let lane = 0;
+            while (lane < laneEndTimes.length && laneEndTimes[lane] > eventStart) {
+                lane++;
+            }
+
+            // Assign lane
+            eventLanes.set(event.id + event.instanceDate, lane);
+
+            // Update lane end time
+            if (lane >= laneEndTimes.length) {
+                laneEndTimes.push(eventEnd);
+            } else {
+                laneEndTimes[lane] = eventEnd;
+            }
+        }
+
+        const totalLanes = laneEndTimes.length;
+
+        for (const event of group) {
+            const { top, height } = getEventTimePosition(event);
+            result.push({
+                event,
+                top,
+                height,
+                lane: eventLanes.get(event.id + event.instanceDate) || 0,
+                totalLanes,
+            });
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Check if an event is an all-day event
+ * All-day events span midnight-to-midnight or have the allDay flag
+ */
+function isAllDayEvent(event: CalendarEvent): boolean {
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+
+    // Check if times indicate all-day (00:00:00 to 23:59:xx or 00:00:00 next day)
+    const startsAtMidnight = start.getHours() === 0 && start.getMinutes() === 0;
+    const endsAtEndOfDay = (end.getHours() === 23 && end.getMinutes() >= 59) ||
+        (end.getHours() === 0 && end.getMinutes() === 0);
+
+    return startsAtMidnight && endsAtEndOfDay;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -157,7 +341,7 @@ interface CalendarEvent {
 export function CalendarPageContent() {
     const { currentPersona } = usePersona();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState<"month" | "week">("month");
+    const [view, setView] = useState<"month" | "week" | "day">("month");
     const [workWeekOnly, setWorkWeekOnly] = useState(false);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -227,9 +411,12 @@ export function CalendarPageContent() {
         fetchEvents();
     }, [fetchEvents]);
 
-    // Navigation - view-aware (weeks in week view, months in month view)
+    // Navigation - view-aware (days in day view, weeks in week view, months in month view)
     const goToPrevious = () => {
-        if (view === "week") {
+        if (view === "day") {
+            // Move back one day
+            setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1));
+        } else if (view === "week") {
             // Move back one week
             setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
         } else {
@@ -239,7 +426,10 @@ export function CalendarPageContent() {
     };
 
     const goToNext = () => {
-        if (view === "week") {
+        if (view === "day") {
+            // Move forward one day
+            setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1));
+        } else if (view === "week") {
             // Move forward one week
             setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
         } else {
@@ -295,6 +485,14 @@ export function CalendarPageContent() {
                         >
                             Week
                         </Button>
+                        <Button
+                            variant={view === "day" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setView("day")}
+                            data-testid="day-view-toggle"
+                        >
+                            Day
+                        </Button>
                     </div>
                     <label className="flex items-center gap-2 text-sm">
                         <input
@@ -328,11 +526,20 @@ export function CalendarPageContent() {
                         setShowDetailsPanel(true);
                     }}
                 />
-            ) : (
+            ) : view === "week" ? (
                 <WeekView
                     currentDate={currentDate}
                     events={events}
                     workWeekOnly={workWeekOnly}
+                    onEventClick={(event) => {
+                        setSelectedEvent(event);
+                        setShowDetailsPanel(true);
+                    }}
+                />
+            ) : (
+                <DayView
+                    currentDate={currentDate}
+                    events={events}
                     onEventClick={(event) => {
                         setSelectedEvent(event);
                         setShowDetailsPanel(true);
@@ -781,26 +988,37 @@ function WeekView({
         days.push(day);
     }
 
-    // Time slots (6 AM to 10 PM)
+    // Time slots (6 AM to 10 PM = 17 hours)
     const hours = Array.from({ length: 17 }, (_, i) => i + 6);
+    const totalHeight = hours.length * HOUR_HEIGHT_PX;
 
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-    // Get events for a specific date
-    const getEventsForDate = (date: Date) => {
-        const dateStr = date.toISOString().split("T")[0];
-        return events.filter((e) => e.instanceDate === dateStr);
+    // Get positioned events for a specific date (exclude all-day events)
+    const getPositionedEventsForDate = (date: Date) => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        const dayEvents = events.filter((e) => e.instanceDate === dateStr && !isAllDayEvent(e));
+        return assignLanes(dayEvents);
     };
+
+    // Get all-day events for a specific date
+    const getAllDayEventsForDate = (date: Date) => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        return events.filter((e) => e.instanceDate === dateStr && isAllDayEvent(e));
+    };
+
+    // Check if there are any all-day events this week
+    const hasAnyAllDayEvents = days.some((day) => getAllDayEventsForDate(day).length > 0);
 
     return (
         <div className="flex-1 overflow-auto" data-testid="week-view">
             {/* Day headers */}
-            <div className="grid" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
-                <div className="p-2" /> {/* Empty corner */}
+            <div className="grid sticky top-0 bg-background z-10" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
+                <div className="p-2 border-b" /> {/* Empty corner */}
                 {days.map((day) => (
                     <div
                         key={day.toISOString()}
-                        className="p-2 text-center border-b"
+                        className="p-2 text-center border-b border-l"
                     >
                         <div className="text-sm text-muted-foreground">
                             {dayNames[day.getDay()]}
@@ -810,49 +1028,241 @@ function WeekView({
                 ))}
             </div>
 
-            {/* Time grid */}
-            <div
-                className="grid"
-                style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}
-            >
-                {hours.map((hour) => (
-                    <Fragment key={`hour-row-${hour}`}>
-                        {/* Time label */}
-                        <div className="text-xs text-muted-foreground p-1 text-right">
+            {/* All Day Events Section */}
+            {hasAnyAllDayEvents && (
+                <div className="grid border-b" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }} data-testid="all-day-section">
+                    <div className="p-1 text-xs text-muted-foreground text-right pr-2">All day</div>
+                    {days.map((day) => {
+                        const allDayEvents = getAllDayEventsForDate(day);
+                        return (
+                            <div key={`allday-${day.toISOString()}`} className="p-1 border-l min-h-8">
+                                {allDayEvents.map((event) => (
+                                    <AllDayEventPill
+                                        key={`${event.id}-${event.instanceDate}`}
+                                        event={event}
+                                        onClick={() => onEventClick(event)}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Time grid with events */}
+            <div className="grid" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
+                {/* Time labels column */}
+                <div className="relative" style={{ height: totalHeight }}>
+                    {hours.map((hour, idx) => (
+                        <div
+                            key={hour}
+                            className="absolute text-xs text-muted-foreground pr-2 text-right w-full"
+                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                        >
                             {hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                         </div>
-                        {/* Day cells for this hour */}
-                        {days.map((day) => {
-                            const dayEvents = getEventsForDate(day);
-                            const hourEvents = dayEvents.filter((e) => {
-                                const eventHour = new Date(e.startTime).getHours();
-                                return eventHour === hour;
-                            });
+                    ))}
+                </div>
 
-                            return (
+                {/* Day columns */}
+                {days.map((day) => {
+                    const positionedEvents = getPositionedEventsForDate(day);
+
+                    return (
+                        <div
+                            key={day.toISOString()}
+                            className="relative border-l"
+                            style={{ height: totalHeight }}
+                        >
+                            {/* Hour gridlines */}
+                            {hours.map((hour, idx) => (
                                 <div
-                                    key={`${day.toISOString()}-${hour}`}
-                                    className="border-b border-r min-h-12 relative"
-                                >
-                                    {hourEvents.map((event) => (
-                                        <EventPill
-                                            key={event.id}
-                                            event={event}
-                                            onClick={() => onEventClick(event)}
-                                        />
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </Fragment>
-                ))}
+                                    key={hour}
+                                    className="absolute w-full border-b"
+                                    style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                                />
+                            ))}
+
+                            {/* Positioned events */}
+                            {positionedEvents.map(({ event, top, height, lane, totalLanes }) => {
+                                const width = `calc(${100 / totalLanes}% - 2px)`;
+                                const left = `calc(${(lane / totalLanes) * 100}% + 1px)`;
+
+                                return (
+                                    <PositionedEventPill
+                                        key={`${event.id}-${event.instanceDate}`}
+                                        event={event}
+                                        top={top}
+                                        height={height}
+                                        width={width}
+                                        left={left}
+                                        onClick={() => onEventClick(event)}
+                                    />
+                                );
+                            })}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
 }
 
 // ============================================================================
-// Event Pill Component
+// Current Time Indicator Component
+// ============================================================================
+
+function CurrentTimeIndicator() {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        // Update every minute
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Calculate position based on current hour/minute
+    const hour = currentTime.getHours();
+    const minute = currentTime.getMinutes();
+    const hourDecimal = hour + minute / 60;
+
+    // Position relative to START_HOUR (6 AM)
+    const top = (hourDecimal - START_HOUR) * HOUR_HEIGHT_PX;
+
+    // Don't render if outside visible range (6 AM - 10 PM)
+    if (hour < START_HOUR || hour >= START_HOUR + 17) {
+        return null;
+    }
+
+    return (
+        <div
+            className="absolute left-0 right-0 z-20 pointer-events-none"
+            style={{ top: `${top}px` }}
+            data-testid="current-time-indicator"
+        >
+            {/* Red circle at the start */}
+            <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-red-500" />
+            {/* Red line across */}
+            <div className="h-0.5 bg-red-500 w-full" />
+        </div>
+    );
+}
+
+// ============================================================================
+// Day View Component
+// ============================================================================
+
+function DayView({
+    currentDate,
+    events,
+    onEventClick,
+}: {
+    currentDate: Date;
+    events: CalendarEvent[];
+    onEventClick: (event: CalendarEvent) => void;
+}) {
+    // Time slots (6 AM to 10 PM = 17 hours)
+    const hours = Array.from({ length: 17 }, (_, i) => i + 6);
+    const totalHeight = hours.length * HOUR_HEIGHT_PX;
+
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    // Get events for the current date
+    const dateStr = format(currentDate, "yyyy-MM-dd");
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const isToday = dateStr === todayStr;
+
+    // Separate all-day and timed events
+    const allDayEvents = events.filter((e) => e.instanceDate === dateStr && isAllDayEvent(e));
+    const timedEvents = events.filter((e) => e.instanceDate === dateStr && !isAllDayEvent(e));
+    const positionedEvents = assignLanes(timedEvents);
+
+    return (
+        <div className="flex-1 overflow-auto" data-testid="day-view">
+            {/* Day header */}
+            <div className="grid sticky top-0 bg-background z-10" style={{ gridTemplateColumns: "60px 1fr" }}>
+                <div className="p-2 border-b" /> {/* Empty corner */}
+                <div className="p-2 text-center border-b border-l">
+                    <div className="text-sm text-muted-foreground">
+                        {dayNames[currentDate.getDay()]}
+                    </div>
+                    <div className="text-lg font-semibold">{currentDate.getDate()}</div>
+                </div>
+            </div>
+
+            {/* All Day Events Section */}
+            {allDayEvents.length > 0 && (
+                <div className="grid border-b" style={{ gridTemplateColumns: "60px 1fr" }} data-testid="all-day-section">
+                    <div className="p-1 text-xs text-muted-foreground text-right pr-2">All day</div>
+                    <div className="p-1 border-l min-h-8">
+                        {allDayEvents.map((event) => (
+                            <AllDayEventPill
+                                key={`${event.id}-${event.instanceDate}`}
+                                event={event}
+                                onClick={() => onEventClick(event)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Time grid with events */}
+            <div className="grid" style={{ gridTemplateColumns: "60px 1fr" }}>
+                {/* Time labels column */}
+                <div className="relative" style={{ height: totalHeight }}>
+                    {hours.map((hour, idx) => (
+                        <div
+                            key={hour}
+                            className="absolute text-xs text-muted-foreground pr-2 text-right w-full"
+                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                        >
+                            {hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Day column */}
+                <div className="relative border-l" style={{ height: totalHeight }}>
+                    {/* Hour gridlines */}
+                    {hours.map((hour, idx) => (
+                        <div
+                            key={hour}
+                            className="absolute w-full border-b"
+                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                        />
+                    ))}
+
+                    {/* Positioned events */}
+                    {positionedEvents.map(({ event, top, height, lane, totalLanes }) => {
+                        const width = `calc(${100 / totalLanes}% - 2px)`;
+                        const left = `calc(${(lane / totalLanes) * 100}% + 1px)`;
+
+                        return (
+                            <PositionedEventPill
+                                key={`${event.id}-${event.instanceDate}`}
+                                event={event}
+                                top={top}
+                                height={height}
+                                width={width}
+                                left={left}
+                                onClick={() => onEventClick(event)}
+                            />
+                        );
+                    })}
+
+                    {/* Current time indicator - only show for today */}
+                    {isToday && <CurrentTimeIndicator />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
+// Event Pill Component (for Month view - flow layout)
 // ============================================================================
 
 function EventPill({
@@ -866,10 +1276,80 @@ function EventPill({
 
     return (
         <button
-            className="event-pill w-full text-left text-xs p-1 rounded truncate text-white cursor-pointer hover:opacity-80"
-            style={{ backgroundColor: typeInfo.color }}
+            className="event-pill w-full text-left text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
+            style={{ backgroundColor: typeInfo.color, color: typeInfo.textColor || "white" }}
             onClick={onClick}
             data-testid="event-pill"
+        >
+            {event.title}
+        </button>
+    );
+}
+
+// ============================================================================
+// Positioned Event Pill Component (for Day/Week view - absolute positioning)
+// ============================================================================
+
+function PositionedEventPill({
+    event,
+    top,
+    height,
+    width,
+    left,
+    onClick,
+}: {
+    event: CalendarEvent;
+    top: number;
+    height: number;
+    width: string;
+    left: string;
+    onClick: () => void;
+}) {
+    const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+
+    // Format time display
+    const startTime = new Date(event.startTime);
+    const timeStr = `${startTime.getHours() % 12 || 12}:${startTime.getMinutes().toString().padStart(2, "0")} ${startTime.getHours() >= 12 ? "PM" : "AM"}`;
+
+    return (
+        <button
+            className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            style={{
+                backgroundColor: typeInfo.color,
+                color: typeInfo.textColor || "white",
+                top: `${top}px`,
+                height: `${height}px`,
+                width,
+                left,
+            }}
+            onClick={onClick}
+            data-testid="positioned-event-pill"
+        >
+            <div className="font-medium truncate">{event.title}</div>
+            {height >= 36 && <div className="text-xs opacity-80">{timeStr}</div>}
+        </button>
+    );
+}
+
+// ============================================================================
+// All Day Event Pill Component
+// ============================================================================
+
+function AllDayEventPill({
+    event,
+    onClick,
+}: {
+    event: CalendarEvent;
+    onClick: () => void;
+}) {
+    const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+
+    return (
+        <button
+            className="w-full text-left text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 mb-1"
+            style={{ backgroundColor: typeInfo.color, color: typeInfo.textColor || "white" }}
+            onClick={onClick}
+            data-testid="all-day-event-pill"
         >
             {event.title}
         </button>
@@ -904,7 +1384,11 @@ function EventModal({
     const [recurrenceDays, setRecurrenceDays] = useState<string[]>([]);
     const [recurrenceUntil, setRecurrenceUntil] = useState<Date | undefined>(undefined);
     const [timezone, setTimezone] = useState(getBrowserTimezone());
+    const [allDay, setAllDay] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    // Check if we're editing just one instance of a recurring event
+    const isEditingInstanceOnly = (editingEvent as CalendarEvent & { _editingInstanceOnly?: boolean })?._editingInstanceOnly === true;
 
     // Get browser timezone for comparison
     const browserTimezone = getBrowserTimezone();
@@ -979,14 +1463,15 @@ function EventModal({
             await onSave({
                 title,
                 description: description || undefined,
-                startTime: `${dateStr}T${startTime}:00`,
-                endTime: `${dateStr}T${endTime}:00`,
+                startTime: allDay ? `${dateStr}T00:00:00` : `${dateStr}T${startTime}:00`,
+                endTime: allDay ? `${dateStr}T23:59:59` : `${dateStr}T${endTime}:00`,
                 eventType,
                 location: location || undefined,
                 recurrence: isRecurring ? recurrence : "none",
                 recurrenceDays: isRecurring && recurrence === "weekly" ? recurrenceDays : undefined,
                 recurrenceUntil: isRecurring && recurrenceUntil ? format(recurrenceUntil, "yyyy-MM-dd") : undefined,
                 timezone,
+                allDay,
             }, editingEvent?.id);
             onClose(); // Close modal after successful save
         } finally {
@@ -1071,28 +1556,43 @@ function EventModal({
                             </Select>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="startTime">Start Time</Label>
-                            <Input
-                                id="startTime"
-                                type="time"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                data-testid="start-time"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="endTime">End Time</Label>
-                            <Input
-                                id="endTime"
-                                type="time"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                data-testid="end-time"
-                            />
-                        </div>
+                    {/* All Day Toggle */}
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="all-day-toggle"
+                            data-testid="all-day-toggle"
+                            checked={allDay}
+                            onChange={(e) => setAllDay(e.target.checked)}
+                            className="rounded"
+                        />
+                        <Label htmlFor="all-day-toggle">All Day</Label>
                     </div>
+                    {/* Time inputs - hidden when All Day is checked */}
+                    {!allDay && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="startTime">Start Time</Label>
+                                <Input
+                                    id="startTime"
+                                    type="time"
+                                    value={startTime}
+                                    onChange={(e) => setStartTime(e.target.value)}
+                                    data-testid="start-time"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="endTime">End Time</Label>
+                                <Input
+                                    id="endTime"
+                                    type="time"
+                                    value={endTime}
+                                    onChange={(e) => setEndTime(e.target.value)}
+                                    data-testid="end-time"
+                                />
+                            </div>
+                        </div>
+                    )}
                     <div>
                         <Label htmlFor="timezone">Timezone</Label>
                         <Select value={timezone} onValueChange={setTimezone}>
@@ -1135,91 +1635,96 @@ function EventModal({
                             placeholder="Meeting location"
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="recurrence-toggle"
-                            checked={isRecurring}
-                            onChange={(e) => setIsRecurring(e.target.checked)}
-                            className="rounded"
-                        />
-                        <Label htmlFor="recurrence-toggle">Repeat</Label>
-                    </div>
-                    {isRecurring && (
-                        <div className="space-y-4 pl-6 border-l-2">
-                            <div>
-                                <Label htmlFor="recurrence-frequency">Frequency</Label>
-                                <Select value={recurrence} onValueChange={(v) => setRecurrence(v as typeof recurrence)}>
-                                    <SelectTrigger id="recurrence-frequency">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="daily">Daily</SelectItem>
-                                        <SelectItem value="weekly">Weekly</SelectItem>
-                                        <SelectItem value="monthly">Monthly</SelectItem>
-                                        <SelectItem value="yearly">Yearly</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                    {/* Recurrence section - hidden when editing single instance */}
+                    {!isEditingInstanceOnly && (
+                        <>
+                            <div className="flex items-center gap-2" data-testid="recurrence-section">
+                                <input
+                                    type="checkbox"
+                                    id="recurrence-toggle"
+                                    checked={isRecurring}
+                                    onChange={(e) => setIsRecurring(e.target.checked)}
+                                    className="rounded"
+                                />
+                                <Label htmlFor="recurrence-toggle">Repeat</Label>
                             </div>
-                            {recurrence === "weekly" && (
-                                <div>
-                                    <Label>Days</Label>
-                                    <div className="flex gap-1 mt-1">
-                                        {daysOfWeek.map((day) => (
-                                            <button
-                                                key={day}
-                                                type="button"
-                                                onClick={() => toggleDay(day)}
-                                                className={`px-2 py-1 text-xs rounded border ${recurrenceDays.includes(day)
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted"
-                                                    }`}
-                                                data-day={day}
-                                            >
-                                                {day}
-                                            </button>
-                                        ))}
+                            {isRecurring && (
+                                <div className="space-y-4 pl-6 border-l-2">
+                                    <div>
+                                        <Label htmlFor="recurrence-frequency">Frequency</Label>
+                                        <Select value={recurrence} onValueChange={(v) => setRecurrence(v as typeof recurrence)}>
+                                            <SelectTrigger id="recurrence-frequency">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="daily">Daily</SelectItem>
+                                                <SelectItem value="weekly">Weekly</SelectItem>
+                                                <SelectItem value="monthly">Monthly</SelectItem>
+                                                <SelectItem value="yearly">Yearly</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {recurrence === "weekly" && (
+                                        <div>
+                                            <Label>Days</Label>
+                                            <div className="flex gap-1 mt-1">
+                                                {daysOfWeek.map((day) => (
+                                                    <button
+                                                        key={day}
+                                                        type="button"
+                                                        onClick={() => toggleDay(day)}
+                                                        className={`px-2 py-1 text-xs rounded border ${recurrenceDays.includes(day)
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "bg-muted"
+                                                            }`}
+                                                        data-day={day}
+                                                    >
+                                                        {day}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <Label htmlFor="recurrence-until">Until (optional)</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    id="recurrence-until"
+                                                    variant="outline"
+                                                    className="w-full justify-start text-left font-normal mt-1"
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {recurrenceUntil ? recurrenceUntil.toLocaleDateString() : "No end date"}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={recurrenceUntil}
+                                                    onSelect={(d) => {
+                                                        setRecurrenceUntil(d);
+                                                    }}
+                                                    initialFocus
+                                                />
+                                                {recurrenceUntil && (
+                                                    <div className="p-2 border-t">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setRecurrenceUntil(undefined)}
+                                                            className="w-full"
+                                                        >
+                                                            Clear end date
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                 </div>
                             )}
-                            <div>
-                                <Label htmlFor="recurrence-until">Until (optional)</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            id="recurrence-until"
-                                            variant="outline"
-                                            className="w-full justify-start text-left font-normal mt-1"
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {recurrenceUntil ? recurrenceUntil.toLocaleDateString() : "No end date"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={recurrenceUntil}
-                                            onSelect={(d) => {
-                                                setRecurrenceUntil(d);
-                                            }}
-                                            initialFocus
-                                        />
-                                        {recurrenceUntil && (
-                                            <div className="p-2 border-t">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setRecurrenceUntil(undefined)}
-                                                    className="w-full"
-                                                >
-                                                    Clear end date
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
+                        </>
                     )}
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={onClose}>
@@ -1280,7 +1785,7 @@ function EventDetailsPanel({
 
     return (
         <div
-            className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform ${open ? "translate-x-0" : "translate-x-full"
+            className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform z-50 ${open ? "translate-x-0" : "translate-x-full"
                 }`}
             data-testid="event-details-panel"
         >

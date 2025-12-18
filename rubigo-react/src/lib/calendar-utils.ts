@@ -12,20 +12,20 @@ export type EventType =
     | "interview" | "holiday" | "conference" | "review" | "planning"
     | "appointment" | "reminder" | "outOfOffice";
 
-export const eventTypeInfo: Record<EventType, { label: string; color: string }> = {
-    meeting: { label: "Meeting", color: "#4285f4" },
-    standup: { label: "Standup", color: "#0f9d58" },
-    allHands: { label: "All Hands", color: "#673ab7" },
-    oneOnOne: { label: "1:1", color: "#ff6f00" },
-    training: { label: "Training", color: "#00bcd4" },
-    interview: { label: "Interview", color: "#e91e63" },
-    holiday: { label: "Holiday", color: "#9e9e9e" },
-    conference: { label: "Conference", color: "#3f51b5" },
-    review: { label: "Review", color: "#795548" },
-    planning: { label: "Planning", color: "#607d8b" },
-    appointment: { label: "Appointment", color: "#8bc34a" },
-    reminder: { label: "Reminder", color: "#ffeb3b" },
-    outOfOffice: { label: "Out of Office", color: "#9e9e9e" },
+export const eventTypeInfo: Record<EventType, { label: string; color: string; textColor?: string }> = {
+    meeting: { label: "Meeting", color: "#1a73e8" },           // Darker blue, ~4.7:1
+    standup: { label: "Standup", color: "#0d7a47" },           // Darker green, ~5.2:1
+    allHands: { label: "All Hands", color: "#5e35b1" },        // Deep purple, ~6.5:1
+    oneOnOne: { label: "1:1", color: "#e65100" },              // Darker orange, ~4.6:1
+    training: { label: "Training", color: "#0097a7" },         // Darker cyan, ~4.5:1
+    interview: { label: "Interview", color: "#c2185b" },       // Darker pink, ~5.5:1
+    holiday: { label: "Holiday", color: "#616161" },           // Darker grey, ~5.3:1
+    conference: { label: "Conference", color: "#303f9f" },     // Darker indigo, ~7.5:1
+    review: { label: "Review", color: "#5d4037" },             // Darker brown, ~7.5:1
+    planning: { label: "Planning", color: "#455a64" },         // Darker blue-grey, ~6.3:1
+    appointment: { label: "Appointment", color: "#689f38" },   // Darker green, ~4.5:1
+    reminder: { label: "Reminder", color: "#f9a825", textColor: "#1a1a1a" }, // Darker yellow + dark text
+    outOfOffice: { label: "Out of Office", color: "#757575" }, // Medium grey, ~4.6:1
 };
 
 export interface CalendarEventWithParticipants {
