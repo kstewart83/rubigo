@@ -17,9 +17,9 @@ const sqlite = new Database(DB_PATH);
 // Enable WAL mode for better concurrent access
 sqlite.exec("PRAGMA journal_mode = WAL;");
 
-// Set busy timeout to wait up to 5 seconds when database is locked
-// This is essential for Next.js builds where multiple workers access the db
-sqlite.exec("PRAGMA busy_timeout = 5000;");
+// Set busy timeout to wait up to 30 seconds when database is locked
+// This is essential for Next.js builds where 7+ workers access the db concurrently
+sqlite.exec("PRAGMA busy_timeout = 30000;");
 
 // Create Drizzle instance with schema
 export const db = drizzle(sqlite, { schema });
