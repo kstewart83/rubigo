@@ -126,8 +126,7 @@ The MCP endpoint is available at `https://rubigo.kwip.net/api/mcp`. Configuratio
 {
   "mcpServers": {
     "rubigo": {
-      "type": "http",
-      "url": "https://rubigo.kwip.net/api/mcp",
+      "serverUrl": "https://rubigo.kwip.net/api/mcp",
       "headers": {
         "Authorization": "Bearer <API_TOKEN>"
       }
