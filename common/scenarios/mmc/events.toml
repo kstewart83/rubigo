@@ -479,6 +479,18 @@ participant_ids = ["f9c8d7"]                                       # Jennifer Ad
 location = "Conference Room 2A"
 timezone = "America/New_York"
 
+# One-time event to create 3-way overlap for testing (Dec 19, 2025)
+[[events]]
+title = "Architecture Review - Q4 Systems"
+description = "Quarterly architecture review session - overlaps with Interview Block and Sprint Review for 3-lane layout testing"
+start_time = "2025-12-19T14:30:00"
+end_time = "2025-12-19T15:30:00"
+event_type = "review"
+organizer_id = "714fd4"                                            # Richard Nakamura
+participant_ids = ["d827cb", "1ea074"]                             # David Park, Mike Chen
+location = "Engineering Open Plan"
+timezone = "America/New_York"
+
 # ============================================================================
 # APPOINTMENTS
 # ============================================================================

@@ -39,6 +39,7 @@ export interface CalendarEventInput {
     timezone?: string;
     location?: string;
     participantIds?: string[];
+    allDay?: boolean;
 }
 
 // ============================================================================
