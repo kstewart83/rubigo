@@ -106,12 +106,20 @@ function initStats(): SyncStats {
     return { created: 0, updated: 0, deleted: 0, skipped: 0, failed: 0 };
 }
 
+// Convert snake_case to camelCase
+function toCamelCase(str: string): string {
+    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
 // Compare two objects for equality (shallow comparison of specified fields)
+// Handles snake_case (TOML) vs camelCase (DB) field name differences
 function hasChanges(existing: Record<string, unknown>, seed: Record<string, unknown>, fields: string[]): boolean {
     for (const field of fields) {
-        const existingVal = existing[field];
+        // Try both snake_case and camelCase versions for existing (DB uses camelCase)
+        const camelField = toCamelCase(field);
+        const existingVal = existing[camelField] ?? existing[field];
         const seedVal = seed[field];
-        // Normalize undefined and null
+        // Normalize undefined and null to empty string for comparison
         const a = existingVal === undefined || existingVal === null ? "" : existingVal;
         const b = seedVal === undefined || seedVal === null ? "" : seedVal;
         if (String(a) !== String(b)) {
