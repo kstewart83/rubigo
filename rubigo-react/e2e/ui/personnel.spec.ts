@@ -183,11 +183,7 @@ test.describe("Personnel CRUD (Admin Only)", () => {
         }
     });
 
-    // TODO: This test is currently skipped due to a component interaction issue.
-    // Clicking the Edit button in the Sheet (detail panel) does not consistently open 
-    // the Edit Personnel dialog. This appears to be a timing/state issue between
-    // the Sheet and Dialog components. See GitHub issue for tracking.
-    test.skip("scen-personnel-edit: Update employee information", async ({ page }) => {
+    test("scen-personnel-edit: Update employee information", async ({ page }) => {
         // First, create a test employee to edit
         const addButton = page.getByRole("button", { name: /add personnel/i });
 
@@ -227,26 +223,24 @@ test.describe("Personnel CRUD (Admin Only)", () => {
             await editButton.click();
 
             // Wait for the Edit Personnel dialog to appear
-            // The dialog should have "Edit Personnel" as its title and contain the edit-name input
-            // Wait longer and check for the dialog explicitly
-            await page.waitForTimeout(500);
-
             const editDialog = page.getByRole("dialog", { name: /edit personnel/i });
-            await expect(editDialog.or(page.locator("#edit-name"))).toBeVisible({ timeout: 5000 });
+            await expect(editDialog).toBeVisible({ timeout: 5000 });
 
-            const editNameInput = page.locator("#edit-name");
+            // Use label-based selector which is more reliable with Playwright
+            const editNameInput = editDialog.getByLabel("Name");
+            await expect(editNameInput).toBeVisible({ timeout: 3000 });
 
             // Modify the name
             await editNameInput.clear();
             await editNameInput.fill("Updated Test Person");
 
             // Click Save
-            const saveButton = page.getByRole("button", { name: /save/i });
+            const saveButton = editDialog.getByRole("button", { name: /save/i });
             await expect(saveButton).toBeVisible({ timeout: 3000 });
             await saveButton.click();
 
-            // Wait for dialog to close - input should no longer be visible
-            await expect(editNameInput).not.toBeVisible({ timeout: 5000 });
+            // Wait for dialog to close
+            await expect(editDialog).not.toBeVisible({ timeout: 5000 });
 
             // Wait for the page to refresh and then search
             await page.waitForTimeout(1000);

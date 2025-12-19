@@ -303,6 +303,9 @@ export function PersonnelPageContent({
             photo: person.photo || "",
         });
         setFormError("");
+        // Close the Sheet (detail panel) before opening the Edit dialog
+        // This prevents both dialogs from being open simultaneously
+        setSelectedPerson(null);
         setShowEditDialog(true);
     };
 
