@@ -233,7 +233,7 @@ export function EmailPageContent() {
         if (!userId || !selectedEmail) return;
         await moveToFolder(selectedEmail.id, userId, "trash");
         setSelectedEmail(null);
-        loadEmails();
+        await loadEmails();
     };
 
     // Restore from trash
@@ -241,7 +241,7 @@ export function EmailPageContent() {
         if (!userId || !selectedEmail) return;
         await moveToFolder(selectedEmail.id, userId, "inbox");
         setSelectedEmail(null);
-        loadEmails();
+        await loadEmails();
     };
 
     // Add recipient

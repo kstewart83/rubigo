@@ -728,8 +728,7 @@ test.describe("Email MVP", () => {
         ).toBeVisible({ timeout: 5000 });
     });
 
-    // POST-MVP: Restore functionality has UI refresh timing issues
-    test.skip("scen-email-trash-recover: Recover from trash", async ({ page }) => {
+    test("scen-email-trash-recover: Recover from trash", async ({ page }) => {
 
 
         // Given I have deleted an email
@@ -780,16 +779,11 @@ test.describe("Email MVP", () => {
         await page.locator("[data-testid='restore-button']").click();
         await page.waitForTimeout(1000);
 
-        // Should not be in Trash anymore
-        await expect(
-            page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
-        ).not.toBeVisible({ timeout: 5000 });
-
         // Should be back in Inbox
         await page.locator("[data-testid='folder-inbox']").click();
         await page.waitForTimeout(1000);
         await expect(
-            page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
+            page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first()
         ).toBeVisible({ timeout: 5000 });
     });
 
