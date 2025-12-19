@@ -29,6 +29,13 @@
       "when": 1766160000000,
       "tag": "0003_enhance_email_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1766180000000,
+      "tag": "0004_add_access_control",
+      "breakpoints": true
     }
   ]
 }
