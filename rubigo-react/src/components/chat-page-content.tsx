@@ -26,6 +26,7 @@ import {
     Plus,
     Send,
     Users,
+    Smile,
 } from "lucide-react";
 import {
     createChannel,
@@ -36,10 +37,16 @@ import {
     joinChannel,
     sendMessage,
     getMessages,
+    toggleReaction,
+    getMessageReactions,
     type ChatChannelWithMembers,
     type ChatMessageWithSender,
+    type ReactionGroup,
 } from "@/lib/chat-actions";
 import type { ChatChannel } from "@/db/schema";
+
+// Common emoji set for reactions (simple inline grid - no external deps)
+const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀"];
 
 // ============================================================================
 // Types
@@ -75,6 +82,10 @@ export function ChatPageContent() {
     const [newChannelDescription, setNewChannelDescription] = useState("");
     const [dmSearchQuery, setDmSearchQuery] = useState("");
 
+    // Emoji picker state
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [emojiPickerForMessage, setEmojiPickerForMessage] = useState<string | null>(null);
+    const [messageReactions, setMessageReactions] = useState<Record<string, ReactionGroup[]>>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Load channels on mount
@@ -125,12 +136,25 @@ export function ChatPageContent() {
     useEffect(() => {
         if (!selectedChannel) {
             setMessages([]);
+            setMessageReactions({});
             return;
         }
 
         const loadMessages = async () => {
             const msgs = await getMessages(selectedChannel);
             setMessages(msgs);
+
+            // Load reactions for each message
+            if (currentPersona) {
+                const reactionsMap: Record<string, ReactionGroup[]> = {};
+                for (const msg of msgs) {
+                    const reactions = await getMessageReactions(msg.id, currentPersona.id);
+                    if (reactions.length > 0) {
+                        reactionsMap[msg.id] = reactions;
+                    }
+                }
+                setMessageReactions(reactionsMap);
+            }
         };
 
         loadMessages();
@@ -138,12 +162,29 @@ export function ChatPageContent() {
         // Poll for new messages every 3 seconds
         const interval = setInterval(loadMessages, 3000);
         return () => clearInterval(interval);
-    }, [selectedChannel]);
+    }, [selectedChannel, currentPersona]);
 
     // Scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+    // Handle reaction toggle
+    const handleReactionToggle = async (messageId: string, emoji: string) => {
+        if (!currentPersona) return;
+
+        const result = await toggleReaction(messageId, emoji, currentPersona.id);
+        if (result.success) {
+            // Reload reactions for this message
+            const reactions = await getMessageReactions(messageId, currentPersona.id);
+            setMessageReactions((prev) => ({
+                ...prev,
+                [messageId]: reactions,
+            }));
+        }
+        setEmojiPickerForMessage(null);
+    };
+
 
     // Handlers
     const handleCreateChannel = async () => {
@@ -342,7 +383,7 @@ export function ChatPageContent() {
                                     <div
                                         key={msg.id}
                                         data-testid="message-bubble"
-                                        className="flex gap-3"
+                                        className="flex gap-3 group"
                                     >
                                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
                                             {msg.senderName.charAt(0).toUpperCase()}
@@ -367,8 +408,60 @@ export function ChatPageContent() {
                                                         }
                                                     )}
                                                 </span>
+                                                {/* Add reaction button - shows on hover */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => setEmojiPickerForMessage(
+                                                        emojiPickerForMessage === msg.id ? null : msg.id
+                                                    )}
+                                                    data-testid="add-reaction-button"
+                                                >
+                                                    <Smile className="h-3 w-3" />
+                                                </Button>
                                             </div>
                                             <p className="text-sm mt-0.5">{msg.content}</p>
+
+                                            {/* Reactions display */}
+                                            {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
+                                                <div className="flex gap-1 mt-1 flex-wrap" data-testid="reactions-container">
+                                                    {messageReactions[msg.id].map((reaction) => (
+                                                        <button
+                                                            key={reaction.emoji}
+                                                            data-testid="reaction-pill"
+                                                            title={reaction.users.map(u => u.name).join(", ")}
+                                                            onClick={() => handleReactionToggle(msg.id, reaction.emoji)}
+                                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${reaction.hasReacted
+                                                                ? "bg-primary/10 border-primary/30"
+                                                                : "bg-muted/50 border-transparent hover:border-border"
+                                                                }`}
+                                                        >
+                                                            <span>{reaction.emoji}</span>
+                                                            <span className="text-muted-foreground">{reaction.count}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Emoji picker dropdown */}
+                                            {emojiPickerForMessage === msg.id && (
+                                                <div
+                                                    className="absolute mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
+                                                    data-testid="emoji-picker"
+                                                >
+                                                    {COMMON_EMOJIS.map((emoji) => (
+                                                        <button
+                                                            key={emoji}
+                                                            data-testid="emoji-option"
+                                                            onClick={() => handleReactionToggle(msg.id, emoji)}
+                                                            className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -378,7 +471,37 @@ export function ChatPageContent() {
 
                         {/* Message Input */}
                         <div className="p-4 border-t">
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 relative">
+                                <div className="relative">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                        data-testid="emoji-button"
+                                    >
+                                        <Smile className="h-4 w-4" />
+                                    </Button>
+                                    {/* Emoji picker for message composition */}
+                                    {showEmojiPicker && (
+                                        <div
+                                            className="absolute bottom-full mb-2 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
+                                            data-testid="compose-emoji-picker"
+                                        >
+                                            {COMMON_EMOJIS.map((emoji) => (
+                                                <button
+                                                    key={emoji}
+                                                    onClick={() => {
+                                                        setMessageInput((prev) => prev + emoji);
+                                                        setShowEmojiPicker(false);
+                                                    }}
+                                                    className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 <Input
                                     data-testid="message-input"
                                     placeholder={`Message ${selectedChannelInfo?.name ?? ""}...`}
