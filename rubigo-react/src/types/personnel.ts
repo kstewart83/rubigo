@@ -27,6 +27,10 @@ export interface Person {
     cellPhone?: string;
     bio?: string;
     isGlobalAdmin?: boolean;
+    // Access control fields
+    clearanceLevel?: string;      // "public" | "low" | "moderate" | "high"
+    tenantClearances?: string;    // JSON array: ["moderate:🍎", "high:🍌"]
+    accessRoles?: string;         // JSON array: ["employee", "manager"]
 }
 
 export interface PersonnelData {
