@@ -157,9 +157,18 @@ async function main() {
     let testExitCode = 0;
 
     try {
-        // Step 1: Clean database
-        console.log("📦 Step 1: Cleaning database...");
-        await runCommand("bun", ["run", "db:clean"]);
+        // Step 1: Delete and recreate database to ensure schema is fresh
+        console.log("📦 Step 1: Resetting database...");
+        try {
+            await unlink("rubigo.db");
+            console.log("   Deleted existing database");
+        } catch {
+            console.log("   No existing database found");
+        }
+
+        // Step 1b: Run migrations to create fresh schema
+        console.log("📦 Step 1b: Running migrations...");
+        await runCommand("bun", ["run", "db:migrate"]);
         console.log();
 
         // Step 2: Build production bundle

@@ -764,109 +764,177 @@ status = "draft"
 # ============================================================================
 # EMAIL MODULE - Internal Messaging (Gmail/Proton-like UX)
 # ============================================================================
+# MVP Scope: Internal messaging with personnel directory + custom addresses
+# No external SMTP/IMAP integration required
 
 [[objectives]]
 id = "obj-email-core"
 title = "Internal Email Communications"
-description = "Users must be able to send and receive internal messages to colleagues in the personnel directory with a familiar email-like experience"
+description = "Users must be able to send and receive internal messages to colleagues in the personnel directory, as well as external contacts via custom email addresses, with a familiar email-like experience"
 project_id = "d4e5f6"
 parent_id = "obj-collaboration-future"
-status = "planned"
+status = "in_progress"
 
 [[objectives]]
 id = "obj-email-organization"
 title = "Email Organization"
-description = "Users must be able to organize their messages with folders, labels, and search to efficiently manage their inbox"
+description = "Users must be able to organize their messages with folders (Inbox, Sent, Drafts, Trash) and search to efficiently manage their communications"
 project_id = "d4e5f6"
 parent_id = "obj-collaboration-future"
-status = "planned"
+status = "in_progress"
+
+[[objectives]]
+id = "obj-email-threading"
+title = "Email Conversation Threading"
+description = "Users must be able to view and participate in conversation threads to maintain context across multiple email exchanges"
+project_id = "d4e5f6"
+parent_id = "obj-collaboration-future"
+status = "in_progress"
 
 # --- Email Features ---
 
 [[features]]
 id = "feat-email-compose"
 name = "Email Composition"
-description = "Compose and send messages to personnel with rich text and attachments"
+description = "Compose and send messages to personnel or custom email addresses with plain text body"
 objective_id = "obj-email-core"
-status = "planned"
+status = "in_progress"
+
+[[features]]
+id = "feat-email-recipients"
+name = "Recipient Selection"
+description = "Select recipients from personnel directory or enter custom email addresses"
+objective_id = "obj-email-core"
+status = "in_progress"
 
 [[features]]
 id = "feat-email-inbox"
 name = "Email Inbox"
 description = "View received messages with sender, subject, preview, and timestamp"
 objective_id = "obj-email-core"
-status = "planned"
+status = "in_progress"
+
+[[features]]
+id = "feat-email-reading"
+name = "Email Reading"
+description = "View full email content with sender info, timestamp, and message body"
+objective_id = "obj-email-core"
+status = "in_progress"
 
 [[features]]
 id = "feat-email-thread"
 name = "Email Threading"
-description = "View and reply to message threads/conversations"
-objective_id = "obj-email-core"
-status = "planned"
+description = "View and reply to message threads/conversations with full context"
+objective_id = "obj-email-threading"
+status = "in_progress"
 
 [[features]]
 id = "feat-email-folders"
 name = "Email Folders"
-description = "Organize messages in Inbox, Sent, Drafts, Trash, and custom folders"
+description = "Organize messages in Inbox, Sent, Drafts, and Trash folders"
 objective_id = "obj-email-organization"
-status = "planned"
+status = "in_progress"
 
 [[features]]
 id = "feat-email-search"
 name = "Email Search"
-description = "Search messages by sender, subject, content, and date"
+description = "Search messages by sender, subject, and content"
 objective_id = "obj-email-organization"
-status = "planned"
+status = "in_progress"
 
-# --- Email Rules ---
+# --- Email Rules: Composition ---
 
 [[rules]]
 id = "rule-email-compose"
 feature_id = "feat-email-compose"
 role = "Platform User"
 requirement = "compose a new email with recipients, subject, and body"
-reason = "communicate with colleagues"
+reason = "communicate with colleagues and contacts"
 status = "draft"
 
 [[rules]]
-id = "rule-email-recipient-picker"
-feature_id = "feat-email-compose"
+id = "rule-email-recipient-personnel"
+feature_id = "feat-email-recipients"
 role = "Platform User"
-requirement = "search and select recipients from the personnel directory"
-reason = "easily find and address colleagues"
+requirement = "search and select recipients from the personnel directory using type-ahead search"
+reason = "easily find and address colleagues without remembering email addresses"
+status = "draft"
+
+[[rules]]
+id = "rule-email-recipient-custom"
+feature_id = "feat-email-recipients"
+role = "Platform User"
+requirement = "enter a custom email address as a recipient"
+reason = "contact external parties or addresses not in the directory"
+status = "draft"
+
+[[rules]]
+id = "rule-email-recipient-multiple"
+feature_id = "feat-email-recipients"
+role = "Platform User"
+requirement = "add multiple recipients (To, CC, BCC) to a single email"
+reason = "send the same message to multiple people"
 status = "draft"
 
 [[rules]]
 id = "rule-email-send"
 feature_id = "feat-email-compose"
 role = "Platform User"
-requirement = "send the composed email to selected recipients"
+requirement = "send the composed email to all selected recipients"
 reason = "deliver my message"
 status = "draft"
 
 [[rules]]
-id = "rule-email-drafts"
-feature_id = "feat-email-compose"
+id = "rule-email-drafts-save"
+feature_id = "feat-email-folders"
 role = "Platform User"
 requirement = "save an email as a draft to finish later"
 reason = "continue composing when I have more time"
 status = "draft"
 
 [[rules]]
+id = "rule-email-drafts-edit"
+feature_id = "feat-email-folders"
+role = "Platform User"
+requirement = "open and continue editing a saved draft"
+reason = "complete and send a message I started earlier"
+status = "draft"
+
+# --- Email Rules: Inbox & Reading ---
+
+[[rules]]
 id = "rule-email-inbox-view"
 feature_id = "feat-email-inbox"
 role = "Platform User"
-requirement = "view my inbox with unread indicators and message previews"
-reason = "quickly scan new messages"
+requirement = "view my inbox with unread indicators, sender names, subjects, preview text, and timestamps"
+reason = "quickly scan new messages and prioritize what to read"
+status = "draft"
+
+[[rules]]
+id = "rule-email-unread-count"
+feature_id = "feat-email-inbox"
+role = "Platform User"
+requirement = "see the count of unread messages in my inbox"
+reason = "know how many new messages await my attention"
 status = "draft"
 
 [[rules]]
 id = "rule-email-read"
-feature_id = "feat-email-inbox"
+feature_id = "feat-email-reading"
 role = "Platform User"
-requirement = "open and read a full email message"
+requirement = "open and read a full email message with sender, date, recipients, and body"
 reason = "understand the complete communication"
 status = "draft"
+
+[[rules]]
+id = "rule-email-mark-read"
+feature_id = "feat-email-reading"
+role = "Platform User"
+requirement = "have emails marked as read when I open them"
+reason = "track which messages I have already reviewed"
+status = "draft"
+
+# --- Email Rules: Threading & Reply ---
 
 [[rules]]
 id = "rule-email-reply"
@@ -888,8 +956,34 @@ status = "draft"
 id = "rule-email-forward"
 feature_id = "feat-email-thread"
 role = "Platform User"
-requirement = "forward an email to other recipients"
-reason = "share relevant information with others"
+requirement = "forward an email to other recipients with original content preserved"
+reason = "share relevant information with others who were not on the original message"
+status = "draft"
+
+[[rules]]
+id = "rule-email-thread-view"
+feature_id = "feat-email-thread"
+role = "Platform User"
+requirement = "view all messages in a conversation thread together in chronological order"
+reason = "see the full context of a discussion"
+status = "draft"
+
+# --- Email Rules: Folders ---
+
+[[rules]]
+id = "rule-email-folder-nav"
+feature_id = "feat-email-folders"
+role = "Platform User"
+requirement = "navigate between Inbox, Sent, Drafts, and Trash folders"
+reason = "access different categories of messages"
+status = "draft"
+
+[[rules]]
+id = "rule-email-sent-view"
+feature_id = "feat-email-folders"
+role = "Platform User"
+requirement = "view emails I have sent in the Sent folder"
+reason = "reference past communications I initiated"
 status = "draft"
 
 [[rules]]
@@ -901,34 +995,193 @@ reason = "remove unwanted messages from my inbox"
 status = "draft"
 
 [[rules]]
+id = "rule-email-trash-view"
+feature_id = "feat-email-folders"
+role = "Platform User"
+requirement = "view and recover deleted messages from Trash"
+reason = "retrieve accidentally deleted emails"
+status = "draft"
+
+# --- Email Rules: Search ---
+
+[[rules]]
 id = "rule-email-search"
 feature_id = "feat-email-search"
 role = "Platform User"
-requirement = "search emails by keyword, sender, or date range"
+requirement = "search emails by keyword matching sender name, subject, or body content"
 reason = "find specific messages quickly"
 status = "draft"
 
-# --- Email Scenarios ---
+# ============================================================================
+# Email Scenarios - BDD Test Cases
+# ============================================================================
+
+# --- Inbox Scenarios ---
 
 [[scenarios]]
-id = "scen-email-compose-send"
-rule_id = "rule-email-compose"
-name = "Compose and send email"
-narrative = "Given I click Compose, when I select a recipient, enter subject and body, and click Send, then the message appears in my Sent folder and the recipient's Inbox"
+id = "scen-email-inbox-empty"
+rule_id = "rule-email-inbox-view"
+name = "View empty inbox"
+narrative = "Given I am a new user with no messages, when I navigate to Email, then I see an empty inbox with a prompt to compose my first message"
 status = "draft"
 
 [[scenarios]]
 id = "scen-email-inbox-list"
 rule_id = "rule-email-inbox-view"
 name = "View inbox messages"
-narrative = "Given I navigate to Email, then I see my inbox with messages showing sender name, subject, preview, and timestamp with unread messages highlighted"
+narrative = "Given I have received messages, when I navigate to Email, then I see my inbox with messages showing sender name, subject, preview, and timestamp with unread messages visually highlighted"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-inbox-unread"
+rule_id = "rule-email-unread-count"
+name = "Unread count displayed"
+narrative = "Given I have 3 unread messages, when I view the Email sidebar, then I see '3' displayed next to the Inbox folder"
+status = "draft"
+
+# --- Composition Scenarios ---
+
+[[scenarios]]
+id = "scen-email-compose-open"
+rule_id = "rule-email-compose"
+name = "Open compose modal"
+narrative = "Given I am viewing Email, when I click Compose, then a compose modal appears with To, Subject, and Body fields"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-compose-personnel"
+rule_id = "rule-email-recipient-personnel"
+name = "Select recipient from directory"
+narrative = "Given I am composing an email, when I type a colleague's name in the To field, then I see matching personnel from the directory and can select one as a recipient"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-compose-custom"
+rule_id = "rule-email-recipient-custom"
+name = "Enter custom email address"
+narrative = "Given I am composing an email, when I type 'client@external.com' and press Enter, then the custom address is added as a recipient chip"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-compose-multiple"
+rule_id = "rule-email-recipient-multiple"
+name = "Add multiple recipients"
+narrative = "Given I am composing an email, when I add Alex Chen to To and Sarah Johnson to CC, then both appear as recipient chips in their respective fields"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-compose-send"
+rule_id = "rule-email-send"
+name = "Send email"
+narrative = "Given I have composed an email with recipient, subject, and body, when I click Send, then the compose modal closes, the message appears in my Sent folder, and the recipient sees it in their Inbox"
+status = "draft"
+
+# --- Draft Scenarios ---
+
+[[scenarios]]
+id = "scen-email-draft-save"
+rule_id = "rule-email-drafts-save"
+name = "Save draft"
+narrative = "Given I am composing an email, when I click Save Draft or close the compose modal without sending, then the email is saved to my Drafts folder"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-draft-edit"
+rule_id = "rule-email-drafts-edit"
+name = "Edit and send draft"
+narrative = "Given I have a saved draft, when I open it from Drafts, complete the message, and click Send, then the draft is removed from Drafts and the email is sent"
+status = "draft"
+
+# --- Reading Scenarios ---
+
+[[scenarios]]
+id = "scen-email-read-open"
+rule_id = "rule-email-read"
+name = "Read email content"
+narrative = "Given I have unread messages in my inbox, when I click on a message, then the reading pane displays the sender, date, recipients, subject, and full body"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-read-marks-read"
+rule_id = "rule-email-mark-read"
+name = "Opening email marks as read"
+narrative = "Given I have an unread message, when I click to open it, then it is marked as read and no longer appears highlighted as new"
+status = "draft"
+
+# --- Reply & Forward Scenarios ---
+
+[[scenarios]]
+id = "scen-email-reply"
+rule_id = "rule-email-reply"
+name = "Reply to email"
+narrative = "Given I am reading an email from Alex Chen, when I click Reply and send my response, then Alex receives my reply and both messages appear in the same thread"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-reply-all"
+rule_id = "rule-email-reply-all"
+name = "Reply all"
+narrative = "Given I received an email sent to me and CC'd to Sarah, when I click Reply All and respond, then both the original sender and Sarah receive my reply"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-forward"
+rule_id = "rule-email-forward"
+name = "Forward email"
+narrative = "Given I am reading an email, when I click Forward, add Mike Smith as recipient, and send, then Mike receives the forwarded message with the original content quoted"
 status = "draft"
 
 [[scenarios]]
 id = "scen-email-thread-view"
-rule_id = "rule-email-reply"
-name = "View and reply to thread"
-narrative = "Given I open an email, when I click Reply, compose my response, and send, then all messages in the thread are visible in chronological order"
+rule_id = "rule-email-thread-view"
+name = "View conversation thread"
+narrative = "Given an email thread with 3 messages, when I open any message in the thread, then I see all 3 messages displayed in chronological order"
+status = "draft"
+
+# --- Folder Scenarios ---
+
+[[scenarios]]
+id = "scen-email-folder-nav"
+rule_id = "rule-email-folder-nav"
+name = "Navigate folders"
+narrative = "Given I am viewing my Inbox, when I click on Sent, then the email list updates to show only messages I have sent"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-sent-view"
+rule_id = "rule-email-sent-view"
+name = "View sent emails"
+narrative = "Given I have sent emails, when I navigate to the Sent folder, then I see my sent messages with recipient, subject, and sent timestamp"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-delete"
+rule_id = "rule-email-delete"
+name = "Delete email"
+narrative = "Given I am viewing an email, when I click Delete, then the email is moved to Trash and removed from Inbox"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-trash-recover"
+rule_id = "rule-email-trash-view"
+name = "Recover from trash"
+narrative = "Given I have deleted an email, when I go to Trash and click Restore on the message, then it returns to my Inbox"
+status = "draft"
+
+# --- Search Scenarios ---
+
+[[scenarios]]
+id = "scen-email-search-basic"
+rule_id = "rule-email-search"
+name = "Search emails"
+narrative = "Given I have multiple emails, when I enter 'quarterly report' in the search box, then I see only emails with matching subject or body content"
+status = "draft"
+
+[[scenarios]]
+id = "scen-email-search-sender"
+rule_id = "rule-email-search"
+name = "Search by sender"
+narrative = "Given I have emails from various senders, when I search for 'Alex Chen', then I see only emails from or mentioning Alex Chen"
 status = "draft"
 
 # ============================================================================

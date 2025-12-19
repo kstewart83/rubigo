@@ -421,32 +421,47 @@ export const calendarDeviations = sqliteTable("calendar_deviations", {
 // ============================================================================
 
 /**
+ * Email Threads - Groups related email messages in conversations
+ */
+export const emailThreads = sqliteTable("email_threads", {
+    id: text("id").primaryKey(),
+    subject: text("subject").notNull(),
+    createdAt: text("created_at").notNull(), // ISO 8601
+    updatedAt: text("updated_at").notNull(), // ISO 8601
+});
+
+/**
  * Emails - Internal messages
  */
 export const emails = sqliteTable("emails", {
     id: text("id").primaryKey(),
-    threadId: text("thread_id").notNull(), // Groups conversations
+    threadId: text("thread_id").references(() => emailThreads.id).notNull(),
     fromId: text("from_id").references(() => personnel.id).notNull(),
     subject: text("subject").notNull(),
-    body: text("body").notNull(), // HTML content
-    sentAt: text("sent_at").notNull(), // ISO 8601
-    folder: text("folder", {
-        enum: ["inbox", "sent", "drafts", "trash"]
-    }).default("inbox"),
+    body: text("body").notNull(), // Plain text or HTML content
+    parentEmailId: text("parent_email_id"), // For replies - references parent email
+    sentAt: text("sent_at"), // ISO 8601 - NULL for drafts
     isDraft: integer("is_draft", { mode: "boolean" }).default(false),
+    createdAt: text("created_at").notNull(), // ISO 8601
     // Access Control
     aco: text("aco").notNull().default('{"sensitivity":"low"}'),
     sco: text("sco"),
 });
 
 /**
- * Email Recipients - To, CC, BCC
+ * Email Recipients - To, CC, BCC with per-recipient folder and read state
+ * Each recipient has their own folder (inbox for receiver, sent for sender copy)
  */
 export const emailRecipients = sqliteTable("email_recipients", {
     id: text("id").primaryKey(),
-    emailId: text("email_id").references(() => emails.id).notNull(),
-    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    emailId: text("email_id").references(() => emails.id, { onDelete: "cascade" }).notNull(),
+    // Personnel ID - NULL if custom email address
+    personnelId: text("personnel_id").references(() => personnel.id),
+    // Custom email address - used when personnelId is NULL
+    emailAddress: text("email_address"),
     type: text("type", { enum: ["to", "cc", "bcc"] }).default("to"),
+    // Per-recipient folder state (inbox, sent, trash)
+    folder: text("folder", { enum: ["inbox", "sent", "drafts", "trash"] }).default("inbox"),
     read: integer("read", { mode: "boolean" }).default(false),
 });
 
@@ -629,6 +644,9 @@ export type CalendarDeviation = typeof calendarDeviations.$inferSelect;
 export type NewCalendarDeviation = typeof calendarDeviations.$inferInsert;
 
 // Collaboration: Email
+export type EmailThread = typeof emailThreads.$inferSelect;
+export type NewEmailThread = typeof emailThreads.$inferInsert;
+
 export type Email = typeof emails.$inferSelect;
 export type NewEmail = typeof emails.$inferInsert;
 
