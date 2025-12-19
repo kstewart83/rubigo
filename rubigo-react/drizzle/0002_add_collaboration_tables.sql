@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `emails` (
 	`from_id` text NOT NULL,
 	`subject` text NOT NULL,
 	`body` text NOT NULL,
-	`sent_at` text NOT NULL,
+	`sent_at` text,
 	`folder` text DEFAULT 'inbox',
 	`is_draft` integer DEFAULT false,
 	FOREIGN KEY (`from_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action

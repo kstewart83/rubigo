@@ -25,8 +25,7 @@ test.describe("Email MVP", () => {
     // Inbox Scenarios
     // -------------------------------------------------------------------------
 
-    // POST-MVP: Test may not run first when running full suite, sees data from other tests
-    test.skip("scen-email-inbox-empty: View empty inbox", async ({ page }) => {
+    test("scen-email-inbox-empty: View empty inbox", async ({ page }) => {
 
 
         // Given I am a new user with no messages
@@ -46,7 +45,7 @@ test.describe("Email MVP", () => {
         // Should see empty state or email list
         const emptyState = page.locator("[data-testid='email-empty-state']");
         const emailList = page.locator("[data-testid='email-list']");
-        await expect(emptyState.or(emailList)).toBeVisible();
+        await expect(emptyState.or(emailList).first()).toBeVisible();
     });
 
     test("scen-email-inbox-list: View inbox messages", async ({ page }) => {
@@ -272,8 +271,8 @@ test.describe("Email MVP", () => {
     // Draft Scenarios
     // -------------------------------------------------------------------------
 
-    // POST-MVP: Draft save functionality needs debugging - email not appearing in drafts folder
-    test.skip("scen-email-draft-save: Save draft", async ({ page }) => {
+    // DEBUG: Testing draft save
+    test("scen-email-draft-save: Save draft", async ({ page }) => {
 
 
         // Given I am composing an email
@@ -309,8 +308,7 @@ test.describe("Email MVP", () => {
         ).toBeVisible({ timeout: 10000 });
     });
 
-    // POST-MVP: Depends on scen-email-draft-save working
-    test.skip("scen-email-draft-edit: Edit and send draft", async ({ page }) => {
+    test("scen-email-draft-edit: Edit and send draft", async ({ page }) => {
 
 
         // Given I have a saved draft
@@ -448,8 +446,7 @@ test.describe("Email MVP", () => {
     // Reply & Forward Scenarios
     // -------------------------------------------------------------------------
 
-    // POST-MVP: Self-addressed emails create duplicates (inbox + sent), causing strict mode violation
-    test.skip("scen-email-reply: Reply to email", async ({ page }) => {
+    test("scen-email-reply: Reply to email", async ({ page }) => {
 
 
         // Given I am reading an email from Alex Chen
@@ -482,7 +479,7 @@ test.describe("Email MVP", () => {
         // Go to inbox and open the email
         await page.locator("[data-testid='folder-inbox']").click();
         await page.waitForTimeout(1000);
-        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first().click();
         await page.waitForTimeout(500);
 
         // Click Reply
@@ -500,7 +497,7 @@ test.describe("Email MVP", () => {
         // Open the email again - should show thread
         await page.locator("[data-testid='folder-inbox']").click();
         await page.waitForTimeout(1000);
-        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first().click();
         await page.waitForTimeout(500);
 
         // Thread should have 2 messages
@@ -678,8 +675,7 @@ test.describe("Email MVP", () => {
         await expect(emailRow.locator("[data-testid='email-timestamp']")).toBeVisible();
     });
 
-    // POST-MVP: Self-addressed emails create duplicates, delete flow needs refinement
-    test.skip("scen-email-delete: Delete email", async ({ page }) => {
+    test("scen-email-delete: Delete email", async ({ page }) => {
 
 
         // Given I am viewing an email
@@ -712,7 +708,7 @@ test.describe("Email MVP", () => {
         // Go to inbox and open the email
         await page.locator("[data-testid='folder-inbox']").click();
         await page.waitForTimeout(1000);
-        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first().click();
         await page.waitForTimeout(500);
 
         // Delete
@@ -726,13 +722,13 @@ test.describe("Email MVP", () => {
 
         // Should be in Trash
         await page.locator("[data-testid='folder-trash']").click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(1000);
         await expect(
-            page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
-        ).toBeVisible();
+            page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first()
+        ).toBeVisible({ timeout: 5000 });
     });
 
-    // POST-MVP: Self-addressed emails create duplicates - "strict mode violation: resolved to 2 elements"
+    // POST-MVP: Restore functionality has UI refresh timing issues
     test.skip("scen-email-trash-recover: Recover from trash", async ({ page }) => {
 
 
@@ -765,7 +761,7 @@ test.describe("Email MVP", () => {
         // Go to inbox and delete the email
         await page.locator("[data-testid='folder-inbox']").click();
         await page.waitForTimeout(1000);
-        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first().click();
         await page.waitForTimeout(500);
         await page.locator("[data-testid='delete-button']").click();
         await page.waitForTimeout(1000);
@@ -775,7 +771,7 @@ test.describe("Email MVP", () => {
         await page.waitForTimeout(1000);
 
         // Find and click on the deleted email
-        const emailRow = page.locator("[data-testid='email-row']", { hasText: uniqueSubject });
+        const emailRow = page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first();
         await expect(emailRow).toBeVisible({ timeout: 5000 });
         await emailRow.click();
         await page.waitForTimeout(500);

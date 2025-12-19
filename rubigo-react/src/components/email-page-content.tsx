@@ -38,6 +38,7 @@ import {
     getEmailById,
     sendEmail,
     saveDraft,
+    deleteDraft,
     moveToFolder,
     searchEmails,
     getUnreadCount,
@@ -198,7 +199,13 @@ export function EmailPageContent() {
             composeMode === "reply" || composeMode === "replyAll" ? selectedEmail?.threadId : undefined
         );
 
+        // If we were editing a draft, delete it after sending
+        if (draftId) {
+            await deleteDraft(draftId);
+        }
+
         setIsComposeOpen(false);
+        setDraftId(null);
         setToRecipients([]);
         setCcRecipients([]);
         setSubject("");
