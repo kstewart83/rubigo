@@ -25,7 +25,7 @@ test.describe("Email MVP", () => {
     // Inbox Scenarios
     // -------------------------------------------------------------------------
 
-    // KNOWN ISSUE: Test expects empty inbox but tests run serially and may have leftover data
+    // POST-MVP: Test may not run first when running full suite, sees data from other tests
     test.skip("scen-email-inbox-empty: View empty inbox", async ({ page }) => {
 
 
@@ -193,8 +193,7 @@ test.describe("Email MVP", () => {
         await expect(chip).toBeVisible();
     });
 
-    // KNOWN ISSUE: CC recipient field not implemented in UI
-    test.skip("scen-email-compose-multiple: Add multiple recipients", async ({ page }) => {
+    test("scen-email-compose-multiple: Add multiple recipients", async ({ page }) => {
 
 
         // Given I am composing an email
@@ -209,14 +208,16 @@ test.describe("Email MVP", () => {
         await page.locator("[data-testid='compose-button']").click();
         await expect(page.locator("[data-testid='compose-modal']")).toBeVisible({ timeout: 5000 });
 
-        // Add first recipient to To field
-        const toInput = page.locator("[data-testid='recipient-input-to']");
+        // Add first recipient to To field (uses recipient-input)
+        const toInput = page.locator("[data-testid='recipient-input']");
         await toInput.fill("alex@example.com");
         await toInput.press("Enter");
         await expect(page.locator("[data-testid='to-chips']").locator("[data-testid='recipient-chip']")).toBeVisible();
 
         // Show CC field and add recipient
         await page.locator("[data-testid='show-cc-button']").click();
+        await expect(page.locator("[data-testid='cc-chips']")).toBeVisible({ timeout: 2000 });
+
         const ccInput = page.locator("[data-testid='recipient-input-cc']");
         await ccInput.fill("sarah@example.com");
         await ccInput.press("Enter");
@@ -271,7 +272,7 @@ test.describe("Email MVP", () => {
     // Draft Scenarios
     // -------------------------------------------------------------------------
 
-    // KNOWN ISSUE: Draft save not persisting correctly or folder refresh timing issue
+    // POST-MVP: Draft save functionality needs debugging - email not appearing in drafts folder
     test.skip("scen-email-draft-save: Save draft", async ({ page }) => {
 
 
@@ -308,7 +309,7 @@ test.describe("Email MVP", () => {
         ).toBeVisible({ timeout: 10000 });
     });
 
-    // KNOWN ISSUE: Depends on scen-email-draft-save working
+    // POST-MVP: Depends on scen-email-draft-save working
     test.skip("scen-email-draft-edit: Edit and send draft", async ({ page }) => {
 
 
@@ -331,10 +332,10 @@ test.describe("Email MVP", () => {
 
         // Go to Drafts and open the draft
         await page.locator("[data-testid='folder-drafts']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Edit button should open compose modal
         await page.locator("[data-testid='edit-draft-button']").click();
@@ -356,17 +357,17 @@ test.describe("Email MVP", () => {
 
         // Draft should be gone from Drafts
         await page.locator("[data-testid='folder-drafts']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
         await expect(
             page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
-        ).not.toBeVisible();
+        ).not.toBeVisible({ timeout: 5000 });
 
         // Should be in Sent
         await page.locator("[data-testid='folder-sent']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
         await expect(
             page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 5000 });
     });
 
     // -------------------------------------------------------------------------
@@ -439,7 +440,7 @@ test.describe("Email MVP", () => {
             await page.waitForTimeout(500);
 
             // After opening, email should be marked as read
-            await expect(unreadEmail).not.toHaveAttribute("data-unread", "true");
+            await expect(unreadEmail).not.toHaveAttribute("data-unread", "true", { timeout: 5000 });
         }
     });
 
@@ -447,7 +448,7 @@ test.describe("Email MVP", () => {
     // Reply & Forward Scenarios
     // -------------------------------------------------------------------------
 
-    // KNOWN ISSUE: Reply recipient pre-population not working as expected
+    // POST-MVP: Self-addressed emails create duplicates (inbox + sent), causing strict mode violation
     test.skip("scen-email-reply: Reply to email", async ({ page }) => {
 
 
@@ -480,9 +481,9 @@ test.describe("Email MVP", () => {
 
         // Go to inbox and open the email
         await page.locator("[data-testid='folder-inbox']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
         await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Click Reply
         await page.locator("[data-testid='reply-button']").click();
@@ -498,8 +499,9 @@ test.describe("Email MVP", () => {
 
         // Open the email again - should show thread
         await page.locator("[data-testid='folder-inbox']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
         await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.waitForTimeout(500);
 
         // Thread should have 2 messages
         const threadMessages = page.locator("[data-testid='thread-message']");
@@ -634,8 +636,7 @@ test.describe("Email MVP", () => {
         ).toBeVisible();
     });
 
-    // KNOWN ISSUE: Sent folder filtering needs investigation
-    test.skip("scen-email-sent-view: View sent emails", async ({ page }) => {
+    test("scen-email-sent-view: View sent emails", async ({ page }) => {
 
 
         // Given I have sent emails
@@ -646,24 +647,38 @@ test.describe("Email MVP", () => {
             page.locator("[data-testid='email-container']")
         ).toBeVisible({ timeout: 10000 });
 
+        // First send an email so we have something to view
+        await page.locator("[data-testid='compose-button']").click();
+        await expect(page.locator("[data-testid='compose-modal']")).toBeVisible({ timeout: 5000 });
+
+        const recipientInput = page.locator("[data-testid='recipient-input']");
+        await recipientInput.fill("test@example.com");
+        await recipientInput.press("Enter");
+        await expect(page.locator("[data-testid='recipient-chip']")).toBeVisible({ timeout: 3000 });
+
+        const uniqueSubject = `Sent View Test ${Date.now()}`;
+        await page.locator("[data-testid='subject-input']").fill(uniqueSubject);
+        await page.locator("[data-testid='body-input']").fill("Email to view in sent.");
+        await page.getByRole("button", { name: /send/i }).click();
+        await expect(page.locator("[data-testid='compose-modal']")).not.toBeVisible({ timeout: 5000 });
+
         // Navigate to Sent
         await page.locator("[data-testid='folder-sent']").click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Should see sent email list
         const emailList = page.locator("[data-testid='email-list']");
         await expect(emailList).toBeVisible();
 
-        // Sent emails should show recipient instead of sender
-        const emailRow = emailList.locator("[data-testid='email-row']").first();
-        if (await emailRow.isVisible({ timeout: 2000 })) {
-            await expect(emailRow.locator("[data-testid='email-recipient']")).toBeVisible();
-            await expect(emailRow.locator("[data-testid='email-subject']")).toBeVisible();
-            await expect(emailRow.locator("[data-testid='email-timestamp']")).toBeVisible();
-        }
+        // Sent emails should show "To: recipient" (uses email-sender testid)
+        const emailRow = emailList.locator("[data-testid='email-row']", { hasText: uniqueSubject });
+        await expect(emailRow).toBeVisible({ timeout: 5000 });
+        await expect(emailRow.locator("[data-testid='email-sender']")).toContainText("To:");
+        await expect(emailRow.locator("[data-testid='email-subject']")).toBeVisible();
+        await expect(emailRow.locator("[data-testid='email-timestamp']")).toBeVisible();
     });
 
-    // KNOWN ISSUE: Delete flow not refreshing list correctly
+    // POST-MVP: Self-addressed emails create duplicates, delete flow needs refinement
     test.skip("scen-email-delete: Delete email", async ({ page }) => {
 
 
@@ -696,18 +711,18 @@ test.describe("Email MVP", () => {
 
         // Go to inbox and open the email
         await page.locator("[data-testid='folder-inbox']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
         await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Delete
         await page.locator("[data-testid='delete-button']").click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
-        // Should not be in Inbox
+        // Should not be in Inbox (wait for list refresh)
         await expect(
             page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
-        ).not.toBeVisible();
+        ).not.toBeVisible({ timeout: 5000 });
 
         // Should be in Trash
         await page.locator("[data-testid='folder-trash']").click();
@@ -717,7 +732,7 @@ test.describe("Email MVP", () => {
         ).toBeVisible();
     });
 
-    // KNOWN ISSUE: Trash recovery not updating folder correctly
+    // POST-MVP: Self-addressed emails create duplicates - "strict mode violation: resolved to 2 elements"
     test.skip("scen-email-trash-recover: Recover from trash", async ({ page }) => {
 
 
@@ -729,33 +744,57 @@ test.describe("Email MVP", () => {
             page.locator("[data-testid='email-container']")
         ).toBeVisible({ timeout: 10000 });
 
+        // First create and delete an email so we have something in trash
+        await page.locator("[data-testid='compose-button']").click();
+        await expect(page.locator("[data-testid='compose-modal']")).toBeVisible({ timeout: 5000 });
+
+        const recipientInput = page.locator("[data-testid='recipient-input']");
+        await recipientInput.fill("Global");
+        await page.waitForTimeout(500);
+        const suggestion = page.locator("[data-testid='recipient-option']").first();
+        await expect(suggestion).toBeVisible({ timeout: 5000 });
+        await suggestion.click();
+        await expect(page.locator("[data-testid='recipient-chip']")).toBeVisible({ timeout: 3000 });
+
+        const uniqueSubject = `Recover Test ${Date.now()}`;
+        await page.locator("[data-testid='subject-input']").fill(uniqueSubject);
+        await page.locator("[data-testid='body-input']").fill("Email to recover.");
+        await page.getByRole("button", { name: /send/i }).click();
+        await expect(page.locator("[data-testid='compose-modal']")).not.toBeVisible({ timeout: 5000 });
+
+        // Go to inbox and delete the email
+        await page.locator("[data-testid='folder-inbox']").click();
+        await page.waitForTimeout(1000);
+        await page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).click();
+        await page.waitForTimeout(500);
+        await page.locator("[data-testid='delete-button']").click();
+        await page.waitForTimeout(1000);
+
         // Navigate to Trash
         await page.locator("[data-testid='folder-trash']").click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(1000);
 
-        // Find a deleted email
-        const emailRow = page.locator("[data-testid='email-row']").first();
-        if (await emailRow.isVisible({ timeout: 2000 })) {
-            const subject = await emailRow.locator("[data-testid='email-subject']").textContent();
-            await emailRow.click();
-            await page.waitForTimeout(300);
+        // Find and click on the deleted email
+        const emailRow = page.locator("[data-testid='email-row']", { hasText: uniqueSubject });
+        await expect(emailRow).toBeVisible({ timeout: 5000 });
+        await emailRow.click();
+        await page.waitForTimeout(500);
 
-            // Click Restore
-            await page.locator("[data-testid='restore-button']").click();
-            await page.waitForTimeout(500);
+        // Click Restore
+        await page.locator("[data-testid='restore-button']").click();
+        await page.waitForTimeout(1000);
 
-            // Should not be in Trash anymore
-            await expect(
-                page.locator("[data-testid='email-row']", { hasText: subject || "" })
-            ).not.toBeVisible();
+        // Should not be in Trash anymore
+        await expect(
+            page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
+        ).not.toBeVisible({ timeout: 5000 });
 
-            // Should be back in Inbox
-            await page.locator("[data-testid='folder-inbox']").click();
-            await page.waitForTimeout(300);
-            await expect(
-                page.locator("[data-testid='email-row']", { hasText: subject || "" })
-            ).toBeVisible();
-        }
+        // Should be back in Inbox
+        await page.locator("[data-testid='folder-inbox']").click();
+        await page.waitForTimeout(1000);
+        await expect(
+            page.locator("[data-testid='email-row']", { hasText: uniqueSubject })
+        ).toBeVisible({ timeout: 5000 });
     });
 
     // -------------------------------------------------------------------------

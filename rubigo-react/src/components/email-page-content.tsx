@@ -77,7 +77,10 @@ export function EmailPageContent() {
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
     const [recipientInput, setRecipientInput] = useState("");
+    const [ccInput, setCcInput] = useState("");
     const [showPersonnelSearch, setShowPersonnelSearch] = useState(false);
+    const [showCcPersonnelSearch, setShowCcPersonnelSearch] = useState(false);
+    const [showCcField, setShowCcField] = useState(false);
 
     const userId = currentPersona?.id;
 
@@ -143,6 +146,8 @@ export function EmailPageContent() {
             setCcRecipients([]);
             setSubject("");
             setBody("");
+            setShowCcField(false);
+            setCcInput("");
         } else if (selectedEmail) {
             if (mode === "reply") {
                 setToRecipients([{ type: "to", personnelId: selectedEmail.fromId }]);
@@ -245,12 +250,35 @@ export function EmailPageContent() {
         setShowPersonnelSearch(false);
     };
 
+    // Add CC recipient
+    const addCcRecipient = (personnelId?: string, emailAddress?: string) => {
+        if (!personnelId && !emailAddress) return;
+        const newRecipient: Recipient = {
+            type: "cc",
+            personnelId,
+            emailAddress,
+        };
+        setCcRecipients([...ccRecipients, newRecipient]);
+        setCcInput("");
+        setShowCcPersonnelSearch(false);
+    };
+
     // Add custom email
     const handleRecipientKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") {
             e.preventDefault();
             if (recipientInput.includes("@")) {
                 addRecipient(undefined, recipientInput);
+            }
+        }
+    };
+
+    // Add custom CC email
+    const handleCcKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (ccInput.includes("@")) {
+                addCcRecipient(undefined, ccInput);
             }
         }
     };
@@ -606,9 +634,23 @@ export function EmailPageContent() {
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        {/* Recipients */}
+                        {/* To Recipients */}
                         <div className="relative">
-                            <Label>To</Label>
+                            <div className="flex items-center justify-between">
+                                <Label>To</Label>
+                                {!showCcField && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        data-testid="show-cc-button"
+                                        onClick={() => setShowCcField(true)}
+                                        className="text-xs h-6"
+                                    >
+                                        + Cc
+                                    </Button>
+                                )}
+                            </div>
                             <div className="flex flex-wrap gap-1 p-2 border rounded-md min-h-[40px]" data-testid="to-chips">
                                 {toRecipients.map((r, i) => (
                                     <RecipientChip
@@ -619,6 +661,7 @@ export function EmailPageContent() {
                                 ))}
                                 <Input
                                     data-testid="recipient-input"
+                                    data-testid-alias="recipient-input-to"
                                     className="flex-1 min-w-[150px] border-0 shadow-none focus-visible:ring-0 h-6 p-0"
                                     placeholder="Add recipient..."
                                     value={recipientInput}
@@ -636,6 +679,39 @@ export function EmailPageContent() {
                                 />
                             )}
                         </div>
+
+                        {/* CC Recipients (shown when toggled) */}
+                        {showCcField && (
+                            <div className="relative">
+                                <Label>Cc</Label>
+                                <div className="flex flex-wrap gap-1 p-2 border rounded-md min-h-[40px]" data-testid="cc-chips">
+                                    {ccRecipients.map((r, i) => (
+                                        <RecipientChip
+                                            key={i}
+                                            recipient={r}
+                                            onRemove={() => removeRecipient(i, "cc")}
+                                        />
+                                    ))}
+                                    <Input
+                                        data-testid="recipient-input-cc"
+                                        className="flex-1 min-w-[150px] border-0 shadow-none focus-visible:ring-0 h-6 p-0"
+                                        placeholder="Add Cc recipient..."
+                                        value={ccInput}
+                                        onChange={(e) => {
+                                            setCcInput(e.target.value);
+                                            setShowCcPersonnelSearch(e.target.value.length > 0);
+                                        }}
+                                        onKeyDown={handleCcKeyDown}
+                                    />
+                                </div>
+                                {showCcPersonnelSearch && ccInput.length > 0 && (
+                                    <PersonnelSearch
+                                        query={ccInput}
+                                        onSelect={(personnelId) => addCcRecipient(personnelId)}
+                                    />
+                                )}
+                            </div>
+                        )}
 
                         {/* Subject */}
                         <div>
