@@ -430,17 +430,42 @@ test.describe("Email MVP", () => {
             page.locator("[data-testid='email-container']")
         ).toBeVisible({ timeout: 10000 });
 
-        // Find an unread email (has unread class/attribute)
-        const unreadEmail = page.locator("[data-testid='email-row'][data-unread='true']").first();
+        // First, send an email to ourselves to ensure we have an unread message
+        await page.locator("[data-testid='compose-button']").click();
+        await expect(page.locator("[data-testid='compose-modal']")).toBeVisible({ timeout: 5000 });
 
-        if (await unreadEmail.isVisible({ timeout: 2000 })) {
-            await unreadEmail.click();
-            await page.waitForTimeout(500);
+        // Send to self (Global Administrator)
+        const recipientInput = page.locator("[data-testid='recipient-input']");
+        await recipientInput.fill("Global");
+        await page.waitForTimeout(500);
+        const suggestion = page.locator("[data-testid='recipient-option']").first();
+        await expect(suggestion).toBeVisible({ timeout: 5000 });
+        await suggestion.click();
+        await expect(page.locator("[data-testid='recipient-chip']")).toBeVisible({ timeout: 3000 });
 
-            // After opening, email should be marked as read
-            await expect(unreadEmail).not.toHaveAttribute("data-unread", "true", { timeout: 5000 });
-        }
+        const uniqueSubject = `Mark Read Test ${Date.now()}`;
+        await page.locator("[data-testid='subject-input']").fill(uniqueSubject);
+        await page.locator("[data-testid='body-input']").fill("Testing mark as read.");
+        await page.getByRole("button", { name: /send/i }).click();
+        await expect(page.locator("[data-testid='compose-modal']")).not.toBeVisible({ timeout: 5000 });
+
+        // Go to inbox and find the unread email
+        await page.locator("[data-testid='folder-inbox']").click();
+        await page.waitForTimeout(1000);
+
+        // Find the email by subject and verify it's unread
+        const emailRow = page.locator("[data-testid='email-row']", { hasText: uniqueSubject }).first();
+        await expect(emailRow).toBeVisible({ timeout: 5000 });
+        await expect(emailRow).toHaveAttribute("data-unread", "true");
+
+        // Click to open and read
+        await emailRow.click();
+        await page.waitForTimeout(500);
+
+        // After opening, email should be marked as read (attribute changes to false or is removed)
+        await expect(emailRow).not.toHaveAttribute("data-unread", "true", { timeout: 5000 });
     });
+
 
     // -------------------------------------------------------------------------
     // Reply & Forward Scenarios

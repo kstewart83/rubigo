@@ -549,32 +549,46 @@ test.describe("Calendar Recurrence Edit Protection", () => {
 
             // Click Edit in details panel
             const detailsPanel = page.locator("[data-testid='event-details-panel']");
+            await expect(detailsPanel).toBeVisible({ timeout: 5000 });
             const editButton = detailsPanel.getByRole("button", { name: /edit/i });
             await editButton.click();
+
+            // Wait for either the Edit Choice Dialog OR the Edit Event modal
+            // The choice dialog has title "Edit Recurring Event"
+            const editChoiceDialog = page.locator("[role='dialog']").filter({ hasText: "Edit Recurring Event" });
+            const editEventModal = page.locator("[role='dialog']").filter({ hasText: "Edit Event" });
+
+            // Wait for one of the dialogs to appear
             await page.waitForTimeout(500);
 
-            // Edit dialog should show choice for recurring events
-            const allOccurrencesButton = page.getByRole("button", { name: /all occurrences|entire series/i });
-            if (await allOccurrencesButton.isVisible({ timeout: 3000 })) {
+            // Check if the choice dialog is visible
+            if (await editChoiceDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
                 // Select "All Occurrences"
+                const allOccurrencesButton = page.getByRole("button", { name: /all occurrences/i });
+                await expect(allOccurrencesButton).toBeVisible({ timeout: 3000 });
                 await allOccurrencesButton.click();
                 await page.waitForTimeout(500);
-
-                // Now in edit mode for entire series
-                // Recurrence options SHOULD be visible
-                const recurrenceSection = page.locator("[data-testid='recurrence-section']").or(
-                    page.locator("#recurrence-toggle")
-                );
-                await expect(recurrenceSection).toBeVisible();
-
-                // Frequency selector should also be visible
-                await expect(page.locator("#recurrence-frequency").or(
-                    page.locator("[data-testid='recurrence-frequency']")
-                )).toBeVisible();
             }
+
+            // Now we should be in the Edit Event modal (either directly or after choosing)
+            await expect(editEventModal).toBeVisible({ timeout: 5000 });
+
+            // Recurrence options SHOULD be visible for series edit
+            // The recurrence-section has the Repeat checkbox
+            const recurrenceSection = page.locator("[data-testid='recurrence-section']");
+            await expect(recurrenceSection).toBeVisible({ timeout: 5000 });
+
+            // The Repeat checkbox should be checked (event is recurring)
+            const repeatCheckbox = page.locator("#recurrence-toggle");
+            await expect(repeatCheckbox).toBeVisible({ timeout: 3000 });
+            await expect(repeatCheckbox).toBeChecked();
+
+            // Frequency selector should also be visible (since recurring is enabled)
+            await expect(page.locator("#recurrence-frequency")).toBeVisible({ timeout: 3000 });
         }
     });
 });
+
 
 // ============================================================================
 // CALENDAR TIMEZONE TESTS
