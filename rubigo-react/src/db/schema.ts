@@ -35,6 +35,15 @@ export const personnel = sqliteTable("personnel", {
     cellPhone: text("cell_phone"),
     bio: text("bio"),
     isGlobalAdmin: integer("is_global_admin", { mode: "boolean" }).default(false),
+    // Access Control: Subject attributes
+    clearanceLevel: text("clearance_level", {
+        enum: ["public", "low", "moderate", "high"]
+    }).default("low"),
+    tenantClearances: text("tenant_clearances"), // JSON: ["moderate:🍎"]
+    accessRoles: text("access_roles").default('["employee"]'), // JSON: ["employee"]
+    // Access Control: Object attributes
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -61,6 +70,9 @@ export const solutions = sqliteTable("solutions", {
     name: text("name").notNull(),
     description: text("description"),
     status: text("status", { enum: ["pipeline", "catalog", "retired"] }).default("catalog"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -110,6 +122,9 @@ export const projects = sqliteTable("projects", {
     status: text("status", { enum: ["planning", "active", "on_hold", "complete", "cancelled"] }).default("planning"),
     startDate: text("start_date"),
     endDate: text("end_date"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -122,6 +137,9 @@ export const objectives = sqliteTable("objectives", {
     projectId: text("project_id").references(() => projects.id),
     parentId: text("parent_id"), // Self-referencing for hierarchy
     status: text("status", { enum: ["draft", "active", "achieved", "deferred"] }).default("draft"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 // ============================================================================
@@ -137,6 +155,9 @@ export const features = sqliteTable("features", {
     description: text("description"),
     objectiveId: text("objective_id").references(() => objectives.id),
     status: text("status", { enum: ["planned", "in_progress", "complete", "cancelled"] }).default("planned"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -245,6 +266,9 @@ export const initiatives = sqliteTable("initiatives", {
     status: text("status", { enum: ["planned", "active", "complete", "cancelled"] }).default("planned"),
     startDate: text("start_date"),
     endDate: text("end_date"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 // ============================================================================
@@ -262,6 +286,9 @@ export const activities = sqliteTable("activities", {
     initiativeId: text("initiative_id").references(() => initiatives.id),
     blockedBy: text("blocked_by"), // JSON array of IDs stored as text
     status: text("status", { enum: ["backlog", "ready", "in_progress", "blocked", "complete"] }).default("backlog"),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -351,6 +378,9 @@ export const calendarEvents = sqliteTable("calendar_events", {
     deleted: integer("deleted", { mode: "boolean" }).default(false),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -404,6 +434,9 @@ export const emails = sqliteTable("emails", {
         enum: ["inbox", "sent", "drafts", "trash"]
     }).default("inbox"),
     isDraft: integer("is_draft", { mode: "boolean" }).default(false),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -431,6 +464,9 @@ export const chatChannels = sqliteTable("chat_channels", {
     type: text("type", { enum: ["channel", "dm"] }).notNull(),
     createdBy: text("created_by").references(() => personnel.id),
     createdAt: text("created_at").notNull(),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -456,6 +492,9 @@ export const chatMessages = sqliteTable("chat_messages", {
     sentAt: text("sent_at").notNull(),
     editedAt: text("edited_at"),
     deleted: integer("deleted", { mode: "boolean" }).default(false),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
 });
 
 /**
@@ -482,6 +521,30 @@ export const screenShareSessions = sqliteTable("screen_share_sessions", {
     chatChannelId: text("chat_channel_id").references(() => chatChannels.id),
     startedAt: text("started_at").notNull(),
     endedAt: text("ended_at"), // Null if active
+});
+
+// ============================================================================
+// Access Control: Classification Guides
+// ============================================================================
+
+/**
+ * Classification Guides - English-level descriptions for data classification
+ * Supports version history: draft -> active -> superseded
+ */
+export const classificationGuides = sqliteTable("classification_guides", {
+    id: text("id").primaryKey(), // e.g., "CG-HR-001"
+    version: integer("version").notNull().default(1),
+    title: text("title").notNull(),
+    sensitivityGuidance: text("sensitivity_guidance").notNull(), // JSON: {public, low, moderate, high}
+    tenantGuidance: text("tenant_guidance"), // JSON: {tenant: description}
+    roleGuidance: text("role_guidance"), // JSON: {role: description}
+    effectiveDate: text("effective_date").notNull(), // ISO 8601
+    status: text("status", {
+        enum: ["draft", "active", "superseded"]
+    }).default("draft"),
+    supersededBy: text("superseded_by"), // ID of newer version
+    createdAt: text("created_at").notNull(),
+    createdBy: text("created_by").notNull(),
 });
 
 // ============================================================================
@@ -588,3 +651,7 @@ export type NewChatReaction = typeof chatReactions.$inferInsert;
 // Collaboration: Screen Share
 export type ScreenShareSession = typeof screenShareSessions.$inferSelect;
 export type NewScreenShareSession = typeof screenShareSessions.$inferInsert;
+
+// Access Control
+export type ClassificationGuide = typeof classificationGuides.$inferSelect;
+export type NewClassificationGuide = typeof classificationGuides.$inferInsert;
