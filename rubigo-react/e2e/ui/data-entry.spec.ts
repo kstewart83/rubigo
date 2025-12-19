@@ -34,7 +34,14 @@ test.describe("Data Entry Flow", () => {
             await signInAsAdmin(page);
 
             // Navigate to services (which shows solutions)
-            await page.getByRole("link", { name: "Services" }).click();
+            // First expand the Projects section if collapsed
+            const projectsButton = page.getByRole("button", { name: "Projects" });
+            if (await projectsButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+                await projectsButton.click();
+                await page.waitForTimeout(300);
+            }
+
+            await page.getByRole("link", { name: /Products.*Services/i }).click();
             await expect(page).toHaveURL(/\/projects\/services/);
         });
 
@@ -237,7 +244,14 @@ test.describe("Data Entry Flow", () => {
         test("should navigate to Metrics page", async ({ page }) => {
             await signInAsAdmin(page);
 
-            await page.getByRole("link", { name: "Metrics" }).click();
+            // First expand the Projects section if collapsed
+            const projectsButton = page.getByRole("button", { name: "Projects" });
+            if (await projectsButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+                await projectsButton.click();
+                await page.waitForTimeout(300);
+            }
+
+            await page.getByRole("link", { name: /Metrics.*KPIs/i }).click();
             await expect(page).toHaveURL(/\/projects\/metrics/);
         });
     });
@@ -247,12 +261,12 @@ test.describe("Data Entry Flow", () => {
             await signInAsAdmin(page);
 
             const pages = [
-                { link: "Services", url: "/projects/services" },
+                { link: /Products.*Services/i, url: "/projects/services" },
                 { link: "Objectives", url: "/projects/objectives" },
                 { link: "Features", url: "/projects/features" },
                 { link: "Initiatives", url: "/projects/initiatives" },
                 { link: "Activities", url: "/projects/activities" },
-                { link: "Metrics", url: "/projects/metrics" },
+                { link: /Metrics.*KPIs/i, url: "/projects/metrics" },
             ];
 
             for (const p of pages) {

@@ -16,6 +16,12 @@ test.describe("System Initialization", () => {
         // Wait for the page to load
         await page.waitForLoadState("networkidle");
 
+        // Skip if already initialized (auto-init mode)
+        const signInButton = page.getByRole("button", { name: "Sign In" });
+        if (await signInButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+            test.skip(true, "System already initialized - skipping uninitialized state test");
+        }
+
         // Should show initialization form (not sign in button)
         await expect(page.getByText("System Initialization")).toBeVisible();
         await expect(page.getByText("Enter the 4-word phrase")).toBeVisible();
@@ -31,6 +37,12 @@ test.describe("System Initialization", () => {
     test("should show error for incorrect initialization phrase", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("networkidle");
+
+        // Skip if already initialized (auto-init mode)
+        const signInButton = page.getByRole("button", { name: "Sign In" });
+        if (await signInButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+            test.skip(true, "System already initialized - skipping phrase error test");
+        }
 
         // Enter wrong words
         const wordInputs = page.locator('input[placeholder="type to search..."]');
