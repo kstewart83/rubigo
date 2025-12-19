@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `emails` (
 CREATE TABLE IF NOT EXISTS `email_recipients` (
 	`id` text PRIMARY KEY NOT NULL,
 	`email_id` text NOT NULL,
-	`personnel_id` text NOT NULL,
+	`personnel_id` text,
 	`type` text DEFAULT 'to',
 	`read` integer DEFAULT false,
 	FOREIGN KEY (`email_id`) REFERENCES `emails`(`id`) ON UPDATE no action ON DELETE no action,
