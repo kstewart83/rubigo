@@ -11,10 +11,12 @@ import {
     chatChannels,
     chatMembers,
     chatMessages,
+    chatReactions,
     personnel,
     type ChatChannel,
     type ChatMessage,
     type ChatMember,
+    type ChatReaction,
 } from "@/db/schema";
 import { eq, and, desc, or } from "drizzle-orm";
 
@@ -378,4 +380,158 @@ export async function deleteMessage(
         console.error("Failed to delete message:", error);
         return { success: false, error: "Failed to delete message" };
     }
+}
+
+// ============================================================================
+// Reaction Operations
+// ============================================================================
+
+export interface ReactionGroup {
+    emoji: string;
+    count: number;
+    users: { id: string; name: string }[];
+    hasReacted: boolean;  // Whether the current user has reacted
+}
+
+/**
+ * Add a reaction to a message
+ */
+export async function addReaction(
+    messageId: string,
+    emoji: string,
+    userId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Check if reaction already exists
+        const existing = await db
+            .select()
+            .from(chatReactions)
+            .where(
+                and(
+                    eq(chatReactions.messageId, messageId),
+                    eq(chatReactions.emoji, emoji),
+                    eq(chatReactions.personnelId, userId)
+                )
+            );
+
+        if (existing.length > 0) {
+            return { success: true }; // Already reacted
+        }
+
+        const now = new Date().toISOString();
+        await db.insert(chatReactions).values({
+            id: crypto.randomUUID(),
+            messageId,
+            personnelId: userId,
+            emoji,
+            createdAt: now,
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to add reaction:", error);
+        return { success: false, error: "Failed to add reaction" };
+    }
+}
+
+/**
+ * Remove a reaction from a message
+ */
+export async function removeReaction(
+    messageId: string,
+    emoji: string,
+    userId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(chatReactions)
+            .where(
+                and(
+                    eq(chatReactions.messageId, messageId),
+                    eq(chatReactions.emoji, emoji),
+                    eq(chatReactions.personnelId, userId)
+                )
+            );
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to remove reaction:", error);
+        return { success: false, error: "Failed to remove reaction" };
+    }
+}
+
+/**
+ * Toggle a reaction (add if not exists, remove if exists)
+ */
+export async function toggleReaction(
+    messageId: string,
+    emoji: string,
+    userId: string
+): Promise<{ success: boolean; added: boolean; error?: string }> {
+    try {
+        const existing = await db
+            .select()
+            .from(chatReactions)
+            .where(
+                and(
+                    eq(chatReactions.messageId, messageId),
+                    eq(chatReactions.emoji, emoji),
+                    eq(chatReactions.personnelId, userId)
+                )
+            );
+
+        if (existing.length > 0) {
+            // Remove
+            await removeReaction(messageId, emoji, userId);
+            return { success: true, added: false };
+        } else {
+            // Add
+            await addReaction(messageId, emoji, userId);
+            return { success: true, added: true };
+        }
+    } catch (error) {
+        console.error("Failed to toggle reaction:", error);
+        return { success: false, added: false, error: "Failed to toggle reaction" };
+    }
+}
+
+/**
+ * Get reactions for a message, grouped by emoji
+ */
+export async function getMessageReactions(
+    messageId: string,
+    currentUserId?: string
+): Promise<ReactionGroup[]> {
+    const reactions = await db
+        .select({
+            emoji: chatReactions.emoji,
+            personnelId: chatReactions.personnelId,
+            personnelName: personnel.name,
+        })
+        .from(chatReactions)
+        .innerJoin(personnel, eq(chatReactions.personnelId, personnel.id))
+        .where(eq(chatReactions.messageId, messageId));
+
+    // Group by emoji
+    const groups = new Map<string, ReactionGroup>();
+
+    for (const reaction of reactions) {
+        if (!groups.has(reaction.emoji)) {
+            groups.set(reaction.emoji, {
+                emoji: reaction.emoji,
+                count: 0,
+                users: [],
+                hasReacted: false,
+            });
+        }
+
+        const group = groups.get(reaction.emoji)!;
+        group.count++;
+        group.users.push({ id: reaction.personnelId, name: reaction.personnelName });
+        if (currentUserId && reaction.personnelId === currentUserId) {
+            group.hasReacted = true;
+        }
+    }
+
+    return Array.from(groups.values());
 }

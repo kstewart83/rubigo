@@ -157,13 +157,13 @@ async function syncPersonnel(
     scenarioDir: string,
     mode: CliArgs["mode"],
     dryRun: boolean
-): Promise<SyncStats> {
+): Promise<{ stats: SyncStats; idMapping: Map<string, string> }> {
     const stats = initStats();
     const data = loadToml<PersonnelToml>(scenarioDir, "personnel.toml");
 
     if (!data?.people?.length) {
         console.log("⏭️  No personnel data found");
-        return stats;
+        return { stats, idMapping: new Map() };
     }
 
     console.log(`\n👥 Syncing ${data.people.length} personnel records...`);
@@ -282,7 +282,25 @@ async function syncPersonnel(
         }
     }
 
-    return stats;
+    // Build TOML ID → database ID mapping
+    // Re-fetch personnel to get current state with DB IDs
+    const idMapping = new Map<string, string>();
+    const refreshedResult = await client.listPersonnel({ pageSize: 1000 });
+    if (refreshedResult.success && refreshedResult.data) {
+        const emailToDbId = new Map<string, string>();
+        for (const p of refreshedResult.data as Array<{ id: string; email: string }>) {
+            emailToDbId.set(p.email.toLowerCase(), p.id);
+        }
+        // Map TOML id → email → DB id
+        for (const person of data.people) {
+            const dbId = emailToDbId.get(person.email.toLowerCase());
+            if (dbId) {
+                idMapping.set(person.id, dbId);
+            }
+        }
+    }
+
+    return { stats, idMapping };
 }
 
 // ============================================================================
@@ -662,6 +680,189 @@ async function syncCalendarEvents(
 }
 
 // ============================================================================
+// Chat Sync
+// ============================================================================
+
+interface ChatToml {
+    description?: { overview?: string };
+    channels?: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        type: "channel" | "dm";
+    }>;
+    memberships?: Array<{
+        channel_id: string;
+        person_id: string;
+    }>;
+    messages?: Array<{
+        channel_id: string;
+        sender_id: string;
+        content: string;
+        sent_at: string;
+    }>;
+}
+
+async function syncChatChannels(
+    client: RubigoClient,
+    channels: NonNullable<ChatToml["channels"]>,
+    mode: CliArgs["mode"],
+    dryRun: boolean
+): Promise<SyncStats> {
+    const stats = initStats();
+
+    if (!channels.length) {
+        return stats;
+    }
+
+    console.log(`\n💬 Syncing ${channels.length} chat channels...`);
+
+    // Get existing channels
+    const existingResult = await client.listChatChannels();
+    const existingMap = new Map<string, Record<string, unknown>>();
+
+    if (existingResult.success && existingResult.data) {
+        for (const channel of existingResult.data as Array<{ id: string;[key: string]: unknown }>) {
+            existingMap.set(channel.id, channel);
+        }
+    }
+
+    const seedIds = new Set<string>();
+
+    for (const channel of channels) {
+        seedIds.add(channel.id);
+        const existing = existingMap.get(channel.id);
+
+        if (!existing) {
+            if (dryRun) {
+                console.log(`   🆕 [DRY-RUN] Would create channel: #${channel.name}`);
+                stats.created++;
+            } else {
+                const result = await client.createChatChannel({
+                    id: channel.id,
+                    name: channel.name,
+                    description: channel.description,
+                    type: channel.type,
+                });
+                if (result.success) {
+                    stats.created++;
+                    console.log(`   ✅ Created channel: #${channel.name}`);
+                } else {
+                    stats.failed++;
+                    console.log(`   ❌ Failed to create #${channel.name}: ${result.error}`);
+                }
+            }
+        } else {
+            stats.skipped++;
+        }
+    }
+
+    // Delete extras in full mode
+    if (mode === "full") {
+        for (const [id, channel] of existingMap) {
+            if (!seedIds.has(id)) {
+                const name = channel.name as string;
+                if (dryRun) {
+                    console.log(`   🗑️  [DRY-RUN] Would delete channel: #${name}`);
+                    stats.deleted++;
+                } else {
+                    const result = await client.deleteChatChannel(id);
+                    if (result.success) {
+                        stats.deleted++;
+                        console.log(`   🗑️  Deleted channel: #${name}`);
+                    } else {
+                        stats.failed++;
+                        console.log(`   ❌ Failed to delete #${name}: ${result.error}`);
+                    }
+                }
+            }
+        }
+    }
+
+    return stats;
+}
+
+async function syncChatMemberships(
+    client: RubigoClient,
+    memberships: NonNullable<ChatToml["memberships"]>,
+    personnelIdMap: Map<string, string>,
+    dryRun: boolean
+): Promise<SyncStats> {
+    const stats = initStats();
+
+    if (!memberships.length) {
+        return stats;
+    }
+
+    console.log(`\n👥 Syncing ${memberships.length} chat memberships...`);
+
+    for (const membership of memberships) {
+        // Translate TOML person_id to database ID
+        const dbPersonnelId = personnelIdMap.get(membership.person_id) || membership.person_id;
+
+        if (dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would add member: ${membership.person_id} to ${membership.channel_id}`);
+            stats.created++;
+        } else {
+            const result = await client.addChatMember({
+                channelId: membership.channel_id,
+                personnelId: dbPersonnelId,
+            });
+            if (result.success) {
+                stats.created++;
+            } else {
+                stats.failed++;
+                console.log(`   ❌ Failed to add member: ${result.error}`);
+            }
+        }
+    }
+
+    console.log(`   ✅ Added ${stats.created} memberships`);
+    return stats;
+}
+
+async function syncChatMessages(
+    client: RubigoClient,
+    messages: NonNullable<ChatToml["messages"]>,
+    personnelIdMap: Map<string, string>,
+    dryRun: boolean
+): Promise<SyncStats> {
+    const stats = initStats();
+
+    if (!messages.length) {
+        return stats;
+    }
+
+    console.log(`\n📝 Syncing ${messages.length} chat messages...`);
+
+    for (const message of messages) {
+        // Translate TOML sender_id to database ID
+        const dbSenderId = personnelIdMap.get(message.sender_id) || message.sender_id;
+
+        if (dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would send message in ${message.channel_id}`);
+            stats.created++;
+        } else {
+            const result = await client.sendChatMessage({
+                channelId: message.channel_id,
+                senderId: dbSenderId,
+                content: message.content,
+                sentAt: message.sent_at,
+            });
+            if (result.success) {
+                stats.created++;
+            } else {
+                stats.failed++;
+                console.log(`   ❌ Failed to send message: ${result.error}`);
+            }
+        }
+    }
+
+    console.log(`   ✅ Sent ${stats.created} messages`);
+    return stats;
+}
+
+// ============================================================================
 // Main Sync Orchestrator
 // ============================================================================
 
@@ -710,8 +911,10 @@ async function main() {
         ...(collaborationData?.specifications || []),
     ];
 
-    // 1. Personnel (no deps)
-    allStats.personnel = await syncPersonnel(client, args.scenario, args.mode, args.dryRun);
+    // 1. Personnel (no deps) - also builds TOML ID → DB ID mapping
+    const personnelResult = await syncPersonnel(client, args.scenario, args.mode, args.dryRun);
+    allStats.personnel = personnelResult.stats;
+    const personnelIdMap = personnelResult.idMapping;
 
     // 2. Solutions (no deps)
     allStats.solutions = await syncSimpleEntity(
@@ -1104,6 +1307,31 @@ async function main() {
         client,
         eventsData?.events || [],
         args.mode,
+        args.dryRun
+    );
+
+    // 20. Chat Channels (depends on Personnel for createdBy)
+    const chatData = loadToml<ChatToml>(args.scenario, "chat.toml");
+    allStats.chatChannels = await syncChatChannels(
+        client,
+        chatData?.channels || [],
+        args.mode,
+        args.dryRun
+    );
+
+    // 21. Chat Memberships (depends on Channels, Personnel)
+    allStats.chatMemberships = await syncChatMemberships(
+        client,
+        chatData?.memberships || [],
+        personnelIdMap,
+        args.dryRun
+    );
+
+    // 22. Chat Messages (depends on Channels, Personnel)
+    allStats.chatMessages = await syncChatMessages(
+        client,
+        chatData?.messages || [],
+        personnelIdMap,
         args.dryRun
     );
 

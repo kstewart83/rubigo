@@ -205,6 +205,36 @@ export interface CalendarEventInput {
     virtualUrl?: string;
 }
 
+// Chat types
+export interface ChatChannelInput {
+    id?: string;
+    name: string;
+    description?: string;
+    type: "channel" | "dm";
+    createdBy?: string;
+}
+
+export interface ChatMemberInput {
+    id?: string;
+    channelId: string;
+    personnelId: string;
+}
+
+export interface ChatMessageInput {
+    id?: string;
+    channelId: string;
+    senderId: string;
+    content: string;
+    sentAt?: string;  // ISO 8601, defaults to now if not provided
+}
+
+export interface ChatReactionInput {
+    id?: string;
+    messageId: string;
+    personnelId: string;
+    emoji: string;
+}
+
 // API Response types
 export interface ApiResult {
     success: boolean;
@@ -668,6 +698,59 @@ export class RubigoClient {
 
     async deleteCalendarEvent(id: string): Promise<ApiResult> {
         return this.request<ApiResult>("DELETE", `/api/calendar/${id}`);
+    }
+
+    // ========================================================================
+    // Chat API
+    // ========================================================================
+
+    async listChatChannels(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/chat/channels");
+    }
+
+    async getChatChannel(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/chat/channels/${id}`);
+    }
+
+    async createChatChannel(input: ChatChannelInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/chat/channels", input);
+    }
+
+    async deleteChatChannel(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/chat/channels/${id}`);
+    }
+
+    async addChatMember(input: ChatMemberInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/chat/members", input);
+    }
+
+    async removeChatMember(channelId: string, personnelId: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/chat/members/${channelId}/${personnelId}`);
+    }
+
+    async listChatMessages(channelId: string, limit?: number): Promise<ListResult<unknown>> {
+        const query = limit ? `?limit=${limit}` : "";
+        return this.request<ListResult<unknown>>("GET", `/api/chat/messages/${channelId}${query}`);
+    }
+
+    async sendChatMessage(input: ChatMessageInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/chat/messages", input);
+    }
+
+    async deleteChatMessage(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/chat/messages/${id}`);
+    }
+
+    async addChatReaction(input: ChatReactionInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/chat/reactions", input);
+    }
+
+    async removeChatReaction(messageId: string, personnelId: string, emoji: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/chat/reactions/${messageId}/${personnelId}/${encodeURIComponent(emoji)}`);
+    }
+
+    async getChatReactions(messageId: string): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", `/api/chat/reactions/${messageId}`);
     }
 }
 

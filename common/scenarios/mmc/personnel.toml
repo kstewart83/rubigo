@@ -8,7 +8,7 @@ WORKFORCE
 - Total Employees: ~500
 - HQ Staff: ~350 (executive, engineering, IT, HR, finance, operations)
 - Regional Offices: ~150 (sales, field service, customer support)
-- Key Personnel Modeled: 18 across all departments
+- Key Personnel Modeled: 23 across all departments (includes 5 test users)
 
 The personnel data below represents key leadership and staff members who 
 are modeled in detail for simulation purposes. The full workforce includes 
@@ -303,3 +303,78 @@ photo = "headshots/nicole_taylor_5eedf9.png"
 desk_phone = "412-555-7101"
 cell_phone = "412-555-8711"
 bio = "Nicole covers Pennsylvania, New York, and the Eastern seaboard. She has an engineering background that helps her consult on complex projects."
+
+# ============================================================================
+# Test Personnel (for E2E testing)
+# ============================================================================
+
+[[people]]
+id = "test01"
+name = "Alex Chen"
+email = "achen@mmc.com"
+title = "QA Engineer"
+department = "IT"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "102"
+manager = "Mike Chen"
+desk_phone = "614-555-2010"
+bio = "Alex joined the IT department to focus on quality assurance and automated testing. Previously worked at a fintech startup."
+
+[[people]]
+id = "test02"
+name = "Jordan Smith"
+email = "jsmith@mmc.com"
+title = "Sales Associate"
+department = "Sales"
+site = "Indianapolis Regional Office"
+building = "Indy Office Building"
+level = 1
+space = "101"
+manager = "Chris Miller"
+desk_phone = "317-555-6010"
+bio = "Jordan is a rising star in the Midwest sales team, bringing energy and fresh ideas to client relationships."
+
+[[people]]
+id = "test03"
+name = "Morgan Davis"
+email = "mdavis@mmc.com"
+title = "Product Designer"
+department = "Engineering"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 2
+space = "202"
+manager = "David Park"
+desk_phone = "614-555-4010"
+bio = "Morgan brings a user-centered design perspective to the engineering team, bridging the gap between form and function."
+
+[[people]]
+id = "test04"
+name = "Taylor Brown"
+email = "tbrown@mmc.com"
+title = "Project Manager"
+department = "Executive"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 3
+space = "300"
+manager = "Thomas Anderson"
+desk_phone = "614-555-1010"
+cell_phone = "614-555-8010"
+bio = "Taylor coordinates cross-functional projects and ensures smooth communication between departments."
+
+[[people]]
+id = "test05"
+name = "Casey Wilson"
+email = "cwilson@mmc.com"
+title = "Support Specialist"
+department = "IT"
+site = "MMC Headquarters"
+building = "HQ Main Building"
+level = 1
+space = "102"
+manager = "Mike Chen"
+desk_phone = "614-555-2011"
+bio = "Casey provides front-line support for internal systems and is known for their patience and problem-solving skills."

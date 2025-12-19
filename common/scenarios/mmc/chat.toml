@@ -1,0 +1,359 @@
+# ============================================================================
+# MMC Chat Seed Data
+# ============================================================================
+# Chat channels, memberships, and sample messages for the MMC scenario.
+# Used by sync-scenario.ts to populate chat data for development and testing.
+
+[description]
+overview = """
+CHAT SEED DATA
+- Channels: 6 department-based and general channels
+- Sample Messages: 3-5 realistic messages per channel
+- Memberships: Department-based channel assignments
+
+This data provides a realistic starting point for chat functionality testing.
+"""
+
+# ============================================================================
+# Channels
+# ============================================================================
+
+[[channels]]
+id = "general"
+name = "general"
+description = "Company-wide announcements and discussions"
+type = "channel"
+
+[[channels]]
+id = "engineering"
+name = "engineering"
+description = "Engineering team discussions and technical updates"
+type = "channel"
+
+[[channels]]
+id = "it-helpdesk"
+name = "it-helpdesk"
+description = "IT support requests and system updates"
+type = "channel"
+
+[[channels]]
+id = "sales"
+name = "sales"
+description = "Sales team coordination and pipeline updates"
+type = "channel"
+
+[[channels]]
+id = "executive"
+name = "executive"
+description = "Leadership team discussions"
+type = "channel"
+
+[[channels]]
+id = "random"
+name = "random"
+description = "Off-topic conversations and water cooler chat"
+type = "channel"
+
+# ============================================================================
+# Channel Memberships
+# ============================================================================
+# Format: channel_id, person_id (references personnel.toml id)
+
+# General - Everyone
+[[memberships]]
+channel_id = "general"
+person_id = "241a6d"  # Thomas Anderson (CEO)
+
+[[memberships]]
+channel_id = "general"
+person_id = "cdb964"  # Margaret Sullivan (CFO)
+
+[[memberships]]
+channel_id = "general"
+person_id = "714fd4"  # Richard Nakamura (CTO)
+
+[[memberships]]
+channel_id = "general"
+person_id = "1ea074"  # Mike Chen (IT Director)
+
+[[memberships]]
+channel_id = "general"
+person_id = "d827cb"  # David Park (Engineering Manager)
+
+[[memberships]]
+channel_id = "general"
+person_id = "4f6f43"  # Patricia Martinez (HR Director)
+
+[[memberships]]
+channel_id = "general"
+person_id = "test01"  # Alex Chen (QA Engineer)
+
+[[memberships]]
+channel_id = "general"
+person_id = "test02"  # Jordan Smith (Sales Associate)
+
+[[memberships]]
+channel_id = "general"
+person_id = "test03"  # Morgan Davis (Product Designer)
+
+[[memberships]]
+channel_id = "general"
+person_id = "test04"  # Taylor Brown (Project Manager)
+
+[[memberships]]
+channel_id = "general"
+person_id = "test05"  # Casey Wilson (Support Specialist)
+
+# Engineering
+[[memberships]]
+channel_id = "engineering"
+person_id = "714fd4"  # Richard Nakamura (CTO)
+
+[[memberships]]
+channel_id = "engineering"
+person_id = "d827cb"  # David Park (Engineering Manager)
+
+[[memberships]]
+channel_id = "engineering"
+person_id = "f9c8d7"  # Jennifer Adams (Senior Mechanical Engineer)
+
+[[memberships]]
+channel_id = "engineering"
+person_id = "8a0c57"  # Robert Thompson (Mechanical Engineer)
+
+[[memberships]]
+channel_id = "engineering"
+person_id = "8f3a18"  # Lisa Chen (CAD Designer)
+
+[[memberships]]
+channel_id = "engineering"
+person_id = "test03"  # Morgan Davis (Product Designer)
+
+# IT Helpdesk
+[[memberships]]
+channel_id = "it-helpdesk"
+person_id = "1ea074"  # Mike Chen (IT Director)
+
+[[memberships]]
+channel_id = "it-helpdesk"
+person_id = "7aa0d4"  # Sarah Kim (Network Administrator)
+
+[[memberships]]
+channel_id = "it-helpdesk"
+person_id = "d62d4d"  # Jason Wright (Systems Administrator)
+
+[[memberships]]
+channel_id = "it-helpdesk"
+person_id = "test01"  # Alex Chen (QA Engineer)
+
+[[memberships]]
+channel_id = "it-helpdesk"
+person_id = "test05"  # Casey Wilson (Support Specialist)
+
+# Sales
+[[memberships]]
+channel_id = "sales"
+person_id = "1e4e5c"  # Chris Miller (Regional Sales Manager - Midwest)
+
+[[memberships]]
+channel_id = "sales"
+person_id = "e8a466"  # Amanda Johnson (Sales Representative)
+
+[[memberships]]
+channel_id = "sales"
+person_id = "4d9154"  # Kevin O'Brien (Regional Sales Manager - North)
+
+[[memberships]]
+channel_id = "sales"
+person_id = "5eedf9"  # Nicole Taylor (Regional Sales Manager - East)
+
+[[memberships]]
+channel_id = "sales"
+person_id = "test02"  # Jordan Smith (Sales Associate)
+
+# Executive
+[[memberships]]
+channel_id = "executive"
+person_id = "241a6d"  # Thomas Anderson (CEO)
+
+[[memberships]]
+channel_id = "executive"
+person_id = "cdb964"  # Margaret Sullivan (CFO)
+
+[[memberships]]
+channel_id = "executive"
+person_id = "714fd4"  # Richard Nakamura (CTO)
+
+[[memberships]]
+channel_id = "executive"
+person_id = "test04"  # Taylor Brown (Project Manager)
+
+# Random - Opt-in sample
+[[memberships]]
+channel_id = "random"
+person_id = "7aa0d4"  # Sarah Kim
+
+[[memberships]]
+channel_id = "random"
+person_id = "8f3a18"  # Lisa Chen
+
+[[memberships]]
+channel_id = "random"
+person_id = "test01"  # Alex Chen
+
+[[memberships]]
+channel_id = "random"
+person_id = "test03"  # Morgan Davis
+
+[[memberships]]
+channel_id = "random"
+person_id = "test05"  # Casey Wilson
+
+# ============================================================================
+# Sample Messages
+# ============================================================================
+# Messages with realistic content and timestamps spanning 2 weeks
+
+# General channel messages
+[[messages]]
+channel_id = "general"
+sender_id = "241a6d"  # Thomas Anderson
+content = "Welcome to the new team chat system! 🎉 Looking forward to more efficient collaboration across all departments."
+sent_at = "2024-12-05T09:00:00-05:00"
+
+[[messages]]
+channel_id = "general"
+sender_id = "714fd4"  # Richard Nakamura
+content = "Great to see everyone here. If you have any technical questions about using the platform, the IT team is ready to help."
+sent_at = "2024-12-05T09:15:00-05:00"
+
+[[messages]]
+channel_id = "general"
+sender_id = "4f6f43"  # Patricia Martinez
+content = "Reminder: Open enrollment for benefits ends Friday. Please submit any changes by EOD Thursday."
+sent_at = "2024-12-09T10:30:00-05:00"
+
+[[messages]]
+channel_id = "general"
+sender_id = "241a6d"  # Thomas Anderson
+content = "Congratulations to the engineering team on shipping the v2.0 release ahead of schedule! 👏"
+sent_at = "2024-12-12T14:00:00-05:00"
+
+# Engineering channel messages
+[[messages]]
+channel_id = "engineering"
+sender_id = "d827cb"  # David Park
+content = "Team standup moving to 9:30 AM starting next week. Please update your calendars."
+sent_at = "2024-12-06T08:45:00-05:00"
+
+[[messages]]
+channel_id = "engineering"
+sender_id = "f9c8d7"  # Jennifer Adams
+content = "The thermal analysis for the new HVAC unit is complete. Results look promising - 15% efficiency improvement over baseline."
+sent_at = "2024-12-10T11:20:00-05:00"
+
+[[messages]]
+channel_id = "engineering"
+sender_id = "8f3a18"  # Lisa Chen
+content = "Updated CAD files for the compressor housing are in the shared drive. Ready for review."
+sent_at = "2024-12-11T16:00:00-05:00"
+
+[[messages]]
+channel_id = "engineering"
+sender_id = "test03"  # Morgan Davis
+content = "Working on updated UI mockups for the control panel. Will share by end of week."
+sent_at = "2024-12-12T09:30:00-05:00"
+
+# IT Helpdesk messages
+[[messages]]
+channel_id = "it-helpdesk"
+sender_id = "1ea074"  # Mike Chen
+content = "Scheduled maintenance this Saturday 2-4 AM. Email and file servers will be briefly unavailable."
+sent_at = "2024-12-05T14:00:00-05:00"
+
+[[messages]]
+channel_id = "it-helpdesk"
+sender_id = "7aa0d4"  # Sarah Kim
+content = "VPN issues should now be resolved. Please let us know if you're still experiencing connectivity problems."
+sent_at = "2024-12-08T10:15:00-05:00"
+
+[[messages]]
+channel_id = "it-helpdesk"
+sender_id = "test05"  # Casey Wilson
+content = "New printer installed on the second floor. Driver package is in the software center."
+sent_at = "2024-12-10T13:45:00-05:00"
+
+[[messages]]
+channel_id = "it-helpdesk"
+sender_id = "test01"  # Alex Chen
+content = "Automated test suite updated to cover the new integration endpoints. All green ✅"
+sent_at = "2024-12-12T15:30:00-05:00"
+
+# Sales channel messages
+[[messages]]
+channel_id = "sales"
+sender_id = "1e4e5c"  # Chris Miller
+content = "Great Q4 so far! Midwest region is tracking 20% over target. Keep pushing team!"
+sent_at = "2024-12-06T16:00:00-05:00"
+
+[[messages]]
+channel_id = "sales"
+sender_id = "5eedf9"  # Nicole Taylor
+content = "Just closed the Thompson Industries deal. $2.4M contract signed yesterday! 🎯"
+sent_at = "2024-12-09T09:00:00-05:00"
+
+[[messages]]
+channel_id = "sales"
+sender_id = "4d9154"  # Kevin O'Brien
+content = "Meeting with Ford's facilities team next week. Anyone have recent case studies for automotive sector?"
+sent_at = "2024-12-11T11:00:00-05:00"
+
+[[messages]]
+channel_id = "sales"
+sender_id = "test02"  # Jordan Smith
+content = "I have the Detroit manufacturing plant case study. Sending it over now."
+sent_at = "2024-12-11T11:15:00-05:00"
+
+# Executive channel messages
+[[messages]]
+channel_id = "executive"
+sender_id = "241a6d"  # Thomas Anderson
+content = "Board meeting next Thursday. Please have your Q4 presentations ready by Tuesday."
+sent_at = "2024-12-05T08:00:00-05:00"
+
+[[messages]]
+channel_id = "executive"
+sender_id = "cdb964"  # Margaret Sullivan
+content = "Preliminary financials look strong. We're on track to exceed annual revenue targets by 8%."
+sent_at = "2024-12-10T10:00:00-05:00"
+
+[[messages]]
+channel_id = "executive"
+sender_id = "714fd4"  # Richard Nakamura
+content = "Digital transformation initiative update: IoT pilot program at Indianapolis plant showing 12% reduction in downtime."
+sent_at = "2024-12-12T11:30:00-05:00"
+
+# Random channel messages
+[[messages]]
+channel_id = "random"
+sender_id = "7aa0d4"  # Sarah Kim
+content = "Anyone want to join a lunch run to the new ramen place downtown?"
+sent_at = "2024-12-06T11:30:00-05:00"
+
+[[messages]]
+channel_id = "random"
+sender_id = "8f3a18"  # Lisa Chen
+content = "I'm in! Their tonkotsu is supposed to be amazing 🍜"
+sent_at = "2024-12-06T11:32:00-05:00"
+
+[[messages]]
+channel_id = "random"
+sender_id = "test01"  # Alex Chen
+content = "Count me in too!"
+sent_at = "2024-12-06T11:35:00-05:00"
+
+[[messages]]
+channel_id = "random"
+sender_id = "test05"  # Casey Wilson
+content = "Happy Friday everyone! 🎉 Any weekend plans?"
+sent_at = "2024-12-13T16:00:00-05:00"
