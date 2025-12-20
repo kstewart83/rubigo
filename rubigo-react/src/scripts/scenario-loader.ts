@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 /**
- * Scenario Data Loader
+ * Profile Data Loader
  * 
- * Loads scenario data from SQLite database.
+ * Loads profile data from profiles.sqlite database for a specific profile.
  * 
  * Usage:
  *   import { loadScenarioData, ScenarioData } from "./scenario-loader";
- *   const data = loadScenarioData("../common/scenarios/mmc");
+ *   const data = loadScenarioData("../common/scenarios", "mmc");
  */
 
 import { Database } from "bun:sqlite";
@@ -19,6 +19,7 @@ import { join } from "path";
 
 export interface PersonnelRecord {
     id: string;
+    profile_id: string;
     name: string;
     email: string;
     title?: string;
@@ -36,6 +37,7 @@ export interface PersonnelRecord {
 
 export interface SolutionRecord {
     id: string;
+    profile_id: string;
     name: string;
     description?: string;
     status?: string;
@@ -43,12 +45,14 @@ export interface SolutionRecord {
 
 export interface ProductRecord {
     id: string;
+    profile_id: string;
     solution_id: string;
     version?: string;
 }
 
 export interface ServiceRecord {
     id: string;
+    profile_id: string;
     name: string;
     solution_id: string;
     service_level?: string;
@@ -56,6 +60,7 @@ export interface ServiceRecord {
 
 export interface ProjectRecord {
     id: string;
+    profile_id: string;
     name: string;
     description?: string;
     solution_id?: string;
@@ -66,6 +71,7 @@ export interface ProjectRecord {
 
 export interface ObjectiveRecord {
     id: string;
+    profile_id: string;
     title: string;
     description?: string;
     project_id?: string;
@@ -75,6 +81,7 @@ export interface ObjectiveRecord {
 
 export interface FeatureRecord {
     id: string;
+    profile_id: string;
     name: string;
     description?: string;
     objective_id?: string;
@@ -83,6 +90,7 @@ export interface FeatureRecord {
 
 export interface RuleRecord {
     id: string;
+    profile_id: string;
     feature_id: string;
     role: string;
     requirement: string;
@@ -92,6 +100,7 @@ export interface RuleRecord {
 
 export interface ScenarioRecord {
     id: string;
+    profile_id: string;
     rule_id: string;
     name: string;
     narrative: string;
@@ -99,7 +108,8 @@ export interface ScenarioRecord {
 }
 
 export interface CalendarEventRecord {
-    id?: string;
+    id: string;
+    profile_id: string;
     title: string;
     description?: string;
     start_time: string;
@@ -118,35 +128,39 @@ export interface CalendarEventRecord {
 
 export interface ChatChannelRecord {
     id: string;
+    profile_id: string;
     name: string;
     description?: string;
     type?: string;
 }
 
 export interface ChatMembershipRecord {
-    id?: string;
+    id: string;
+    profile_id: string;
     channel_id: string;
     person_id: string;
     joined_at?: string;
 }
 
 export interface ChatMessageRecord {
-    id?: string;
+    id: string;
+    profile_id: string;
     channel_id: string;
     sender_id: string;
     content: string;
     sent_at?: string;
-    message_type?: string;
 }
 
 export interface RoleRecord {
     id: string;
+    profile_id: string;
     name: string;
     description?: string;
 }
 
 export interface InfrastructureRecord {
     id: string;
+    profile_id: string;
     name: string;
     type: string;
     space?: string;
@@ -156,6 +170,7 @@ export interface InfrastructureRecord {
 
 export interface ComponentRecord {
     id: string;
+    profile_id: string;
     name: string;
     type: string;
     placement_type?: string;
@@ -167,6 +182,7 @@ export interface ComponentRecord {
 
 export interface AssetRecord {
     id: string;
+    profile_id: string;
     name: string;
     category?: string;
     manufacturer?: string;
@@ -183,6 +199,7 @@ export interface AssetRecord {
 }
 
 export interface ScenarioData {
+    profileId: string;
     personnel: PersonnelRecord[];
     solutions: SolutionRecord[];
     products: ProductRecord[];
@@ -200,77 +217,88 @@ export interface ScenarioData {
     infrastructure: InfrastructureRecord[];
     components: ComponentRecord[];
     assets: AssetRecord[];
-    source: "sqlite";
 }
 
 // ============================================================================
-// SQLite Loader
+// Loader Function
 // ============================================================================
 
 /**
- * Load scenario data from SQLite database.
+ * Load profile data from profiles.sqlite database.
  * 
- * @param scenarioDir Path to the scenario directory (e.g., "../common/scenarios/mmc")
- * @returns ScenarioData containing all entity arrays
- * @throws Error if SQLite database not found
+ * @param scenarioDir Path to the scenarios directory (e.g., "../common/scenarios")
+ * @param profileId Profile ID to load (e.g., "mmc")
+ * @returns ScenarioData containing all entity arrays for the profile
+ * @throws Error if database not found or profile doesn't exist
  */
-export function loadScenarioData(scenarioDir: string): ScenarioData {
-    const dbPath = join(scenarioDir, "builds", "mmc.sqlite");
+export function loadScenarioData(scenarioDir: string, profileId: string = "mmc"): ScenarioData {
+    const dbPath = join(scenarioDir, "builds", "profiles.sqlite");
 
     if (!existsSync(dbPath)) {
         throw new Error(
-            `SQLite database not found at ${dbPath}. ` +
+            `Profiles database not found at ${dbPath}. ` +
             `Run 'bun run scenarios:build' to generate the database.`
         );
     }
 
-    console.log(`   📊 Loading scenario data from SQLite: ${dbPath}`);
+    console.log(`   📊 Loading profile '${profileId}' from: ${dbPath}`);
 
     const db = new Database(dbPath, { readonly: true });
 
     try {
-        const personnel = db.query("SELECT * FROM personnel").all() as PersonnelRecord[];
-        const solutions = db.query("SELECT * FROM solutions").all() as SolutionRecord[];
-        const products = db.query("SELECT * FROM products").all() as ProductRecord[];
-        const services = db.query("SELECT * FROM services").all() as ServiceRecord[];
-        const projects = db.query("SELECT * FROM projects").all() as ProjectRecord[];
-        const objectives = db.query("SELECT * FROM objectives").all() as ObjectiveRecord[];
-        const features = db.query("SELECT * FROM features").all() as FeatureRecord[];
-        const rules = db.query("SELECT * FROM rules").all() as RuleRecord[];
-        const scenarios = db.query("SELECT * FROM scenarios").all() as ScenarioRecord[];
-        const calendarEvents = db.query("SELECT * FROM calendar_events").all() as CalendarEventRecord[];
-        const chatChannels = db.query("SELECT * FROM chat_channels").all() as ChatChannelRecord[];
-        const chatMemberships = db.query("SELECT * FROM chat_memberships").all() as ChatMembershipRecord[];
-        const chatMessages = db.query("SELECT * FROM chat_messages").all() as ChatMessageRecord[];
-        const roles = db.query("SELECT * FROM roles").all() as RoleRecord[];
-        const infrastructure = db.query("SELECT * FROM infrastructure").all() as InfrastructureRecord[];
-        const components = db.query("SELECT * FROM components").all() as ComponentRecord[];
-        const assets = db.query("SELECT * FROM assets").all() as AssetRecord[];
+        // Verify profile exists
+        const profile = db.query("SELECT id FROM profile WHERE id = ?").get(profileId);
+        if (!profile) {
+            const available = db.query("SELECT id FROM profile").all() as { id: string }[];
+            throw new Error(
+                `Profile '${profileId}' not found. ` +
+                `Available profiles: ${available.map(p => p.id).join(", ")}`
+            );
+        }
+
+        const q = (table: string) =>
+            db.query(`SELECT * FROM ${table} WHERE profile_id = ?`).all(profileId);
 
         return {
-            personnel,
-            solutions,
-            products,
-            services,
-            projects,
-            objectives,
-            features,
-            rules,
-            scenarios,
-            calendarEvents,
-            chatChannels,
-            chatMemberships,
-            chatMessages,
-            roles,
-            infrastructure,
-            components,
-            assets,
-            source: "sqlite",
+            profileId,
+            personnel: q("personnel") as PersonnelRecord[],
+            solutions: q("solutions") as SolutionRecord[],
+            products: q("products") as ProductRecord[],
+            services: q("services") as ServiceRecord[],
+            projects: q("projects") as ProjectRecord[],
+            objectives: q("objectives") as ObjectiveRecord[],
+            features: q("features") as FeatureRecord[],
+            rules: q("rules") as RuleRecord[],
+            scenarios: q("scenarios") as ScenarioRecord[],
+            calendarEvents: q("calendar_events") as CalendarEventRecord[],
+            chatChannels: q("chat_channels") as ChatChannelRecord[],
+            chatMemberships: q("chat_memberships") as ChatMembershipRecord[],
+            chatMessages: q("chat_messages") as ChatMessageRecord[],
+            roles: q("roles") as RoleRecord[],
+            infrastructure: q("infrastructure") as InfrastructureRecord[],
+            components: q("components") as ComponentRecord[],
+            assets: q("assets") as AssetRecord[],
         };
     } finally {
         db.close();
     }
 }
 
-// Alias for backward compatibility
+/**
+ * List all available profile IDs.
+ */
+export function listProfiles(scenarioDir: string): string[] {
+    const dbPath = join(scenarioDir, "builds", "profiles.sqlite");
+    if (!existsSync(dbPath)) return [];
+
+    const db = new Database(dbPath, { readonly: true });
+    try {
+        const profiles = db.query("SELECT id FROM profile").all() as { id: string }[];
+        return profiles.map(p => p.id);
+    } finally {
+        db.close();
+    }
+}
+
+// Backward compatibility alias
 export const loadScenarioDataFromSqlite = loadScenarioData;

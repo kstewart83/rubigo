@@ -1,56 +1,44 @@
 -- ============================================================================
--- 006_work.sql - Activities, Roles, Assignments, Allocations
+-- 006_work.sql - Work management schema
 -- ============================================================================
--- Source: projects.toml (work management entities)
 
 CREATE TABLE IF NOT EXISTS activities (
-    id TEXT PRIMARY KEY,
+    id TEXT NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
     name TEXT NOT NULL,
     description TEXT,
-    parent_id TEXT REFERENCES activities(id),
-    initiative_id TEXT REFERENCES initiatives(id),
-    status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'active', 'complete', 'cancelled', 'blocked'))
+    initiative_id TEXT,
+    status TEXT DEFAULT 'planned',
+    start_date TEXT,
+    end_date TEXT,
+    PRIMARY KEY (id, profile_id)
 );
 
 CREATE TABLE IF NOT EXISTS roles (
-    id TEXT PRIMARY KEY,
+    id TEXT NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
     name TEXT NOT NULL,
-    description TEXT
+    description TEXT,
+    PRIMARY KEY (id, profile_id)
 );
 
 CREATE TABLE IF NOT EXISTS assignments (
-    id TEXT PRIMARY KEY,
-    activity_id TEXT NOT NULL REFERENCES activities(id),
-    role_id TEXT NOT NULL REFERENCES roles(id),
-    quantity INTEGER DEFAULT 1,
-    unit TEXT DEFAULT 'fte',
-    raci_type TEXT CHECK(raci_type IN ('responsible', 'accountable', 'consulted', 'informed'))
+    id TEXT NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    activity_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    role_id TEXT,
+    PRIMARY KEY (id, profile_id)
 );
 
 CREATE TABLE IF NOT EXISTS allocations (
-    id TEXT PRIMARY KEY,
-    assignment_id TEXT NOT NULL REFERENCES assignments(id),
-    person_id TEXT NOT NULL REFERENCES personnel(id),
-    quantity_contributed REAL,
-    start_date TEXT,
-    end_date TEXT
+    id TEXT NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    assignment_id TEXT NOT NULL,
+    hours REAL,
+    period TEXT,
+    PRIMARY KEY (id, profile_id)
 );
 
--- ============================================================================
--- Roles
--- ============================================================================
-
-INSERT INTO roles (id, name, description) VALUES
-('role-proj-mgr', 'Project Manager', 'Oversees project planning, execution, and delivery');
-
-INSERT INTO roles (id, name, description) VALUES
-('role-dev', 'Developer', 'Designs and implements software solutions');
-
-INSERT INTO roles (id, name, description) VALUES
-('role-qa', 'Quality Assurance', 'Tests and validates software quality');
-
-INSERT INTO roles (id, name, description) VALUES
-('role-analyst', 'Business Analyst', 'Gathers requirements and defines specifications');
-
--- NOTE: Activities, assignments, and allocations would be populated from projects.toml
--- This schema is ready for full data migration
+CREATE INDEX IF NOT EXISTS idx_roles_profile ON roles(profile_id);
+CREATE INDEX IF NOT EXISTS idx_activities_profile ON activities(profile_id);

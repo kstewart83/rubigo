@@ -1,134 +1,114 @@
 #!/usr/bin/env bun
 /**
- * Build Scenarios Script
+ * Build Profiles SQLite Database
  * 
- * Builds SQLite databases from SQL schema files for each scenario.
+ * Compiles schema files and all profile data into a single profiles.sqlite database.
  * 
- * Usage:
- *   bun run scenarios:build
- *   bun run scenarios:build --scenario=mmc
+ * Usage: bun src/scripts/build-scenarios.ts
  */
 
 import { Database } from "bun:sqlite";
-import { readdir, readFile, mkdir, unlink, exists } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { readFileSync, readdirSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { join, basename } from "path";
 
-interface BuildOptions {
-    scenario: string;
-    verbose: boolean;
+// Resolve paths relative to rubigo-react
+const scriptDir = import.meta.dir;
+const projectRoot = join(scriptDir, "..", "..", "..");
+
+const SCHEMA_DIR = join(projectRoot, "common", "scenarios", "schema");
+const PROFILES_DIR = join(projectRoot, "common", "scenarios", "profiles");
+const BUILDS_DIR = join(projectRoot, "common", "scenarios", "builds");
+const OUTPUT_FILE = join(BUILDS_DIR, "profiles.sqlite");
+
+console.log("============================================================");
+console.log("🏗️  Rubigo Profiles Builder");
+console.log("============================================================\n");
+
+// Ensure builds directory exists
+if (!existsSync(BUILDS_DIR)) {
+    mkdirSync(BUILDS_DIR, { recursive: true });
 }
 
-function parseArgs(): BuildOptions {
-    const args = process.argv.slice(2);
-    const options: BuildOptions = {
-        scenario: "mmc",
-        verbose: false,
-    };
-
-    for (const arg of args) {
-        if (arg.startsWith("--scenario=")) {
-            options.scenario = arg.split("=")[1];
-        }
-        if (arg === "--verbose" || arg === "-v") {
-            options.verbose = true;
-        }
-    }
-
-    return options;
+// Remove existing database
+if (existsSync(OUTPUT_FILE)) {
+    unlinkSync(OUTPUT_FILE);
 }
 
-async function getSqlFiles(dir: string): Promise<string[]> {
-    const files = await readdir(dir);
-    return files
-        .filter(f => f.endsWith(".sql"))
-        .sort() // Ensures numeric ordering: 000_, 001_, etc.
-        .map(f => join(dir, f));
-}
+// Create new database
+const db = new Database(OUTPUT_FILE);
 
-async function buildScenario(scenario: string, verbose: boolean): Promise<void> {
-    console.log(`\n🔨 Building scenario: ${scenario}`);
+// Load and execute schema files
+console.log("📁 Loading schema files from", SCHEMA_DIR);
+const schemaFiles = readdirSync(SCHEMA_DIR)
+    .filter(f => f.endsWith(".sql"))
+    .sort();
 
-    // Paths - common/ is at repo root, not within rubigo-react
-    const projectRoot = join(import.meta.dir, "..", "..", "..");
-    const commonDir = join(projectRoot, "common", "scenarios");
-    const schemaDir = join(commonDir, "schema");
-    const scenarioDir = join(commonDir, scenario);
-    const buildsDir = join(scenarioDir, "builds");
-    const dbPath = join(buildsDir, `${scenario}.sqlite`);
-
-    // Ensure builds directory exists
-    await mkdir(buildsDir, { recursive: true });
-
-    // Remove existing database if present
-    if (await exists(dbPath)) {
-        await unlink(dbPath);
-        if (verbose) console.log(`   🗑️  Removed existing ${basename(dbPath)}`);
-    }
-
-    // Create new database
-    const db = new Database(dbPath);
-
+for (const file of schemaFiles) {
+    const sql = readFileSync(join(SCHEMA_DIR, file), "utf-8");
     try {
-        // 1. Execute schema files in order
-        console.log(`   📁 Loading schema files from ${schemaDir}`);
-        const schemaFiles = await getSqlFiles(schemaDir);
-
-        for (const file of schemaFiles) {
-            const sql = await readFile(file, "utf-8");
-            const filename = basename(file);
-
-            if (verbose) console.log(`   📄 Executing ${filename}`);
-
-            try {
-                db.exec(sql);
-            } catch (error) {
-                console.error(`   ❌ Error in ${filename}:`, error);
-                throw error;
-            }
-        }
-        console.log(`   ✅ Loaded ${schemaFiles.length} schema files`);
-
-        // 2. Execute profile-specific SQL (company configuration)
-        const profileSql = join(scenarioDir, "profile.sql");
-        if (await exists(profileSql)) {
-            const sql = await readFile(profileSql, "utf-8");
-            if (verbose) console.log(`   📄 Executing profile.sql`);
-            db.exec(sql);
-            console.log(`   ✅ Loaded profile data`);
-        }
-
-        // 3. Verify build
-        const personnelCount = db.query("SELECT COUNT(*) as count FROM personnel").get() as { count: number };
-        const objectivesCount = db.query("SELECT COUNT(*) as count FROM objectives").get() as { count: number };
-        const featuresCount = db.query("SELECT COUNT(*) as count FROM features").get() as { count: number };
-        const profileInfo = db.query("SELECT name FROM profile").get() as { name: string } | null;
-
-        console.log(`\n   📊 Build Summary:`);
-        console.log(`      Profile: ${profileInfo?.name || "Unknown"}`);
-        console.log(`      Personnel: ${personnelCount.count}`);
-        console.log(`      Objectives: ${objectivesCount.count}`);
-        console.log(`      Features: ${featuresCount.count}`);
-        console.log(`   \n   💾 Database: ${dbPath}`);
-
-    } finally {
-        db.close();
-    }
-}
-
-async function main(): Promise<void> {
-    const options = parseArgs();
-
-    console.log("=".repeat(60));
-    console.log("🏗️  Rubigo Scenario Builder");
-    console.log("=".repeat(60));
-
-    try {
-        await buildScenario(options.scenario, options.verbose);
-        console.log("\n✅ Build complete!");
+        db.exec(sql);
+        console.log(`   ✅ ${file}`);
     } catch (error) {
-        console.error("\n❌ Build failed:", error);
+        console.error(`   ❌ ${file}: ${error}`);
         process.exit(1);
     }
 }
 
-main();
+console.log(`\n📂 Loading profile data from ${PROFILES_DIR}`);
+
+// Find all profile directories
+const profileDirs = readdirSync(PROFILES_DIR, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+for (const profileId of profileDirs) {
+    const profileDir = join(PROFILES_DIR, profileId);
+    const profileSql = join(profileDir, "profile.sql");
+    const dataSql = join(profileDir, "data.sql");
+
+    console.log(`\n   🔹 Profile: ${profileId}`);
+
+    // Load profile metadata
+    if (existsSync(profileSql)) {
+        try {
+            db.exec(readFileSync(profileSql, "utf-8"));
+            console.log(`      ✅ profile.sql`);
+        } catch (error) {
+            console.error(`      ❌ profile.sql: ${error}`);
+        }
+    }
+
+    // Load profile data
+    if (existsSync(dataSql)) {
+        try {
+            db.exec(readFileSync(dataSql, "utf-8"));
+            console.log(`      ✅ data.sql`);
+        } catch (error) {
+            console.error(`      ❌ data.sql: ${error}`);
+        }
+    }
+}
+
+// Print summary
+console.log("\n📊 Build Summary:");
+
+// Profile info
+const profiles = db.query("SELECT id, name FROM profile").all() as { id: string; name: string }[];
+for (const p of profiles) {
+    console.log(`   Profile: ${p.name} (${p.id})`);
+
+    const personnel = db.query("SELECT COUNT(*) as c FROM personnel WHERE profile_id = ?").get(p.id) as { c: number };
+    const objectives = db.query("SELECT COUNT(*) as c FROM objectives WHERE profile_id = ?").get(p.id) as { c: number };
+    const features = db.query("SELECT COUNT(*) as c FROM features WHERE profile_id = ?").get(p.id) as { c: number };
+    const events = db.query("SELECT COUNT(*) as c FROM calendar_events WHERE profile_id = ?").get(p.id) as { c: number };
+
+    console.log(`      Personnel: ${personnel.c}`);
+    console.log(`      Objectives: ${objectives.c}`);
+    console.log(`      Features: ${features.c}`);
+    console.log(`      Events: ${events.c}`);
+}
+
+console.log(`\n   💾 Database: ${OUTPUT_FILE}`);
+
+db.close();
+console.log("\n✅ Build complete!\n");
