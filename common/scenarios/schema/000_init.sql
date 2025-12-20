@@ -2,7 +2,7 @@
 -- 000_init.sql - Base PRAGMA settings and scenario metadata
 -- ============================================================================
 
-PRAGMA foreign_keys = ON;
+PRAGMA foreign_keys = OFF;  -- Disabled for bulk loading; validated by sync script
 PRAGMA journal_mode = WAL;
 
 -- Scenario metadata table
