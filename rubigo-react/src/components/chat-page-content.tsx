@@ -142,7 +142,13 @@ export function ChatPageContent() {
 
         const loadMessages = async () => {
             const msgs = await getMessages(selectedChannel);
-            setMessages(msgs);
+            // Only update if messages actually changed (compare IDs to avoid re-renders)
+            setMessages((prev) => {
+                const prevIds = prev.map(m => m.id).join(',');
+                const newIds = msgs.map(m => m.id).join(',');
+                if (prevIds === newIds) return prev; // No change
+                return msgs;
+            });
 
             // Load reactions for each message
             if (currentPersona) {
@@ -153,21 +159,32 @@ export function ChatPageContent() {
                         reactionsMap[msg.id] = reactions;
                     }
                 }
-                setMessageReactions(reactionsMap);
+                setMessageReactions((prev) => {
+                    // Only update if reactions actually changed
+                    const prevStr = JSON.stringify(prev);
+                    const newStr = JSON.stringify(reactionsMap);
+                    if (prevStr === newStr) return prev;
+                    return reactionsMap;
+                });
             }
         };
 
         loadMessages();
 
-        // Poll for new messages every 3 seconds
-        const interval = setInterval(loadMessages, 3000);
+        // Poll for new messages every 5 seconds (increased from 3s)
+        const interval = setInterval(loadMessages, 5000);
         return () => clearInterval(interval);
     }, [selectedChannel, currentPersona]);
 
-    // Scroll to bottom when messages change
+    // Scroll to bottom only on initial load or when new messages are added
+    const prevMessageCountRef = useRef(0);
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        // Only scroll if message count increased (new message arrived)
+        if (messages.length > prevMessageCountRef.current) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+        prevMessageCountRef.current = messages.length;
+    }, [messages.length]);
 
     // Handle reaction toggle
     const handleReactionToggle = async (messageId: string, emoji: string) => {

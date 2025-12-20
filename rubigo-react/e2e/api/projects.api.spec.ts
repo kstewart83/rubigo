@@ -2,7 +2,7 @@
  * Projects API E2E Tests
  * 
  * Tests the Projects REST API endpoints using direct HTTP calls.
- * Maps to requirements in common/scenarios/mmc/requirements/projects.toml
+ * Maps to requirements in common/seed/mmc/requirements/projects.toml
  */
 
 import { test, expect } from "@playwright/test";

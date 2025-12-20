@@ -64,11 +64,10 @@ const profileDirs = readdirSync(PROFILES_DIR, { withFileTypes: true })
 for (const profileId of profileDirs) {
     const profileDir = join(PROFILES_DIR, profileId);
     const profileSql = join(profileDir, "profile.sql");
-    const dataSql = join(profileDir, "data.sql");
 
     console.log(`\n   🔹 Profile: ${profileId}`);
 
-    // Load profile metadata
+    // Load profile metadata first
     if (existsSync(profileSql)) {
         try {
             db.exec(readFileSync(profileSql, "utf-8"));
@@ -78,13 +77,30 @@ for (const profileId of profileDirs) {
         }
     }
 
-    // Load profile data
-    if (existsSync(dataSql)) {
+    // Recursively find all .sql files (except profile.sql) and execute in alphabetical order
+    // This supports nested structures like: personnel.sql, projects/solutions.sql, collaboration/chat.sql
+    const findSqlFiles = (dir: string, prefix = ""): string[] => {
+        const files: string[] = [];
+        const entries = readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+            if (entry.isDirectory()) {
+                files.push(...findSqlFiles(join(dir, entry.name), relPath));
+            } else if (entry.name.endsWith(".sql") && entry.name !== "profile.sql") {
+                files.push(relPath);
+            }
+        }
+        return files;
+    };
+
+    const sqlFiles = findSqlFiles(profileDir).sort();
+    for (const relPath of sqlFiles) {
+        const fullPath = join(profileDir, relPath);
         try {
-            db.exec(readFileSync(dataSql, "utf-8"));
-            console.log(`      ✅ data.sql`);
+            db.exec(readFileSync(fullPath, "utf-8"));
+            console.log(`      ✅ ${relPath}`);
         } catch (error) {
-            console.error(`      ❌ data.sql: ${error}`);
+            console.error(`      ❌ ${relPath}: ${error}`);
         }
     }
 }
