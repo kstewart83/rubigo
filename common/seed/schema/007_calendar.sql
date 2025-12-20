@@ -33,3 +33,22 @@ CREATE TABLE IF NOT EXISTS calendar_participants (
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_profile ON calendar_events(profile_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_participants_profile ON calendar_participants(profile_id);
+
+CREATE TABLE IF NOT EXISTS calendar_deviations (
+    id TEXT NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    event_id TEXT NOT NULL,
+    original_date TEXT,
+    new_date TEXT,
+    cancelled INTEGER DEFAULT 0,
+    override_start_time TEXT,
+    override_end_time TEXT,
+    override_title TEXT,
+    override_description TEXT,
+    override_location TEXT,
+    override_timezone TEXT,
+    PRIMARY KEY (id, profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_deviations_profile ON calendar_deviations(profile_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_deviations_event ON calendar_deviations(event_id);
