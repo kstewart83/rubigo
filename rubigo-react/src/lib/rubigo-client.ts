@@ -198,11 +198,15 @@ export interface CalendarEventInput {
     | "interview" | "holiday" | "conference" | "review" | "planning"
     | "appointment" | "reminder" | "outOfOffice";
     recurrence?: "none" | "daily" | "weekly" | "monthly" | "yearly";
+    recurrenceInterval?: number;
     recurrenceDays?: string[];  // ["Mon", "Wed", "Fri"]
     recurrenceUntil?: string;
     timezone?: string;
     location?: string;
     virtualUrl?: string;
+    allDay?: boolean;
+    participantIds?: string[];
+    organizerId?: string;
 }
 
 // Chat types
@@ -751,6 +755,42 @@ export class RubigoClient {
 
     async getChatReactions(messageId: string): Promise<ListResult<unknown>> {
         return this.request<ListResult<unknown>>("GET", `/api/chat/reactions/${messageId}`);
+    }
+
+    // =========================================================================
+    // Email Sync Operations
+    // =========================================================================
+
+    async createEmailThread(input: {
+        subject: string;
+        createdAt?: string;
+        updatedAt?: string;
+    }): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/email/sync", { action: "createThread", ...input });
+    }
+
+    async createEmail(input: {
+        threadId: string;
+        fromId: string;
+        subject: string;
+        body: string;
+        parentEmailId?: string;
+        sentAt?: string;
+        isDraft?: boolean;
+        createdAt?: string;
+    }): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/email/sync", { action: "createEmail", ...input });
+    }
+
+    async createEmailRecipient(input: {
+        emailId: string;
+        personnelId?: string;
+        emailAddress?: string;
+        type?: "to" | "cc" | "bcc";
+        folder?: "inbox" | "sent" | "drafts" | "trash";
+        read?: boolean;
+    }): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/email/sync", { action: "createRecipient", ...input });
     }
 }
 

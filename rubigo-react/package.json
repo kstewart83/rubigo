@@ -7,7 +7,6 @@
     "dev:clean": "RUBIGO_SHOW_COMMIT=true bun --bun next dev --turbopack",
     "dev:isolated": "NEXT_DIST_DIR=.next-isolated RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack",
     "dev:mmc": "bun src/scripts/dev-mmc.ts",
-    "dev:sync": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun run src/db/sync.ts --watch",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
     "lint": "eslint .",
@@ -17,9 +16,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/seed.ts",
-    "db:sync": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/sync.ts",
-    "db:sync:watch": "RUBIGO_SEED_DIR=../common/scenarios/mmc bun src/db/sync.ts --watch",
     "db:clean": "bun src/db/clean.ts",
     "db:studio": "drizzle-kit studio",
     "test:e2e": "bunx playwright test",
@@ -29,9 +25,8 @@
     "deploy:monitor": "bun scripts/deploy-monitor.ts",
     "incident:triage": "bun scripts/incident-triage.ts",
     "wip:init": "bun scripts/wip-init.ts",
-    "sync:scenario": "bun src/scripts/sync-scenario.ts",
     "scenarios:build": "bun src/scripts/build-scenarios.ts",
-    "sync:scenario:sqlite": "bun src/scripts/sync-scenario-sqlite.ts"
+    "sync:scenario": "bun src/scripts/sync-scenario-sqlite.ts"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",

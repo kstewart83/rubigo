@@ -133,7 +133,7 @@ export async function getChannel(id: string): Promise<ChatChannelWithMembers | n
 export async function joinChannel(
     channelId: string,
     userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; existed?: boolean; error?: string }> {
     try {
         const now = new Date().toISOString();
 
@@ -149,7 +149,7 @@ export async function joinChannel(
             );
 
         if (existing.length > 0) {
-            return { success: true }; // Already a member
+            return { success: true, existed: true }; // Already a member
         }
 
         await db.insert(chatMembers).values({

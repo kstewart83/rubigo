@@ -2,7 +2,7 @@
  * MCP Server E2E Tests
  *
  * Tests the MCP (Model Context Protocol) server endpoints.
- * Maps to requirements in common/scenarios/mmc/integration.toml
+ * Maps to requirements in common/seed/mmc/integration.toml
  *
  * Feature: feat-mcp-server
  */
