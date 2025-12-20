@@ -55,6 +55,11 @@ import {
 
 type FolderType = "inbox" | "sent" | "drafts" | "trash";
 
+/** Extended Recipient with display name for UI */
+interface RecipientWithName extends Recipient {
+    displayName?: string;
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -73,8 +78,8 @@ export function EmailPageContent() {
     const [draftId, setDraftId] = useState<string | null>(null);
 
     // Compose form state
-    const [toRecipients, setToRecipients] = useState<Recipient[]>([]);
-    const [ccRecipients, setCcRecipients] = useState<Recipient[]>([]);
+    const [toRecipients, setToRecipients] = useState<RecipientWithName[]>([]);
+    const [ccRecipients, setCcRecipients] = useState<RecipientWithName[]>([]);
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
     const [recipientInput, setRecipientInput] = useState("");
@@ -151,20 +156,20 @@ export function EmailPageContent() {
             setCcInput("");
         } else if (selectedEmail) {
             if (mode === "reply") {
-                setToRecipients([{ type: "to", personnelId: selectedEmail.fromId }]);
+                setToRecipients([{ type: "to", personnelId: selectedEmail.fromId, displayName: selectedEmail.senderName }]);
                 setCcRecipients([]);
                 setSubject(`Re: ${selectedEmail.subject}`);
                 setBody(`\n\n---\nOn ${new Date(selectedEmail.sentAt || "").toLocaleString()}, ${selectedEmail.senderName} wrote:\n${selectedEmail.body}`);
             } else if (mode === "replyAll") {
                 // Add original sender and all recipients except self
-                const toList: Recipient[] = [{ type: "to", personnelId: selectedEmail.fromId }];
-                const ccList: Recipient[] = [];
+                const toList: RecipientWithName[] = [{ type: "to", personnelId: selectedEmail.fromId, displayName: selectedEmail.senderName }];
+                const ccList: RecipientWithName[] = [];
                 for (const r of selectedEmail.recipients) {
                     if (r.personnelId && r.personnelId !== userId) {
                         if (r.type === "to") {
-                            toList.push({ type: "to", personnelId: r.personnelId });
+                            toList.push({ type: "to", personnelId: r.personnelId, displayName: r.name || undefined });
                         } else if (r.type === "cc") {
-                            ccList.push({ type: "cc", personnelId: r.personnelId });
+                            ccList.push({ type: "cc", personnelId: r.personnelId, displayName: r.name || undefined });
                         }
                     }
                 }
@@ -245,12 +250,13 @@ export function EmailPageContent() {
     };
 
     // Add recipient
-    const addRecipient = (personnelId?: string, emailAddress?: string) => {
+    const addRecipient = (personnelId?: string, emailAddress?: string, displayName?: string) => {
         if (!personnelId && !emailAddress) return;
-        const newRecipient: Recipient = {
+        const newRecipient: RecipientWithName = {
             type: "to",
             personnelId,
             emailAddress,
+            displayName,
         };
         setToRecipients([...toRecipients, newRecipient]);
         setRecipientInput("");
@@ -258,12 +264,13 @@ export function EmailPageContent() {
     };
 
     // Add CC recipient
-    const addCcRecipient = (personnelId?: string, emailAddress?: string) => {
+    const addCcRecipient = (personnelId?: string, emailAddress?: string, displayName?: string) => {
         if (!personnelId && !emailAddress) return;
-        const newRecipient: Recipient = {
+        const newRecipient: RecipientWithName = {
             type: "cc",
             personnelId,
             emailAddress,
+            displayName,
         };
         setCcRecipients([...ccRecipients, newRecipient]);
         setCcInput("");
@@ -504,6 +511,7 @@ export function EmailPageContent() {
                                                             type: "to" as const,
                                                             personnelId: r.personnelId || undefined,
                                                             emailAddress: r.emailAddress || undefined,
+                                                            displayName: r.name || undefined,
                                                         }))
                                                 );
                                                 setCcRecipients(
@@ -513,6 +521,7 @@ export function EmailPageContent() {
                                                             type: "cc" as const,
                                                             personnelId: r.personnelId || undefined,
                                                             emailAddress: r.emailAddress || undefined,
+                                                            displayName: r.name || undefined,
                                                         }))
                                                 );
                                                 setSubject(selectedEmail.subject);
@@ -682,7 +691,7 @@ export function EmailPageContent() {
                             {showPersonnelSearch && recipientInput.length > 0 && (
                                 <PersonnelSearch
                                     query={recipientInput}
-                                    onSelect={(personnelId) => addRecipient(personnelId)}
+                                    onSelect={(personnelId, name) => addRecipient(personnelId, undefined, name)}
                                 />
                             )}
                         </div>
@@ -714,7 +723,7 @@ export function EmailPageContent() {
                                 {showCcPersonnelSearch && ccInput.length > 0 && (
                                     <PersonnelSearch
                                         query={ccInput}
-                                        onSelect={(personnelId) => addCcRecipient(personnelId)}
+                                        onSelect={(personnelId, name) => addCcRecipient(personnelId, undefined, name)}
                                     />
                                 )}
                             </div>
@@ -819,11 +828,11 @@ function RecipientChip({
     recipient,
     onRemove,
 }: {
-    recipient: Recipient;
+    recipient: RecipientWithName;
     onRemove: () => void;
 }) {
-    // For personnel, we'd need to look up their name - for now show ID or address
-    const display = recipient.emailAddress || recipient.personnelId || "Unknown";
+    // Display name first, then email address, then ID as fallback
+    const display = recipient.displayName || recipient.emailAddress || recipient.personnelId || "Unknown";
 
     return (
         <span
@@ -847,7 +856,7 @@ function PersonnelSearch({
     onSelect,
 }: {
     query: string;
-    onSelect: (personnelId: string) => void;
+    onSelect: (personnelId: string, name: string) => void;
 }) {
     const [results, setResults] = useState<{ id: string; name: string; email: string }[]>([]);
 
@@ -876,7 +885,7 @@ function PersonnelSearch({
                     key={person.id}
                     data-testid="recipient-option"
                     className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
-                    onClick={() => onSelect(person.id)}
+                    onClick={() => onSelect(person.id, person.name)}
                 >
                     <div>{person.name}</div>
                     <div className="text-xs text-muted-foreground">{person.email}</div>
