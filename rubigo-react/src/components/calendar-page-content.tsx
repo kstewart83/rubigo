@@ -1808,7 +1808,14 @@ function EventDetailsPanel({
                     <div>
                         <Label className="text-muted-foreground">Date & Time</Label>
                         <p>
-                            {displayStartTime.toLocaleDateString()} {displayStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {displayEndTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {displayStartTime.toLocaleDateString()}{" "}
+                            {isAllDayEvent(event) ? (
+                                <span className="font-medium">All Day</span>
+                            ) : (
+                                <>
+                                    {displayStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {displayEndTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </>
+                            )}
                             {event.timezone && (
                                 <span className="text-muted-foreground"> ({getTimezoneDisplayName(event.timezone)})</span>
                             )}

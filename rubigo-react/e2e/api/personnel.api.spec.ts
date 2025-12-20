@@ -57,7 +57,8 @@ test.describe("Personnel API - CRUD Operations", () => {
     });
 
     test("GET /api/personnel - list with pagination", async ({ request }) => {
-        const response = await request.get(`${API_URL}/api/personnel?page=1&pageSize=5`, {
+        // Note: API supports pageSize of 10, 25, 50, 100 only
+        const response = await request.get(`${API_URL}/api/personnel?page=1&pageSize=10`, {
             headers,
         });
 
@@ -65,7 +66,7 @@ test.describe("Personnel API - CRUD Operations", () => {
         const body = await response.json();
         expect(body.success).toBe(true);
         expect(body.page).toBe(1);
-        expect(body.pageSize).toBe(5);
+        expect(body.pageSize).toBe(10);
     });
 
     test("GET /api/personnel - list with search", async ({ request }) => {
