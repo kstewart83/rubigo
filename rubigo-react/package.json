@@ -28,7 +28,9 @@
     "deploy:monitor": "bun scripts/deploy-monitor.ts",
     "incident:triage": "bun scripts/incident-triage.ts",
     "wip:init": "bun scripts/wip-init.ts",
-    "sync:scenario": "bun src/scripts/sync-scenario.ts"
+    "sync:scenario": "bun src/scripts/sync-scenario.ts",
+    "scenarios:build": "bun src/scripts/build-scenarios.ts",
+    "sync:scenario:sqlite": "bun src/scripts/sync-scenario-sqlite.ts"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",

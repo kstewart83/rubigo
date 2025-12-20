@@ -1,0 +1,4 @@
+# Ignore built database files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
