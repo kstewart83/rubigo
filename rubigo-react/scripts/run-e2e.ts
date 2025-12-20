@@ -4,8 +4,8 @@
  *
  * Usage: bun run scripts/run-e2e.ts
  *
- * Port configuration is read from ../wip.toml if running in a WIP worktree,
- * otherwise falls back to default port 3600.
+ * Port and database configuration is read from ../wip.toml if running in a WIP worktree,
+ * otherwise falls back to defaults (port 3600, database rubigo-e2e.db).
  */
 
 import { spawn, type Subprocess } from "bun";
@@ -15,12 +15,18 @@ import { join } from "path";
 
 const LOG_FILE = ".e2e-server.log";
 const DEFAULT_PORT = 3600;
+const DEFAULT_E2E_DATABASE = "rubigo-e2e.db";
 const SERVER_STARTUP_DELAY = 8000;
 
 interface WipConfig {
     ports?: {
         e2e?: number;
         base?: number;
+    };
+    projects?: {
+        "rubigo-react"?: {
+            e2e_database?: string;
+        };
     };
 }
 
@@ -45,6 +51,28 @@ async function getPort(): Promise<number> {
         // wip.toml not found or invalid - use default
     }
     return DEFAULT_PORT;
+}
+
+/**
+ * Load wip.toml configuration
+ * Returns null if not in a WIP worktree
+ */
+async function loadWipConfig(): Promise<WipConfig | null> {
+    try {
+        const wipTomlPath = join(process.cwd(), "..", "wip.toml");
+        const content = await readFile(wipTomlPath, "utf-8");
+        return parseToml(content) as WipConfig;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Get E2E database path from wip.toml or use default
+ * Uses projects.rubigo-react.e2e_database if specified, otherwise default
+ */
+function getDatabasePath(config: WipConfig | null): string {
+    return config?.projects?.["rubigo-react"]?.e2e_database || DEFAULT_E2E_DATABASE;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -74,7 +102,7 @@ async function runCommand(command: string, args: string[], env?: Record<string, 
     return await proc.exited;
 }
 
-async function startServer(port: number): Promise<{ proc: Subprocess; logContent: string }> {
+async function startServer(port: number, databasePath: string): Promise<{ proc: Subprocess; logContent: string }> {
     const logFile = Bun.file(LOG_FILE);
     const logWriter = logFile.writer();
 
@@ -82,7 +110,12 @@ async function startServer(port: number): Promise<{ proc: Subprocess; logContent
         cmd: ["bun", "--bun", "run", "start"],
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, PORT: String(port), RUBIGO_AUTO_INIT: "true" },
+        env: { 
+            ...process.env, 
+            PORT: String(port), 
+            RUBIGO_AUTO_INIT: "true",
+            DATABASE_URL: `./${databasePath}`,
+        },
     });
 
     // Collect output for token extraction
@@ -156,11 +189,15 @@ async function main() {
     let serverProc: Subprocess | null = null;
     let testExitCode = 0;
 
+    // Load wip config for database path
+    const wipConfig = await loadWipConfig();
+    const databasePath = getDatabasePath(wipConfig);
+
     try {
         // Step 1: Delete and recreate database to ensure schema is fresh
-        console.log("📦 Step 1: Resetting database...");
+        console.log(`📦 Step 1: Resetting database (${databasePath})...`);
         try {
-            await unlink("rubigo.db");
+            await unlink(databasePath);
             console.log("   Deleted existing database");
         } catch {
             console.log("   No existing database found");
@@ -168,7 +205,7 @@ async function main() {
 
         // Step 1b: Run migrations to create fresh schema
         console.log("📦 Step 1b: Running migrations...");
-        await runCommand("bun", ["run", "db:migrate"]);
+        await runCommand("bun", ["run", "db:migrate"], { DATABASE_URL: `./${databasePath}` });
         console.log();
 
         // Step 2: Build production bundle
@@ -184,8 +221,8 @@ async function main() {
         console.log(`🚀 Step 3: Starting production server on port ${port}...`);
         await killProcessOnPort(port);
 
-        console.log("   Starting server...");
-        const { proc, logContent } = await startServer(port);
+        console.log(`   Starting server (database: ${databasePath})...`);
+        const { proc, logContent } = await startServer(port, databasePath);
         serverProc = proc;
 
         console.log(`   Server running on http://localhost:${port}`);
