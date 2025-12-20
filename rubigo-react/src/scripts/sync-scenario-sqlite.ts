@@ -783,6 +783,43 @@ async function main() {
     }
     allStats.calendarEvents = { created: calendarCreated, skipped: calendarSkipped, failed: calendarFailed, updated: 0, deleted: 0 };
 
+    // 14. Calendar Deviations - sync orphaned deviation examples
+    console.log(`\n📦 Syncing ${data.calendarDeviations.length} calendar deviations...`);
+    let deviationCreated = 0, deviationSkipped = 0, deviationFailed = 0;
+
+    // Need to look up existing event IDs by title to resolve event_id
+    for (const deviation of data.calendarDeviations) {
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would create deviation for event: ${deviation.event_id}, date: ${deviation.original_date || deviation.new_date}`);
+            deviationCreated++;
+        } else {
+            // Use the createDeviation API (need to add to client)
+            const result = await client.createCalendarDeviation({
+                eventId: deviation.event_id,
+                originalDate: deviation.original_date || undefined,
+                newDate: deviation.new_date || undefined,
+                cancelled: deviation.cancelled === 1,
+                overrideStartTime: deviation.override_start_time || undefined,
+                overrideEndTime: deviation.override_end_time || undefined,
+                overrideTitle: deviation.override_title || undefined,
+                overrideDescription: deviation.override_description || undefined,
+                overrideLocation: deviation.override_location || undefined,
+                overrideTimezone: deviation.override_timezone || undefined,
+            });
+            if (result.success) {
+                if ((result as { existed?: boolean }).existed) {
+                    deviationSkipped++;
+                } else {
+                    deviationCreated++;
+                }
+            } else {
+                deviationFailed++;
+                console.log(`   ❌ Failed to create deviation: ${result.error}`);
+            }
+        }
+    }
+    allStats.calendarDeviations = { created: deviationCreated, skipped: deviationSkipped, failed: deviationFailed, updated: 0, deleted: 0 };
+
     // =========================================================================
     // Sync Email (threads, emails, recipients)
     // =========================================================================
