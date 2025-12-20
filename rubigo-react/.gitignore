@@ -55,3 +55,9 @@ rubigo.db-shm
 .e2e-server.log
 /playwright-report/
 /test-results/
+
+# Isolated dev/E2E environments
+/.next-isolated/
+rubigo-e2e.db
+rubigo-e2e.db-wal
+rubigo-e2e.db-shm
