@@ -24,6 +24,7 @@ interface CliArgs {
     url: string;
     token: string;
     scenario: string;
+    profile: string;
     dryRun: boolean;
 }
 
@@ -33,7 +34,8 @@ function parseArgs(): CliArgs {
         mode: "create",
         url: "http://localhost:3000",
         token: "",
-        scenario: "../common/scenarios/mmc",
+        scenario: "../common/scenarios",
+        profile: "mmc",
         dryRun: false,
     };
 
@@ -52,6 +54,8 @@ function parseArgs(): CliArgs {
             result.token = arg.split("=")[1];
         } else if (arg.startsWith("--scenario=")) {
             result.scenario = arg.split("=")[1];
+        } else if (arg.startsWith("--profile=")) {
+            result.profile = arg.split("=")[1];
         } else if (arg === "--dry-run") {
             result.dryRun = true;
         }
@@ -59,7 +63,8 @@ function parseArgs(): CliArgs {
 
     result.token = result.token || process.env.RUBIGO_API_TOKEN || "";
     result.url = result.url || process.env.RUBIGO_API_URL || "http://localhost:3000";
-    result.scenario = result.scenario || process.env.RUBIGO_SEED_DIR || "../common/scenarios/mmc";
+    result.scenario = result.scenario || process.env.RUBIGO_SEED_DIR || "../common/scenarios";
+    result.profile = result.profile || process.env.RUBIGO_PROFILE || "mmc";
 
     if (!result.token) {
         console.error("❌ API token required. Use --token=xxx or set RUBIGO_API_TOKEN.");
@@ -159,9 +164,9 @@ async function main() {
     console.log(`   Dry Run: ${args.dryRun}`);
     console.log("=".repeat(60));
 
-    // Load data from SQLite (or fall back to TOML)
-    const data = loadScenarioData(args.scenario);
-    console.log(`   📊 Data source: ${data.source.toUpperCase()}`);
+    // Load data from SQLite
+    const data = loadScenarioData(args.scenario, args.profile);
+    console.log(`   📊 Profile: ${data.profileId}`);
 
     const client = new RubigoClient({
         baseUrl: args.url,
