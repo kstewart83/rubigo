@@ -91,6 +91,7 @@ e2e_api = <base + 2> # E2E API server (if separate)
 # Project-specific operational settings
 [projects.rubigo-react]
 database = "rubigo.db"
+e2e_database = "rubigo-e2e.db"
 validation_cmd = "bun run pre-push-check"
 test_cmd = "bun run test:e2e:full"
 version_file = "rubigo.toml"
@@ -106,6 +107,9 @@ Work continues in `wip/<slug>/` using absolute paths. The main checkout remains 
 
 > [!NOTE]
 > Each worktree uses its own database file in its own project directory. This isolation prevents SQLite lock conflicts between worktrees.
+
+> [!TIP]
+> If you need to run a dev server while another process (like E2E tests) might conflict, use `bun run dev:isolated` which uses a separate `.next-isolated` directory to avoid lock conflicts.
 
 > [!IMPORTANT]
 > The branch is NOT pushed until the first commit. Use `/wip-commit` to create checkpoint commits and push to remote.
