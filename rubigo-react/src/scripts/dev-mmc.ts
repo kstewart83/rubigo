@@ -3,21 +3,31 @@
  * Dev MMC Orchestrator
  * 
  * Starts the dev server, waits for it to be ready, captures the API token,
- * and runs the seed-via-api script to load MMC scenario data.
+ * and runs the SQLite sync script to load MMC scenario data.
  * 
  * Usage:
  *   bun src/scripts/dev-mmc.ts
+ *   bun src/scripts/dev-mmc.ts --profile=other
  */
 
 import { spawn, type Subprocess } from "bun";
-import { join } from "path";
 
 // Configuration
-const SEED_DIR = "../common/scenarios/mmc";
+const DEFAULT_PROFILE = "mmc";
 const SERVER_PORT = 3000;
 const SERVER_TIMEOUT_MS = 30000;
 
 let serverProcess: Subprocess | null = null;
+
+// Parse CLI args for profile
+function getProfile(): string {
+    for (const arg of process.argv.slice(2)) {
+        if (arg.startsWith("--profile=")) {
+            return arg.split("=")[1];
+        }
+    }
+    return DEFAULT_PROFILE;
+}
 
 // Cleanup on exit
 function cleanup() {
@@ -123,26 +133,26 @@ async function startServer(): Promise<string> {
 }
 
 /**
- * Run the seed script with the captured token
+ * Run the SQLite sync script with the captured token
  */
-async function runSeedScript(apiToken: string): Promise<void> {
-    console.log("\n🌱 Running seed script...\n");
+async function runSyncScript(apiToken: string, profile: string): Promise<void> {
+    console.log(`\n🌱 Syncing ${profile} profile data...\n`);
 
-    const seedProcess = spawn({
-        cmd: ["bun", "src/scripts/seed-via-api.ts"],
-        env: {
-            ...process.env,
-            RUBIGO_SEED_DIR: SEED_DIR,
-            RUBIGO_API_TOKEN: apiToken,
-            RUBIGO_API_URL: `http://localhost:${SERVER_PORT}`,
-        },
+    const syncProcess = spawn({
+        cmd: [
+            "bun",
+            "src/scripts/sync-scenario-sqlite.ts",
+            `--profile=${profile}`,
+            `--token=${apiToken}`,
+            `--url=http://localhost:${SERVER_PORT}`,
+        ],
         stdout: "inherit",
         stderr: "inherit",
     });
 
-    const exitCode = await seedProcess.exited;
+    const exitCode = await syncProcess.exited;
     if (exitCode !== 0) {
-        throw new Error(`Seed script exited with code ${exitCode}`);
+        throw new Error(`Sync script exited with code ${exitCode}`);
     }
 }
 
@@ -150,8 +160,10 @@ async function runSeedScript(apiToken: string): Promise<void> {
  * Main entry point
  */
 async function main() {
+    const profile = getProfile();
+
     console.log("\n" + "=".repeat(60));
-    console.log("🎯 Rubigo Dev with MMC Scenario");
+    console.log(`🎯 Rubigo Dev with ${profile.toUpperCase()} Profile`);
     console.log("=".repeat(60) + "\n");
 
     try {
@@ -162,11 +174,11 @@ async function main() {
         // Wait for server to be fully ready
         await waitForServer();
 
-        // Run seed script
-        await runSeedScript(apiToken);
+        // Run sync script
+        await runSyncScript(apiToken, profile);
 
         console.log("\n" + "=".repeat(60));
-        console.log("✅ MMC scenario loaded successfully!");
+        console.log(`✅ ${profile.toUpperCase()} profile loaded successfully!`);
         console.log("   Server is running at http://localhost:3000");
         console.log("   Press Ctrl+C to stop");
         console.log("=".repeat(60) + "\n");

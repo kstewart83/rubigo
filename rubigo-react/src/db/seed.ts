@@ -11,7 +11,7 @@ import { parse } from "@iarna/toml";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
-// TOML file location (symlinked from common/scenarios/mmc)
+// TOML file location (symlinked from common/seed/mmc)
 const TOML_PATH = join(process.cwd(), "src/data/projects.toml");
 
 interface RawTomlData {

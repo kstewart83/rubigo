@@ -2,7 +2,7 @@
  * Personnel API E2E Tests
  * 
  * Tests the Personnel REST API endpoints using direct HTTP calls.
- * Maps to requirements in common/scenarios/mmc/requirements/personnel.toml
+ * Maps to requirements in common/seed/mmc/requirements/personnel.toml
  */
 
 import { test, expect } from "@playwright/test";

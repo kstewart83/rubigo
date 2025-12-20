@@ -104,16 +104,11 @@ export function EmailPageContent() {
         setUnreadCount(count);
     }, [userId]);
 
-    // Initial load
+    // Load emails and unread count on mount and when folder/user changes
     useEffect(() => {
         loadEmails();
         loadUnreadCount();
-    }, [loadEmails, loadUnreadCount]);
-
-    // Reload emails when folder changes
-    useEffect(() => {
-        loadEmails();
-    }, [activeFolder, loadEmails]);
+    }, [userId, activeFolder]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Select email
     const handleSelectEmail = async (emailId: string, threadId: string) => {

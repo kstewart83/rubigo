@@ -23,6 +23,33 @@ async function clean() {
     console.log("   Deleting calendar events...");
     await db.delete(schema.calendarEvents);
 
+    // Email module tables
+    console.log("   Deleting email recipients...");
+    await db.delete(schema.emailRecipients);
+
+    console.log("   Deleting emails...");
+    await db.delete(schema.emails);
+
+    console.log("   Deleting email threads...");
+    await db.delete(schema.emailThreads);
+
+    // Chat module tables
+    console.log("   Deleting chat reactions...");
+    await db.delete(schema.chatReactions);
+
+    console.log("   Deleting chat messages...");
+    await db.delete(schema.chatMessages);
+
+    console.log("   Deleting chat members...");
+    await db.delete(schema.chatMembers);
+
+    console.log("   Deleting chat channels...");
+    await db.delete(schema.chatChannels);
+
+    // Screen share module
+    console.log("   Deleting screen share sessions...");
+    await db.delete(schema.screenShareSessions);
+
     console.log("   Deleting action logs...");
     await db.delete(schema.actionLogs);
 

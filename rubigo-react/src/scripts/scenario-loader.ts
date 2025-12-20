@@ -6,7 +6,7 @@
  * 
  * Usage:
  *   import { loadScenarioData, ScenarioData } from "./scenario-loader";
- *   const data = loadScenarioData("../common/scenarios", "mmc");
+ *   const data = loadScenarioData("../common/seed", "mmc");
  */
 
 import { Database } from "bun:sqlite";
@@ -151,6 +151,38 @@ export interface ChatMessageRecord {
     sent_at?: string;
 }
 
+export interface EmailThreadRecord {
+    id: string;
+    profile_id: string;
+    subject: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface EmailRecord {
+    id: string;
+    profile_id: string;
+    thread_id: string;
+    from_id: string;
+    subject: string;
+    body: string;
+    parent_email_id?: string;
+    sent_at?: string;
+    is_draft?: number;
+    created_at?: string;
+}
+
+export interface EmailRecipientRecord {
+    id: string;
+    profile_id: string;
+    email_id: string;
+    personnel_id?: string;
+    email_address?: string;
+    type?: string;
+    folder?: string;
+    read?: number;
+}
+
 export interface RoleRecord {
     id: string;
     profile_id: string;
@@ -217,6 +249,9 @@ export interface ScenarioData {
     infrastructure: InfrastructureRecord[];
     components: ComponentRecord[];
     assets: AssetRecord[];
+    emailThreads: EmailThreadRecord[];
+    emails: EmailRecord[];
+    emailRecipients: EmailRecipientRecord[];
 }
 
 // ============================================================================
@@ -226,7 +261,7 @@ export interface ScenarioData {
 /**
  * Load profile data from profiles.sqlite database.
  * 
- * @param scenarioDir Path to the scenarios directory (e.g., "../common/scenarios")
+ * @param scenarioDir Path to the seed directory (e.g., "../common/seed")
  * @param profileId Profile ID to load (e.g., "mmc")
  * @returns ScenarioData containing all entity arrays for the profile
  * @throws Error if database not found or profile doesn't exist
@@ -278,6 +313,9 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             infrastructure: q("infrastructure") as InfrastructureRecord[],
             components: q("components") as ComponentRecord[],
             assets: q("assets") as AssetRecord[],
+            emailThreads: q("email_threads") as EmailThreadRecord[],
+            emails: q("emails") as EmailRecord[],
+            emailRecipients: q("email_recipients") as EmailRecipientRecord[],
         };
     } finally {
         db.close();
