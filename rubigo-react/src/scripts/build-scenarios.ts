@@ -88,23 +88,23 @@ async function buildScenario(scenario: string, verbose: boolean): Promise<void> 
         }
         console.log(`   ✅ Loaded ${schemaFiles.length} schema files`);
 
-        // 2. Execute scenario-specific SQL
-        const scenarioSql = join(scenarioDir, "scenario.sql");
-        if (await exists(scenarioSql)) {
-            const sql = await readFile(scenarioSql, "utf-8");
-            if (verbose) console.log(`   📄 Executing scenario.sql`);
+        // 2. Execute profile-specific SQL (company configuration)
+        const profileSql = join(scenarioDir, "profile.sql");
+        if (await exists(profileSql)) {
+            const sql = await readFile(profileSql, "utf-8");
+            if (verbose) console.log(`   📄 Executing profile.sql`);
             db.exec(sql);
-            console.log(`   ✅ Loaded scenario-specific data`);
+            console.log(`   ✅ Loaded profile data`);
         }
 
         // 3. Verify build
         const personnelCount = db.query("SELECT COUNT(*) as count FROM personnel").get() as { count: number };
         const objectivesCount = db.query("SELECT COUNT(*) as count FROM objectives").get() as { count: number };
         const featuresCount = db.query("SELECT COUNT(*) as count FROM features").get() as { count: number };
-        const scenarioInfo = db.query("SELECT name FROM scenario").get() as { name: string } | null;
+        const profileInfo = db.query("SELECT name FROM profile").get() as { name: string } | null;
 
         console.log(`\n   📊 Build Summary:`);
-        console.log(`      Scenario: ${scenarioInfo?.name || "Unknown"}`);
+        console.log(`      Profile: ${profileInfo?.name || "Unknown"}`);
         console.log(`      Personnel: ${personnelCount.count}`);
         console.log(`      Objectives: ${objectivesCount.count}`);
         console.log(`      Features: ${featuresCount.count}`);

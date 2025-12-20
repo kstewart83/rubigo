@@ -1,12 +1,13 @@
 -- ============================================================================
--- 000_init.sql - Base PRAGMA settings and scenario metadata
+-- 000_init.sql - Base PRAGMA settings and profile metadata
 -- ============================================================================
 
 PRAGMA foreign_keys = OFF;  -- Disabled for bulk loading; validated by sync script
 PRAGMA journal_mode = WAL;
 
--- Scenario metadata table
-CREATE TABLE IF NOT EXISTS scenario (
+-- Profile metadata table (company/demo configuration)
+-- Named "profile" to distinguish from "scenarios" table (BDD test cases)
+CREATE TABLE IF NOT EXISTS profile (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     short_name TEXT NOT NULL,
