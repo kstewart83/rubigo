@@ -435,3 +435,89 @@ export async function moveEventInstance(
         return { success: false, error: "Failed to move instance" };
     }
 }
+
+// ============================================================================
+// Orphaned Deviation Management
+// ============================================================================
+
+/**
+ * Get orphaned deviations for a recurring event
+ * An anchored deviation is orphaned if its originalDate no longer occurs 
+ * in the event's current recurrence pattern
+ */
+export async function getOrphanedDeviations(eventId: string): Promise<CalendarDeviation[]> {
+    // First, get the event to check its recurrence pattern
+    const event = await getCalendarEvent(eventId);
+    if (!event) {
+        return [];
+    }
+
+    // Non-recurring events can't have orphaned deviations
+    if (event.recurrence === "none" || !event.recurrence) {
+        return [];
+    }
+
+    // Get all deviations for this event
+    const allDeviations = await getEventDeviations(eventId);
+
+    // Import wouldOccurOn to check pattern matching
+    const { wouldOccurOn } = await import("@/lib/calendar-utils");
+
+    // Filter to only anchored deviations that are orphaned
+    const orphaned = allDeviations.filter(deviation => {
+        // Only check anchored deviations (those with originalDate)
+        if (!deviation.originalDate) {
+            return false;
+        }
+
+        // Check if this date would occur on the current pattern
+        return !wouldOccurOn(event, deviation.originalDate);
+    });
+
+    return orphaned;
+}
+
+/**
+ * Delete a specific deviation by ID
+ */
+export async function deleteDeviation(
+    deviationId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(calendarDeviations)
+            .where(eq(calendarDeviations.id, deviationId));
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete deviation:", error);
+        return { success: false, error: "Failed to delete deviation" };
+    }
+}
+
+/**
+ * Delete all orphaned deviations for an event
+ */
+export async function deleteAllOrphanedDeviations(
+    eventId: string
+): Promise<{ success: boolean; count: number; error?: string }> {
+    try {
+        const orphaned = await getOrphanedDeviations(eventId);
+
+        if (orphaned.length === 0) {
+            return { success: true, count: 0 };
+        }
+
+        // Delete each orphaned deviation
+        for (const deviation of orphaned) {
+            await db
+                .delete(calendarDeviations)
+                .where(eq(calendarDeviations.id, deviation.id));
+        }
+
+        return { success: true, count: orphaned.length };
+    } catch (error) {
+        console.error("Failed to delete orphaned deviations:", error);
+        return { success: false, count: 0, error: "Failed to delete orphaned deviations" };
+    }
+}

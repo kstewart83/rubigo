@@ -59,6 +59,7 @@ import {
 } from "@/lib/calendar-actions";
 import { expandRecurringEvents } from "@/lib/calendar-utils";
 import { usePersona } from "@/contexts/persona-context";
+import { OrphanedDeviationsPanel } from "@/components/orphaned-deviations-panel";
 
 // ============================================================================
 // Timezone Constants
@@ -1862,6 +1863,14 @@ function EventDetailsPanel({
                             <Label className="text-muted-foreground">Recurrence</Label>
                             <p className="text-sm">{event.recurrence}</p>
                         </div>
+                    )}
+
+                    {/* Orphaned Deviations Indicator */}
+                    {event.isRecurring && (
+                        <OrphanedDeviationsPanel
+                            eventId={event.id}
+                            isRecurring={event.isRecurring}
+                        />
                     )}
 
                     {/* Deviation status indicator */}
