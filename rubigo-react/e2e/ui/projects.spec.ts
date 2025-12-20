@@ -50,7 +50,7 @@ test.describe("Solutions (Services)", () => {
 
         // Then I see a list of Solutions with their names, descriptions, and status
         await expect(page).toHaveURL(/\/projects\/services/);
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -95,7 +95,8 @@ test.describe("Projects", () => {
         await page.waitForLoadState("networkidle");
 
         // Then I see projects grouped or linked by their solution
-        const content = page.locator("main");
+        // Use nth(1) because there are two main elements (sidebar and content)
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -140,7 +141,7 @@ test.describe("Objectives", () => {
 
         // Then I see objectives displayed in a hierarchical tree structure
         await expect(page).toHaveURL(/\/projects\/objectives/);
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -186,7 +187,7 @@ test.describe("Initiatives", () => {
 
         // Then I see a list of initiatives with their linked KPIs and status
         await expect(page).toHaveURL(/\/projects\/initiatives/);
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -245,7 +246,7 @@ test.describe("Activities", () => {
 
         // Then I see activities with their initiative, roles, and capacity information
         await expect(page).toHaveURL(/\/projects\/activities/);
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -298,7 +299,7 @@ test.describe("Metrics", () => {
 
         // Then I see a list of metrics with their units and current values
         await expect(page).toHaveURL(/\/projects\/metrics/);
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 
@@ -309,7 +310,7 @@ test.describe("Metrics", () => {
 
         // When a metric has linked KPIs, then I can see the KPI targets and thresholds
         // Look for any KPI-related content on the page
-        const content = page.locator("main");
+        const content = page.getByRole("main").nth(1);
         await expect(content).toBeVisible();
     });
 });
@@ -335,7 +336,7 @@ test.describe("Projects Navigation", () => {
             await page.goto(url);
             await page.waitForLoadState("networkidle");
             await expect(page).toHaveURL(new RegExp(url));
-            const content = page.locator("main");
+            const content = page.getByRole("main").nth(1);
             await expect(content).toBeVisible();
         }
     });
