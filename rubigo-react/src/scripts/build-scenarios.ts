@@ -15,9 +15,9 @@ import { join, basename } from "path";
 const scriptDir = import.meta.dir;
 const projectRoot = join(scriptDir, "..", "..", "..");
 
-const SCHEMA_DIR = join(projectRoot, "common", "scenarios", "schema");
-const PROFILES_DIR = join(projectRoot, "common", "scenarios", "profiles");
-const BUILDS_DIR = join(projectRoot, "common", "scenarios", "builds");
+const SCHEMA_DIR = join(projectRoot, "common", "seed", "schema");
+const PROFILES_DIR = join(projectRoot, "common", "seed", "profiles");
+const BUILDS_DIR = join(projectRoot, "common", "seed", "builds");
 const OUTPUT_FILE = join(BUILDS_DIR, "profiles.sqlite");
 
 console.log("============================================================");
