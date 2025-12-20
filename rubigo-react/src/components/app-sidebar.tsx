@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -165,6 +165,20 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
         }
         return expanded;
     });
+
+    // Keep module expanded when navigating to any of its sub-pages
+    useEffect(() => {
+        for (const module of sidebarModules) {
+            if (module.subPages) {
+                const isPathInModule = module.subPages.some(
+                    (subPage) => pathname === subPage.href || pathname.startsWith(subPage.href + "/")
+                );
+                if (isPathInModule && !expandedModules.has(module.id)) {
+                    setExpandedModules((prev) => new Set(prev).add(module.id));
+                }
+            }
+        }
+    }, [pathname, expandedModules]);
 
     const toggleModule = (moduleId: string) => {
         setExpandedModules((prev) => {
