@@ -139,7 +139,15 @@ export async function getEmails(
             recipientsByEmail.set(r.emailId, names);
         }
 
-        return result.map(({ email, senderName, senderEmail, recipientRead }) => ({
+        // Deduplicate by email ID (can have duplicates when sending to self)
+        const seen = new Set<string>();
+        const dedupedResult = result.filter(({ email }) => {
+            if (seen.has(email.id)) return false;
+            seen.add(email.id);
+            return true;
+        });
+
+        return dedupedResult.map(({ email, senderName, senderEmail, recipientRead }) => ({
             id: email.id,
             threadId: email.threadId,
             subject: email.subject,
@@ -574,7 +582,15 @@ export async function searchEmails(
             )
             .orderBy(desc(emails.sentAt));
 
-        return result.map(({ email, senderName, senderEmail, recipientRead }) => ({
+        // Deduplicate by email ID (can have duplicates when sending to self)
+        const seen = new Set<string>();
+        const dedupedResult = result.filter(({ email }) => {
+            if (seen.has(email.id)) return false;
+            seen.add(email.id);
+            return true;
+        });
+
+        return dedupedResult.map(({ email, senderName, senderEmail, recipientRead }) => ({
             id: email.id,
             threadId: email.threadId,
             subject: email.subject,
