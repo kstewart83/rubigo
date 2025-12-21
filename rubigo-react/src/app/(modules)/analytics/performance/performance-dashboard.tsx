@@ -120,7 +120,7 @@ export function PerformanceDashboard() {
                                             {formatMs(row.p99)}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {row.count.toLocaleString()}
+                                            {Number(row.count).toLocaleString()}
                                         </td>
                                     </tr>
                                 ))}
@@ -166,18 +166,18 @@ export function PerformanceDashboard() {
                                             {row.route}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {row.total.toLocaleString()}
+                                            {Number(row.total).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-red-600 dark:text-red-400 text-right font-medium">
-                                            {row.errors.toLocaleString()}
+                                            {Number(row.errors).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span
                                                 className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${row.error_pct < 1
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                        : row.error_pct < 5
-                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                    : row.error_pct < 5
+                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                                     }`}
                                             >
                                                 {row.error_pct.toFixed(2)}%
@@ -243,17 +243,17 @@ export function PerformanceDashboard() {
                                         <td className="px-6 py-4 text-right">
                                             <span
                                                 className={`text-sm font-medium ${row.good_pct >= 75
-                                                        ? 'text-green-600 dark:text-green-400'
-                                                        : row.good_pct >= 50
-                                                            ? 'text-yellow-600 dark:text-yellow-400'
-                                                            : 'text-red-600 dark:text-red-400'
+                                                    ? 'text-green-600 dark:text-green-400'
+                                                    : row.good_pct >= 50
+                                                        ? 'text-yellow-600 dark:text-yellow-400'
+                                                        : 'text-red-600 dark:text-red-400'
                                                     }`}
                                             >
                                                 {row.good_pct.toFixed(1)}%
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {row.count.toLocaleString()}
+                                            {Number(row.count).toLocaleString()}
                                         </td>
                                     </tr>
                                 ))}

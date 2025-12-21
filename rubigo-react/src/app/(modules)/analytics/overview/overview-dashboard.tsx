@@ -136,7 +136,7 @@ export function OverviewDashboard() {
                 />
                 <StatCard
                     title="Total Requests"
-                    value={stats?.total_requests?.toLocaleString() ?? 0}
+                    value={Number(stats?.total_requests ?? 0).toLocaleString()}
                     subtitle="Last 24 hours"
                     icon={Activity}
                 />
@@ -196,10 +196,10 @@ export function OverviewDashboard() {
                                             {page.path}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {page.views.toLocaleString()}
+                                            {Number(page.views).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {page.unique_sessions.toLocaleString()}
+                                            {Number(page.unique_sessions).toLocaleString()}
                                         </td>
                                     </tr>
                                 ))}

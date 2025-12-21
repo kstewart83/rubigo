@@ -33,7 +33,7 @@ function ModuleCard({ module }: { module: ModuleUsage }) {
                 <BarChart3 className="h-4 w-4 text-zinc-400" />
             </div>
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {module.event_count.toLocaleString()}
+                {Number(module.event_count).toLocaleString()}
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {module.unique_sessions} unique sessions
@@ -145,13 +145,13 @@ export function UsageDashboard() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {page.views.toLocaleString()}
+                                            {Number(page.views).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {page.unique_sessions.toLocaleString()}
+                                            {Number(page.unique_sessions).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
-                                            {(page.views / Math.max(page.unique_sessions, 1)).toFixed(1)}
+                                            {(Number(page.views) / Math.max(Number(page.unique_sessions), 1)).toFixed(1)}
                                         </td>
                                     </tr>
                                 ))}
