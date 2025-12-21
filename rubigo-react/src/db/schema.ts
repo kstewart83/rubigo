@@ -35,6 +35,12 @@ export const personnel = sqliteTable("personnel", {
     cellPhone: text("cell_phone"),
     bio: text("bio"),
     isGlobalAdmin: integer("is_global_admin", { mode: "boolean" }).default(false),
+    // Agent Simulation fields
+    isAgent: integer("is_agent", { mode: "boolean" }).default(false),
+    agentStatus: text("agent_status", {
+        enum: ["dormant", "sleeping", "idle", "working"]
+    }).default("dormant"),
+    agentPersona: text("agent_persona"), // JSON: personality traits, communication style
     // Access Control: Subject attributes
     clearanceLevel: text("clearance_level", {
         enum: ["public", "low", "moderate", "high"]
@@ -539,6 +545,57 @@ export const screenShareSessions = sqliteTable("screen_share_sessions", {
 });
 
 // ============================================================================
+// Agent Simulation
+// ============================================================================
+
+/**
+ * Agent Events - Thought/action log for agent simulation
+ * Captures the agent's internal reasoning and external actions
+ */
+export const agentEvents = sqliteTable("agent_events", {
+    id: text("id").primaryKey(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    timestamp: text("timestamp").notNull(), // ISO 8601
+    eventType: text("event_type", {
+        enum: ["thought", "action", "observation", "decision"]
+    }).notNull(),
+    content: text("content").notNull(),
+    contextId: text("context_id"), // Links to sync_contexts.id
+    targetEntity: text("target_entity"), // e.g., "email:123", "chat:456"
+    parentEventId: text("parent_event_id"), // For ReAct chains
+    metadata: text("metadata"), // JSON for additional context
+});
+
+/**
+ * Sync Contexts - Synchronous interaction zones
+ * Represents shared interactions that multiple agents/people can participate in
+ */
+export const syncContexts = sqliteTable("sync_contexts", {
+    id: text("id").primaryKey(),
+    contextType: text("context_type", {
+        enum: ["meeting", "chat_active", "hallway", "phone_call"]
+    }).notNull(),
+    reactionTier: text("reaction_tier", {
+        enum: ["sync", "near_sync", "async"]
+    }).notNull(),
+    relatedEntityId: text("related_entity_id"), // meeting ID, channel ID, etc.
+    startedAt: text("started_at").notNull(), // ISO 8601
+    endedAt: text("ended_at"), // ISO 8601, null if active
+});
+
+/**
+ * Sync Context Participants - Who is participating in a sync context
+ * Tracks join/leave times for context participation
+ */
+export const syncContextParticipants = sqliteTable("sync_context_participants", {
+    id: text("id").primaryKey(),
+    contextId: text("context_id").references(() => syncContexts.id).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    joinedAt: text("joined_at").notNull(), // ISO 8601
+    leftAt: text("left_at"), // ISO 8601, null if still active
+});
+
+// ============================================================================
 // Access Control: Classification Guides
 // ============================================================================
 
@@ -673,3 +730,25 @@ export type NewScreenShareSession = typeof screenShareSessions.$inferInsert;
 // Access Control
 export type ClassificationGuide = typeof classificationGuides.$inferSelect;
 export type NewClassificationGuide = typeof classificationGuides.$inferInsert;
+
+// Agent Simulation
+export type AgentEvent = typeof agentEvents.$inferSelect;
+export type NewAgentEvent = typeof agentEvents.$inferInsert;
+
+export type SyncContext = typeof syncContexts.$inferSelect;
+export type NewSyncContext = typeof syncContexts.$inferInsert;
+
+export type SyncContextParticipant = typeof syncContextParticipants.$inferSelect;
+export type NewSyncContextParticipant = typeof syncContextParticipants.$inferInsert;
+
+// Agent Status enum for type safety
+export const AGENT_STATUSES = ["dormant", "sleeping", "idle", "working"] as const;
+export type AgentStatus = (typeof AGENT_STATUSES)[number];
+
+// Reaction Tiers with timing configurations
+export const REACTION_TIERS = {
+    sync: { maxLatencyMs: 2000 },       // Meeting, hallway, phone
+    near_sync: { maxLatencyMs: 60000 }, // Active chat thread
+    async: { maxLatencyMs: 3600000 },   // Email, task queue
+} as const;
+export type ReactionTier = keyof typeof REACTION_TIERS;
