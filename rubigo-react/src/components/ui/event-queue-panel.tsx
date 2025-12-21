@@ -74,13 +74,27 @@ export function EventQueuePanel({ refreshTrigger }: EventQueuePanelProps) {
         return () => clearInterval(interval);
     }, [page, fetchEvents]);
 
-    const formatTime = (isoString: string) => {
-        const date = new Date(isoString);
-        return date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit"
-        });
+    const formatCountdown = (msUntilReady: number) => {
+        if (msUntilReady <= 0) return "Ready";
+
+        const seconds = Math.ceil(msUntilReady / 1000);
+        if (seconds < 60) {
+            return `in ${seconds}s`;
+        }
+
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (minutes < 60) {
+            return remainingSeconds > 0
+                ? `in ${minutes}m ${remainingSeconds}s`
+                : `in ${minutes}m`;
+        }
+
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return remainingMinutes > 0
+            ? `in ${hours}h ${remainingMinutes}m`
+            : `in ${hours}h`;
     };
 
     const formatEventType = (type: string) => {
@@ -121,8 +135,8 @@ export function EventQueuePanel({ refreshTrigger }: EventQueuePanelProps) {
                             <div
                                 key={event.id}
                                 className={`flex items-center gap-2 p-2 rounded text-xs ${event.isReady
-                                        ? "bg-green-500/10 border border-green-500/20"
-                                        : "bg-muted/50"
+                                    ? "bg-green-500/10 border border-green-500/20"
+                                    : "bg-muted/50"
                                     }`}
                             >
                                 {event.isReady ? (
@@ -141,14 +155,14 @@ export function EventQueuePanel({ refreshTrigger }: EventQueuePanelProps) {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="text-right flex-shrink-0">
+                                <div className="text-right flex-shrink-0 min-w-[60px]">
                                     {event.isReady ? (
                                         <span className="text-green-600 dark:text-green-400 font-medium">
                                             Ready
                                         </span>
                                     ) : (
-                                        <span className="text-muted-foreground">
-                                            {formatTime(event.scheduledFor)}
+                                        <span className="text-amber-500">
+                                            {formatCountdown(event.msUntilReady)}
                                         </span>
                                     )}
                                 </div>
