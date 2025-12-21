@@ -96,13 +96,37 @@ export function AgentSimulationContent() {
         }
     }, [selectedAgentId, fetchEvents]);
 
-    // Polling when running
+    // Execute a tick - call the backend API
+    const executeTick = useCallback(async () => {
+        try {
+            const response = await fetch("/api/agents/tick", { method: "POST" });
+            const data = await response.json();
+            console.log("Tick result:", data);
+
+            // Refresh status after tick
+            await fetchStatus();
+
+            // Refresh events if we have a selected agent
+            if (selectedAgentId) {
+                await fetchEvents(selectedAgentId);
+            }
+
+            setSimulation(prev => ({ ...prev, totalTicks: prev.totalTicks + 1 }));
+        } catch (error) {
+            console.error("Tick error:", error);
+        }
+    }, [fetchStatus, fetchEvents, selectedAgentId]);
+
+    // Auto-tick when running
     useEffect(() => {
         if (simulation.running) {
-            const interval = setInterval(fetchStatus, 2000);
+            // Run a tick every 5 seconds
+            const interval = setInterval(executeTick, 5000);
+            // Also run one immediately
+            executeTick();
             return () => clearInterval(interval);
         }
-    }, [simulation.running, fetchStatus]);
+    }, [simulation.running, executeTick]);
 
     const handleStart = () => {
         setSimulation(prev => ({ ...prev, running: true }));
@@ -113,8 +137,7 @@ export function AgentSimulationContent() {
     };
 
     const handleTick = () => {
-        setSimulation(prev => ({ ...prev, totalTicks: prev.totalTicks + 1 }));
-        fetchStatus();
+        executeTick();
     };
 
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
