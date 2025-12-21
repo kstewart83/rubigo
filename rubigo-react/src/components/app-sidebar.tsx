@@ -29,6 +29,7 @@ import {
     Mail,
     MessageCircle,
     MonitorPlay,
+    Bot,
 } from "lucide-react";
 
 import {
@@ -136,6 +137,12 @@ const sidebarModules: SidebarModule[] = [
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
         ],
+    },
+    {
+        id: "agents",
+        label: "AI Agents",
+        href: "/agents",
+        icon: Bot,
     },
 ];
 
