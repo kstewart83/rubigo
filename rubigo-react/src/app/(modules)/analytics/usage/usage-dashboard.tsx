@@ -77,7 +77,7 @@ export function UsageDashboard() {
                         <Users className="h-8 w-8" />
                     </div>
                     <div>
-                        <p className="text-sm opacity-80">Active Sessions (Last Hour)</p>
+                        <p className="text-sm opacity-80">Active Sessions (Last 24 Hours)</p>
                         <p className="text-4xl font-bold">{data?.sessions ?? 0}</p>
                     </div>
                 </div>
