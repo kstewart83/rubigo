@@ -607,6 +607,24 @@ export const syncContextParticipants = sqliteTable("sync_context_participants", 
     leftAt: text("left_at"), // ISO 8601, null if still active
 });
 
+/**
+ * Agent Scheduled Events - DES Priority Queue
+ * Events are processed when scheduled_for <= current_time
+ * After processing, handlers schedule the next event (self-rescheduling)
+ */
+export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").references(() => personnel.id).notNull(),
+    eventType: text("event_type", {
+        enum: ["check_chat", "check_email", "check_calendar", "check_tasks", "think"]
+    }).notNull(),
+    contextId: text("context_id").references(() => syncContexts.id), // Optional link to context
+    scheduledFor: text("scheduled_for").notNull(), // ISO 8601 - the priority key
+    payload: text("payload"), // JSON with event-specific details
+    createdAt: text("created_at").notNull(), // ISO 8601
+    processedAt: text("processed_at"), // ISO 8601, null until processed
+});
+
 // ============================================================================
 // Access Control: Classification Guides
 // ============================================================================
@@ -755,6 +773,9 @@ export type NewSyncContext = typeof syncContexts.$inferInsert;
 
 export type SyncContextParticipant = typeof syncContextParticipants.$inferSelect;
 export type NewSyncContextParticipant = typeof syncContextParticipants.$inferInsert;
+
+export type AgentScheduledEvent = typeof agentScheduledEvents.$inferSelect;
+export type NewAgentScheduledEvent = typeof agentScheduledEvents.$inferInsert;
 
 // Agent Status enum for type safety
 export const AGENT_STATUSES = ["dormant", "sleeping", "idle", "working"] as const;
