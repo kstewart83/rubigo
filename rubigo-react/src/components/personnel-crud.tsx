@@ -255,6 +255,30 @@ export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
                 </div>
             </div>
 
+            {/* AI Agent Toggle - Prominent at top */}
+            <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                <div>
+                    <Label htmlFor="isAgent" className="text-base font-medium">AI Agent</Label>
+                    <p className="text-sm text-muted-foreground">
+                        Enable AI simulation for this personnel
+                    </p>
+                </div>
+                <button
+                    id="isAgent"
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.isAgent}
+                    onClick={() => setFormData({ ...formData, isAgent: !formData.isAgent })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.isAgent ? "bg-purple-600" : "bg-muted"
+                        }`}
+                >
+                    <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${formData.isAgent ? "translate-x-5" : "translate-x-0"
+                            }`}
+                    />
+                </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="title">Title</Label>
@@ -367,32 +391,6 @@ export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
                     placeholder="Brief biography..."
                     rows={3}
                 />
-            </div>
-
-            {/* AI Agent Section */}
-            <div className="border-t pt-4 mt-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Label htmlFor="isAgent" className="text-base">AI Agent</Label>
-                        <p className="text-sm text-muted-foreground">
-                            Enable AI simulation for this personnel
-                        </p>
-                    </div>
-                    <button
-                        id="isAgent"
-                        type="button"
-                        role="switch"
-                        aria-checked={formData.isAgent}
-                        onClick={() => setFormData({ ...formData, isAgent: !formData.isAgent })}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.isAgent ? "bg-purple-600" : "bg-muted"
-                            }`}
-                    >
-                        <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${formData.isAgent ? "translate-x-5" : "translate-x-0"
-                                }`}
-                        />
-                    </button>
-                </div>
             </div>
 
             {error && (
