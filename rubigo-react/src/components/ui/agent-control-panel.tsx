@@ -142,7 +142,6 @@ export function AgentControlPanel({
                             variant="outline"
                             size="sm"
                             onClick={onTick}
-                            disabled={!simulation.running}
                         >
                             ⏭ Tick
                         </Button>
