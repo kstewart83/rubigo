@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AgentControlPanel } from "@/components/ui/agent-control-panel";
 import { AgentThoughtViewer } from "@/components/ui/agent-thought-viewer";
+import { EventQueuePanel } from "@/components/ui/event-queue-panel";
 import type { AgentInfo, SimulationState } from "@/components/ui/agent-control-panel";
 import type { ThoughtEntry } from "@/components/ui/agent-thought-viewer";
 import type { AgentStatus } from "@/db/schema";
@@ -193,7 +194,7 @@ export function AgentSimulationContent() {
             {/* Main Content - Full height flex */}
             <div className="flex-1 flex min-h-0">
                 {/* Left Sidebar - Control Panel (1/3 width) */}
-                <div className="w-1/3 flex-shrink-0 border-r overflow-y-auto p-4">
+                <div className="w-1/3 flex-shrink-0 border-r overflow-y-auto p-4 space-y-6">
                     <AgentControlPanel
                         agents={agents}
                         simulation={simulation}
@@ -204,6 +205,11 @@ export function AgentSimulationContent() {
                         onSelectAgent={setSelectedAgentId}
                         className="border-0 shadow-none"
                     />
+
+                    {/* Event Queue */}
+                    <div className="border-t pt-4">
+                        <EventQueuePanel refreshTrigger={simulation.totalTicks} />
+                    </div>
                 </div>
 
                 {/* Right Content - Thought Viewer (2/3 width) */}
