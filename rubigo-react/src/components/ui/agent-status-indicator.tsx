@@ -26,22 +26,10 @@ const statusConfig: Record<AgentStatus, {
         label: "Dormant",
         animate: false,
     },
-    sleeping: {
-        color: "bg-blue-400",
-        bgColor: "bg-blue-400/20",
-        label: "Sleeping",
-        animate: false,
-    },
-    idle: {
+    active: {
         color: "bg-green-400",
         bgColor: "bg-green-400/20",
-        label: "Idle",
-        animate: false,
-    },
-    working: {
-        color: "bg-amber-400",
-        bgColor: "bg-amber-400/20",
-        label: "Working",
+        label: "Active",
         animate: true,
     },
 };
