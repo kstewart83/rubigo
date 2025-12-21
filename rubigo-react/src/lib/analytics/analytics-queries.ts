@@ -95,7 +95,7 @@ export async function getWebVitalsSummary(
 }
 
 /**
- * Get error rate by route
+ * Get error rate by route (routes with enough traffic)
  */
 export interface RouteErrorRate {
   route: string;
@@ -121,6 +121,46 @@ export async function getErrorRateByRoute(
     GROUP BY name
     HAVING COUNT(*) >= 5
     ORDER BY error_pct DESC
+    LIMIT 20
+  `);
+}
+
+/**
+ * Get all routes with errors (no minimum threshold)
+ * Sorted by error count to show which routes have the most failures
+ */
+export interface RouteErrors {
+  route: string;
+  errors: number;
+  total: number;
+  error_pct: number;
+  hit_rate_pct: number; // % of total traffic this route represents
+}
+
+export async function getRoutesWithErrors(
+  range: TimeRange = '24h'
+): Promise<RouteErrors[]> {
+  const interval = getTimeRangeInterval(range);
+
+  return query<RouteErrors>(`
+    WITH totals AS (
+      SELECT COUNT(*) AS grand_total
+      FROM rubigo.otel_spans
+      WHERE created_at >= current_timestamp - ${interval}
+        AND kind = 1
+    )
+    SELECT 
+      name AS route,
+      COUNT(*) FILTER (WHERE status_code = 2) AS errors,
+      COUNT(*) AS total,
+      ROUND(COUNT(*) FILTER (WHERE status_code = 2) * 100.0 / COUNT(*), 2) AS error_pct,
+      ROUND(COUNT(*) * 100.0 / totals.grand_total, 2) AS hit_rate_pct
+    FROM rubigo.otel_spans, totals
+    WHERE created_at >= current_timestamp - ${interval}
+      AND kind = 1
+    GROUP BY name, totals.grand_total
+    HAVING COUNT(*) FILTER (WHERE status_code = 2) > 0
+    ORDER BY errors DESC
     LIMIT 20
   `);
 }

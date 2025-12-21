@@ -20,6 +20,14 @@ interface RouteError {
     error_pct: number;
 }
 
+interface ErrorRoute {
+    route: string;
+    errors: number;
+    total: number;
+    error_pct: number;
+    hit_rate_pct: number;
+}
+
 interface WebVital {
     name: string;
     p50: number;
@@ -32,6 +40,7 @@ interface WebVital {
 interface PerformanceData {
     latency: RouteLatency[];
     errors: RouteError[];
+    errorRoutes: ErrorRoute[];
     vitals: WebVital[];
     error: string | null;
 }
@@ -191,6 +200,72 @@ export function PerformanceDashboard() {
                 ) : (
                     <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
                         No error data available (this is good!)
+                    </div>
+                )}
+            </div>
+
+            {/* Error Routes - All routes with errors */}
+            <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                    All Routes with Errors
+                    <span className="text-sm font-normal text-zinc-500">(sorted by error count)</span>
+                </h2>
+                {data?.errorRoutes && data.errorRoutes.length > 0 ? (
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
+                            <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        Route
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        Errors
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        Total Hits
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        Error Rate
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        Hit Rate
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                {data.errorRoutes.map((row) => (
+                                    <tr key={row.route}>
+                                        <td className="px-6 py-4 text-sm font-mono text-zinc-900 dark:text-zinc-100">
+                                            {row.route}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-red-600 dark:text-red-400 text-right font-bold">
+                                            {Number(row.errors).toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 text-right">
+                                            {Number(row.total).toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                                {row.error_pct.toFixed(2)}%
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`text-sm ${row.hit_rate_pct < 1 ? 'text-zinc-400' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                                                {row.hit_rate_pct.toFixed(2)}%
+                                                {row.hit_rate_pct < 1 && (
+                                                    <span className="ml-1 text-xs text-zinc-400">(low traffic)</span>
+                                                )}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center py-8 text-zinc-500 dark:text-zinc-400 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                        ✅ No errors in the last 24 hours!
                     </div>
                 )}
             </div>

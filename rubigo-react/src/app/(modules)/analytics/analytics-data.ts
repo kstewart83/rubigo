@@ -11,6 +11,7 @@ import {
     getTraceLatencyPercentiles,
     getWebVitalsSummary,
     getErrorRateByRoute,
+    getRoutesWithErrors,
     getFeatureUsageByModule,
     getTopPages,
     getActiveSessions,
@@ -41,18 +42,20 @@ export async function fetchOverviewData(range: TimeRange = '24h') {
 
 export async function fetchPerformanceData(range: TimeRange = '24h') {
     try {
-        const [latency, errors, vitals] = await Promise.all([
+        const [latency, errors, errorRoutes, vitals] = await Promise.all([
             getTraceLatencyPercentiles(range),
             getErrorRateByRoute(range),
+            getRoutesWithErrors(range),
             getWebVitalsSummary(range),
         ]);
 
-        return { latency, errors, vitals, error: null };
+        return { latency, errors, errorRoutes, vitals, error: null };
     } catch (error) {
         console.error('[Analytics] Failed to fetch performance data:', error);
         return {
             latency: [],
             errors: [],
+            errorRoutes: [],
             vitals: [],
             error: 'Failed to load performance data'
         };
