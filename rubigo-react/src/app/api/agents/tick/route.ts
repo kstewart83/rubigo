@@ -11,7 +11,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
     getNextReadyEvent,
     markEventProcessed,
@@ -76,8 +76,8 @@ async function handleCheckChat(
         return { responded: false };
     }
 
-    // Get recent messages not from this agent
-    const recentMessages = await db
+    // Get recent messages (newest first, then reverse for chronological order)
+    const recentMessagesRaw = await db
         .select({
             id: schema.chatMessages.id,
             content: schema.chatMessages.content,
@@ -90,8 +90,11 @@ async function handleCheckChat(
             eq(schema.chatMessages.senderId, schema.personnel.id)
         )
         .where(eq(schema.chatMessages.channelId, channelId))
-        .orderBy(schema.chatMessages.sentAt)
+        .orderBy(desc(schema.chatMessages.sentAt))
         .limit(10);
+
+    // Reverse to get chronological order (oldest first for context)
+    const recentMessages = recentMessagesRaw.reverse();
 
     // Filter to messages not from this agent
     const otherMessages = recentMessages.filter(m => m.senderId !== agentId);
