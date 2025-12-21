@@ -37,10 +37,11 @@ interface Pagination {
 interface EventQueuePanelProps {
     refreshTrigger?: number; // Increment to trigger refresh
     onSelectEvent?: (event: ScheduledEvent) => void;
+    onEventsRefresh?: (events: ScheduledEvent[]) => void;
     selectedEventId?: string | null;
 }
 
-export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId }: EventQueuePanelProps) {
+export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh, selectedEventId }: EventQueuePanelProps) {
     const [events, setEvents] = useState<ScheduledEvent[]>([]);
     const [pagination, setPagination] = useState<Pagination | null>(null);
     const [currentTime, setCurrentTime] = useState<string>("");
@@ -57,13 +58,14 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId
                 setEvents(data.events);
                 setPagination(data.pagination);
                 setCurrentTime(data.currentTime);
+                onEventsRefresh?.(data.events);
             }
         } catch (error) {
             console.error("Failed to fetch events:", error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [onEventsRefresh]);
 
     // Fetch on mount and when page changes
     useEffect(() => {

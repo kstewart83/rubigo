@@ -152,6 +152,7 @@ export function AgentSimulationContent() {
             // Clear local state
             setThoughts([]);
             setSelectedAgentId(null);
+            setSelectedEvent(null);
             setSimulation(prev => ({ ...prev, running: false, totalTicks: 0 }));
 
             // Refresh status
@@ -234,6 +235,18 @@ export function AgentSimulationContent() {
                             onSelectEvent={(event) => {
                                 setSelectedEvent(event);
                                 setSelectedAgentId(null); // Clear agent selection
+                            }}
+                            onEventsRefresh={(events) => {
+                                // Update selected event with fresh timing data
+                                if (selectedEvent) {
+                                    const updated = events.find(e => e.id === selectedEvent.id);
+                                    if (updated) {
+                                        setSelectedEvent(updated);
+                                    } else {
+                                        // Event was processed, clear selection
+                                        setSelectedEvent(null);
+                                    }
+                                }
                             }}
                             selectedEventId={selectedEvent?.id}
                         />
