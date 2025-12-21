@@ -31,6 +31,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             );
         }
 
+        // Get version for ETag
+        const versions = storage.getVersionHistory(id);
+        const currentVersion = versionId
+            ? versions.find(v => v.id === versionId)
+            : versions[0];
+
+        const etag = currentVersion ? `"${currentVersion.checksum}"` : null;
+
+        // Check If-None-Match for conditional GET
+        const ifNoneMatch = request.headers.get("If-None-Match");
+        if (etag && ifNoneMatch === etag) {
+            return new NextResponse(null, { status: 304 });
+        }
+
         // Download file content
         const data = await storage.downloadFile(id, versionId || undefined);
         if (!data) {
@@ -49,6 +63,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         // Cache headers for immutable content
         // The checksum-based ETag enables client-side caching
         response.headers.set("Cache-Control", "private, max-age=31536000, immutable");
+        if (etag) {
+            response.headers.set("ETag", etag);
+        }
 
         return response;
     } catch (error) {
