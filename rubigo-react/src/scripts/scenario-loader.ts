@@ -126,6 +126,21 @@ export interface CalendarEventRecord {
     timezone?: string;
 }
 
+export interface CalendarDeviationRecord {
+    id: string;
+    profile_id: string;
+    event_id: string;
+    original_date?: string;
+    new_date?: string;
+    cancelled?: number;
+    override_start_time?: string;
+    override_end_time?: string;
+    override_title?: string;
+    override_description?: string;
+    override_location?: string;
+    override_timezone?: string;
+}
+
 export interface ChatChannelRecord {
     id: string;
     profile_id: string;
@@ -242,6 +257,7 @@ export interface ScenarioData {
     rules: RuleRecord[];
     scenarios: ScenarioRecord[];
     calendarEvents: CalendarEventRecord[];
+    calendarDeviations: CalendarDeviationRecord[];
     chatChannels: ChatChannelRecord[];
     chatMemberships: ChatMembershipRecord[];
     chatMessages: ChatMessageRecord[];
@@ -306,6 +322,7 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             rules: q("rules") as RuleRecord[],
             scenarios: q("scenarios") as ScenarioRecord[],
             calendarEvents: q("calendar_events") as CalendarEventRecord[],
+            calendarDeviations: q("calendar_deviations") as CalendarDeviationRecord[],
             chatChannels: q("chat_channels") as ChatChannelRecord[],
             chatMemberships: q("chat_memberships") as ChatMembershipRecord[],
             chatMessages: q("chat_messages") as ChatMessageRecord[],

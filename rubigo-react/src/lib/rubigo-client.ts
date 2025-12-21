@@ -209,6 +209,19 @@ export interface CalendarEventInput {
     organizerId?: string;
 }
 
+export interface CalendarDeviationInput {
+    eventId: string;
+    originalDate?: string;
+    newDate?: string;
+    cancelled?: boolean;
+    overrideStartTime?: string;
+    overrideEndTime?: string;
+    overrideTitle?: string;
+    overrideDescription?: string;
+    overrideLocation?: string;
+    overrideTimezone?: string;
+}
+
 // Chat types
 export interface ChatChannelInput {
     id?: string;
@@ -702,6 +715,10 @@ export class RubigoClient {
 
     async deleteCalendarEvent(id: string): Promise<ApiResult> {
         return this.request<ApiResult>("DELETE", `/api/calendar/${id}`);
+    }
+
+    async createCalendarDeviation(input: CalendarDeviationInput): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/calendar/deviations", input);
     }
 
     // ========================================================================
