@@ -474,7 +474,7 @@ export function PersonnelPageContent({
                             <SheetHeader>
                                 <SheetTitle>{selectedPerson.name}</SheetTitle>
                             </SheetHeader>
-                            <div className="mt-6 space-y-6">
+                            <div className="mt-6 space-y-6 px-4 overflow-y-auto">
                                 {/* Photo */}
                                 <div className="flex justify-center">
                                     {selectedPerson.photo ? (
