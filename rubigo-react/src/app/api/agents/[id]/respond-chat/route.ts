@@ -141,7 +141,7 @@ export async function POST(request: Request, { params }: RouteParams) {
                 channelId: schema.chatMessages.channelId,
                 senderId: schema.chatMessages.senderId,
                 content: schema.chatMessages.content,
-                timestamp: schema.chatMessages.timestamp,
+                sentAt: schema.chatMessages.sentAt,
                 senderName: schema.personnel.name,
             })
             .from(schema.chatMessages)
@@ -155,7 +155,7 @@ export async function POST(request: Request, { params }: RouteParams) {
                     ne(schema.chatMessages.senderId, id)
                 )
             )
-            .orderBy(desc(schema.chatMessages.timestamp))
+            .orderBy(desc(schema.chatMessages.sentAt))
             .limit(10);
 
         if (recentMessages.length === 0) {
@@ -200,7 +200,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             channelId: targetMessage.channelId,
             senderId: id,
             content: responseContent,
-            timestamp: new Date().toISOString(),
+            sentAt: new Date().toISOString(),
         });
 
         // Record this as an agent event
