@@ -12,13 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw, Clock, CheckCircle } from "lucide-react";
 
-interface ScheduledEvent {
+export interface ScheduledEvent {
     id: string;
     agentId: string;
     agentName: string;
     eventType: string;
     contextId: string | null;
     scheduledFor: string;
+    payload: string | null;
+    createdAt: string;
     isReady: boolean;
     msUntilReady: number;
 }
@@ -34,9 +36,11 @@ interface Pagination {
 
 interface EventQueuePanelProps {
     refreshTrigger?: number; // Increment to trigger refresh
+    onSelectEvent?: (event: ScheduledEvent) => void;
+    selectedEventId?: string | null;
 }
 
-export function EventQueuePanel({ refreshTrigger }: EventQueuePanelProps) {
+export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId }: EventQueuePanelProps) {
     const [events, setEvents] = useState<ScheduledEvent[]>([]);
     const [pagination, setPagination] = useState<Pagination | null>(null);
     const [currentTime, setCurrentTime] = useState<string>("");
@@ -131,43 +135,49 @@ export function EventQueuePanel({ refreshTrigger }: EventQueuePanelProps) {
                     </div>
                 ) : (
                     <div className="space-y-1">
-                        {events.map((event) => (
-                            <div
-                                key={event.id}
-                                className={`flex items-center gap-2 p-2 rounded text-xs ${event.isReady
-                                    ? "bg-green-500/10 border border-green-500/20"
-                                    : "bg-muted/50"
-                                    }`}
-                            >
-                                {event.isReady ? (
-                                    <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                                ) : (
-                                    <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1">
-                                        <span className="font-medium truncate">
-                                            {event.agentName}
-                                        </span>
-                                        <span className="text-muted-foreground">·</span>
-                                        <span className="text-muted-foreground truncate">
-                                            {formatEventType(event.eventType)}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="text-right flex-shrink-0 min-w-[60px]">
+                        {events.map((event) => {
+                            const isSelected = selectedEventId === event.id;
+                            return (
+                                <button
+                                    key={event.id}
+                                    onClick={() => onSelectEvent?.(event)}
+                                    className={`w-full flex items-center gap-2 p-2 rounded text-xs text-left transition-colors ${isSelected
+                                        ? "bg-primary/20 border border-primary/40 ring-1 ring-primary/20"
+                                        : event.isReady
+                                            ? "bg-green-500/10 border border-green-500/20 hover:bg-green-500/20"
+                                            : "bg-muted/50 hover:bg-muted"
+                                        }`}
+                                >
                                     {event.isReady ? (
-                                        <span className="text-green-600 dark:text-green-400 font-medium">
-                                            Ready
-                                        </span>
+                                        <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
                                     ) : (
-                                        <span className="text-amber-500">
-                                            {formatCountdown(event.msUntilReady)}
-                                        </span>
+                                        <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                     )}
-                                </div>
-                            </div>
-                        ))}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium truncate">
+                                                {event.agentName}
+                                            </span>
+                                            <span className="text-muted-foreground">·</span>
+                                            <span className="text-muted-foreground truncate">
+                                                {formatEventType(event.eventType)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0 min-w-[60px]">
+                                        {event.isReady ? (
+                                            <span className="text-green-600 dark:text-green-400 font-medium">
+                                                Ready
+                                            </span>
+                                        ) : (
+                                            <span className="text-amber-500">
+                                                {formatCountdown(event.msUntilReady)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 

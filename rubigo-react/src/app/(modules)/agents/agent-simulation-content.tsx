@@ -8,7 +8,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { AgentControlPanel } from "@/components/ui/agent-control-panel";
 import { AgentThoughtViewer } from "@/components/ui/agent-thought-viewer";
-import { EventQueuePanel } from "@/components/ui/event-queue-panel";
+import { EventQueuePanel, type ScheduledEvent } from "@/components/ui/event-queue-panel";
+import { EventDetailsPanel } from "@/components/ui/event-details-panel";
 import type { AgentInfo, SimulationState } from "@/components/ui/agent-control-panel";
 import type { ThoughtEntry } from "@/components/ui/agent-thought-viewer";
 import type { AgentStatus } from "@/db/schema";
@@ -22,6 +23,7 @@ export function AgentSimulationContent() {
         totalTicks: 0,
     });
     const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<ScheduledEvent | null>(null);
     const [thoughts, setThoughts] = useState<ThoughtEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -172,6 +174,11 @@ export function AgentSimulationContent() {
         }
     };
 
+    const handleSelectAgent = (agentId: string) => {
+        setSelectedAgentId(agentId);
+        setSelectedEvent(null); // Clear event selection
+    };
+
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
     if (loading) {
@@ -216,19 +223,31 @@ export function AgentSimulationContent() {
                         onTick={handleTick}
                         onReset={handleReset}
                         onActivate={handleActivate}
-                        onSelectAgent={setSelectedAgentId}
+                        onSelectAgent={handleSelectAgent}
                         className="border-0 shadow-none"
                     />
 
                     {/* Event Queue */}
                     <div className="border-t pt-4">
-                        <EventQueuePanel refreshTrigger={simulation.totalTicks} />
+                        <EventQueuePanel
+                            refreshTrigger={simulation.totalTicks}
+                            onSelectEvent={(event) => {
+                                setSelectedEvent(event);
+                                setSelectedAgentId(null); // Clear agent selection
+                            }}
+                            selectedEventId={selectedEvent?.id}
+                        />
                     </div>
                 </div>
 
-                {/* Right Content - Thought Viewer (2/3 width) */}
+                {/* Right Content - Details Panel (2/3 width) */}
                 <div className="w-2/3 overflow-y-auto p-6">
-                    {selectedAgent ? (
+                    {selectedEvent ? (
+                        <EventDetailsPanel
+                            event={selectedEvent}
+                            onClose={() => setSelectedEvent(null)}
+                        />
+                    ) : selectedAgent ? (
                         <AgentThoughtViewer
                             agentId={selectedAgent.id}
                             agentName={selectedAgent.name}
