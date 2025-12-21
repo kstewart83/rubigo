@@ -47,3 +47,15 @@ INSERT INTO calendar_events (profile_id, id, title, description, start_time, end
 INSERT INTO calendar_events (profile_id, id, title, description, start_time, end_time, all_day, event_type, recurrence, recurrence_interval, recurrence_days, recurrence_until, organizer_id, location, virtual_url, timezone) VALUES ('mmc', 'evt-046', 'IT Year-End Security Audit', 'Annual security compliance review before year end', '2024-12-18T10:00:00', '2024-12-18T12:00:00', 0, 'review', NULL, NULL, NULL, NULL, '1ea074', 'IT Help Desk', NULL, 'America/New_York');
 INSERT INTO calendar_events (profile_id, id, title, description, start_time, end_time, all_day, event_type, recurrence, recurrence_interval, recurrence_days, recurrence_until, organizer_id, location, virtual_url, timezone) VALUES ('mmc', 'evt-047', 'Holiday Office Closure', 'Office closed for winter holidays', '2024-12-23T00:00:00', '2024-12-31T23:59:59', 1, 'holiday', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'America/New_York');
 
+-- CALENDAR_DEVIATIONS
+-- Demo data for orphaned deviation management feature
+-- evt-002 recurs on Tuesdays only, so Wed/Thu deviations are orphaned
+
+-- Orphan 1: Cancellation that was for a Wednesday (no longer matches Tue pattern)
+INSERT INTO calendar_deviations (profile_id, id, event_id, original_date, cancelled) VALUES ('mmc', 'dev-orphan-001', 'evt-002', '2025-01-15', 1);
+
+-- Orphan 2: Modification that was for a Thursday (no longer matches Tue pattern)
+INSERT INTO calendar_deviations (profile_id, id, event_id, original_date, override_title, override_location) VALUES ('mmc', 'dev-orphan-002', 'evt-002', '2025-01-16', 'IT Team Weekly - Extended', 'Conference Room 2A');
+
+-- Active deviation (not orphaned - matches Tuesday pattern)
+INSERT INTO calendar_deviations (profile_id, id, event_id, original_date, override_title) VALUES ('mmc', 'dev-active-001', 'evt-002', '2025-01-21', 'IT Team Weekly - Q1 Kickoff');

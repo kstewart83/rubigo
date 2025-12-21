@@ -237,3 +237,90 @@ function shouldOccurOn(
             return false;
     }
 }
+
+/**
+ * Check if a date WOULD occur on the event's recurrence pattern
+ * This ignores deviations - it only checks the pure recurrence pattern
+ * Used for detecting orphaned deviations
+ */
+export function wouldOccurOn(
+    event: CalendarEventWithParticipants,
+    dateStr: string
+): boolean {
+    // Non-recurring events don't have pattern matching
+    if (event.recurrence === "none" || !event.recurrence) {
+        return false;
+    }
+
+    // Check if entire event is deleted
+    if (event.deleted) {
+        return false;
+    }
+
+    const date = new Date(dateStr + "T12:00:00"); // Noon to avoid timezone issues
+    const eventStart = new Date(event.startTime);
+    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    // Must be on or after event start date
+    if (checkDate < eventStartDate) {
+        return false;
+    }
+
+    // Check recurrence end date
+    if (event.recurrenceUntil) {
+        const recurrenceEnd = new Date(event.recurrenceUntil);
+        if (checkDate > recurrenceEnd) {
+            return false;
+        }
+    }
+
+    // Get recurrence interval (default to 1)
+    const interval = event.recurrenceInterval ?? 1;
+    const recurrenceDays: string[] = event.recurrenceDays
+        ? JSON.parse(event.recurrenceDays)
+        : [];
+
+    switch (event.recurrence) {
+        case "daily": {
+            const daysDiff = Math.floor((date.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24));
+            return daysDiff >= 0 && daysDiff % interval === 0;
+        }
+
+        case "weekly": {
+            const daysDiff = Math.floor((date.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24));
+            const weeksDiff = Math.floor(daysDiff / 7);
+            const weekdayAbbr = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
+
+            if (recurrenceDays.length === 0) {
+                // Same weekday as original
+                return date.getDay() === eventStart.getDay() && weeksDiff % interval === 0;
+            } else {
+                // Specific days
+                return recurrenceDays.includes(weekdayAbbr) && weeksDiff % interval === 0;
+            }
+        }
+
+        case "monthly": {
+            if (date.getDate() !== eventStart.getDate()) {
+                return false;
+            }
+            const monthsDiff =
+                (date.getFullYear() - eventStart.getFullYear()) * 12 +
+                (date.getMonth() - eventStart.getMonth());
+            return monthsDiff >= 0 && monthsDiff % interval === 0;
+        }
+
+        case "yearly": {
+            if (date.getMonth() !== eventStart.getMonth() ||
+                date.getDate() !== eventStart.getDate()) {
+                return false;
+            }
+            const yearsDiff = date.getFullYear() - eventStart.getFullYear();
+            return yearsDiff >= 0 && yearsDiff % interval === 0;
+        }
+
+        default:
+            return false;
+    }
+}
