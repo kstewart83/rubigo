@@ -78,3 +78,11 @@ export {
     type StoredFile,
     type UploadResult,
 } from "./file-storage";
+
+// AI-Powered File Type Detection (optional - requires magika package)
+export {
+    detectFileType,
+    validateUpload,
+    getTypeMismatchWarning,
+    type FileTypeResult,
+} from "./magika";

@@ -8,11 +8,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { FileStorageService } from "@/lib/files";
 
-/** Generate a short random ID */
-function generateId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${timestamp}-${random}`;
+// Magika is optional - gracefully degrade if not available
+let validateUpload: typeof import("@/lib/files/magika").validateUpload | null = null;
+try {
+    const magika = require("@/lib/files/magika");
+    validateUpload = magika.validateUpload;
+} catch {
+    console.warn("Magika not available - file type validation disabled");
 }
 
 export interface FileMetadata {
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
         const folderId = formData.get("folderId") as string | null;
         const ownerId = parseInt(formData.get("ownerId") as string, 10);
         const existingFileId = formData.get("fileId") as string | null; // For new version
+        const skipValidation = formData.get("skipValidation") === "true";
 
         if (!file) {
             return NextResponse.json(
@@ -81,6 +84,31 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
 
+        // Magika validation (if available)
+        let detectedType: string | null = null;
+        let typeMismatch = false;
+        let warnings: string[] = [];
+
+        if (validateUpload && !skipValidation) {
+            try {
+                const validation = await validateUpload(data, file.name, file.type);
+                detectedType = validation.detected.label;
+                typeMismatch = !validation.detected.extensionMatch;
+                warnings = validation.warnings;
+
+                // Block dangerous uploads
+                if (validation.blocked) {
+                    return NextResponse.json({
+                        success: false,
+                        error: "Upload blocked for security reasons",
+                        warnings,
+                    }, { status: 403 });
+                }
+            } catch (err) {
+                console.warn("Magika validation failed, proceeding without:", err);
+            }
+        }
+
         const db = getDb();
         const storage = new FileStorageService(db);
 
@@ -91,6 +119,8 @@ export async function POST(request: NextRequest) {
             name: file.name,
             data,
             mimeType: file.type || undefined,
+            detectedType: detectedType || undefined,
+            typeMismatch,
             ownerId,
             existingFileId: existingFileId || undefined,
         });
@@ -109,6 +139,10 @@ export async function POST(request: NextRequest) {
                 deduplicationRatio: result.size > 0
                     ? (result.duplicatedBytes / result.size).toFixed(2)
                     : "0.00",
+                // Type detection
+                detectedType,
+                typeMismatch,
+                warnings: warnings.length > 0 ? warnings : undefined,
             }
         });
     } catch (error) {

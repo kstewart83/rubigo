@@ -93,10 +93,12 @@ export class FileStorageService {
         name: string;
         data: Uint8Array;
         mimeType?: string;
+        detectedType?: string;
+        typeMismatch?: boolean;
         ownerId: number;
         existingFileId?: string;
     }): Promise<UploadResult> {
-        const { profileId, folderId, name, data, mimeType, ownerId, existingFileId } = params;
+        const { profileId, folderId, name, data, mimeType, detectedType, typeMismatch, ownerId, existingFileId } = params;
 
         // 1. Chunk the data
         const chunks = this.chunker.chunk(data);
@@ -158,9 +160,9 @@ export class FileStorageService {
                 // Create new file
                 fileId = generateId();
                 this.db.prepare(`
-          INSERT INTO files (id, profile_id, folder_id, name, mime_type, total_size, owner_id, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        `).run(fileId, profileId, folderId, name, mimeType || null, data.length, ownerId);
+          INSERT INTO files (id, profile_id, folder_id, name, mime_type, detected_type, type_mismatch, total_size, owner_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `).run(fileId, profileId, folderId, name, mimeType || null, detectedType || null, typeMismatch ? 1 : 0, data.length, ownerId);
             }
 
             // 7. Create version record
