@@ -60,6 +60,7 @@ import {
 import { expandRecurringEvents } from "@/lib/calendar-utils";
 import { usePersona } from "@/contexts/persona-context";
 import { OrphanedDeviationsPanel } from "@/components/orphaned-deviations-panel";
+import { useAnalytics } from "@/hooks/use-analytics";
 
 // ============================================================================
 // Timezone Constants
@@ -341,6 +342,7 @@ interface CalendarEvent {
 
 export function CalendarPageContent() {
     const { currentPersona } = usePersona();
+    const { trackEvent } = useAnalytics();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<"month" | "week" | "day">("month");
     const [workWeekOnly, setWorkWeekOnly] = useState(false);
@@ -350,6 +352,12 @@ export function CalendarPageContent() {
     const [showEventModal, setShowEventModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [showDetailsPanel, setShowDetailsPanel] = useState(false);
+
+    // Handle view change with analytics tracking
+    const handleViewChange = (newView: "month" | "week" | "day") => {
+        trackEvent('calendar.view_change', { properties: { from: view, to: newView } });
+        setView(newView);
+    };
 
     // Recurring event choice dialog state
     const [showDeleteChoiceDialog, setShowDeleteChoiceDialog] = useState(false);
@@ -474,14 +482,14 @@ export function CalendarPageContent() {
                         <Button
                             variant={view === "month" ? "default" : "ghost"}
                             size="sm"
-                            onClick={() => setView("month")}
+                            onClick={() => handleViewChange("month")}
                         >
                             Month
                         </Button>
                         <Button
                             variant={view === "week" ? "default" : "ghost"}
                             size="sm"
-                            onClick={() => setView("week")}
+                            onClick={() => handleViewChange("week")}
                             data-testid="week-view-toggle"
                         >
                             Week
@@ -489,7 +497,7 @@ export function CalendarPageContent() {
                         <Button
                             variant={view === "day" ? "default" : "ghost"}
                             size="sm"
-                            onClick={() => setView("day")}
+                            onClick={() => handleViewChange("day")}
                             data-testid="day-view-toggle"
                         >
                             Day
