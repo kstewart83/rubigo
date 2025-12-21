@@ -3,12 +3,14 @@
  * 
  * Exports OTel spans directly to SQLite for airgapped environments.
  * No external telemetry collector required.
+ * 
+ * Uses bun:sqlite for Bun compatibility.
  */
 
 import type { SpanExporter, ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import type { ExportResult } from '@opentelemetry/core';
 import { ExportResultCode } from '@opentelemetry/core';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { resolve } from 'path';
 
 // Batch size for bulk inserts
@@ -43,9 +45,9 @@ function getDatabasePath(): string {
 /**
  * Initialize the database connection (lazy singleton)
  */
-let db: Database.Database | null = null;
+let db: Database | null = null;
 
-function getDatabase(): Database.Database {
+function getDatabase(): Database {
     if (!db) {
         const dbPath = getDatabasePath();
         db = new Database(dbPath);
@@ -97,19 +99,33 @@ function flushSpans(): void {
         start_time, end_time, duration_ns, status_code, status_message,
         attributes, resource
       ) VALUES (
-        @trace_id, @span_id, @parent_span_id, @name, @kind,
-        @start_time, @end_time, @duration_ns, @status_code, @status_message,
-        @attributes, @resource
+        $trace_id, $span_id, $parent_span_id, $name, $kind,
+        $start_time, $end_time, $duration_ns, $status_code, $status_message,
+        $attributes, $resource
       )
     `);
 
-        const insertMany = database.transaction((spans: SpanRecord[]) => {
+        // Use transaction for bulk insert
+        const transaction = database.transaction((spans: SpanRecord[]) => {
             for (const span of spans) {
-                insert.run(span);
+                insert.run({
+                    $trace_id: span.trace_id,
+                    $span_id: span.span_id,
+                    $parent_span_id: span.parent_span_id,
+                    $name: span.name,
+                    $kind: span.kind,
+                    $start_time: span.start_time,
+                    $end_time: span.end_time,
+                    $duration_ns: span.duration_ns,
+                    $status_code: span.status_code,
+                    $status_message: span.status_message,
+                    $attributes: span.attributes,
+                    $resource: span.resource,
+                });
             }
         });
 
-        insertMany(pendingSpans);
+        transaction(pendingSpans);
         pendingSpans = [];
     } catch (error) {
         console.error('[SQLiteSpanExporter] Failed to flush spans:', error);
@@ -139,8 +155,9 @@ export class SQLiteSpanExporter implements SpanExporter {
         try {
             const records = spans.map((span): SpanRecord => {
                 // Get parent span ID from parentSpanContext if available
-                const parentContext = (span as { parentSpanContext?: () => { spanId?: string } }).parentSpanContext;
-                const parentSpanId = parentContext?.()?.spanId || null;
+                // parentSpanContext is a SpanContext object, not a function
+                const parentContext = (span as unknown as { parentSpanContext?: { spanId?: string } }).parentSpanContext;
+                const parentSpanId = parentContext?.spanId || null;
 
                 return {
                     trace_id: span.spanContext().traceId,

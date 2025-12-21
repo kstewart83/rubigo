@@ -4,9 +4,10 @@
  * Analytics Server Actions
  * 
  * Server-side functions for logging analytics events and metrics.
+ * Uses bun:sqlite for Bun compatibility.
  */
 
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { resolve } from 'path';
 
 interface AnalyticsEvent {
@@ -37,7 +38,7 @@ function getDatabasePath(): string {
 /**
  * Get database connection (creates tables if needed)
  */
-function getDatabase(): Database.Database {
+function getDatabase(): Database {
     const db = new Database(getDatabasePath());
 
     // Ensure tables exist
@@ -86,18 +87,19 @@ export async function logAnalyticsEvent(event: AnalyticsEvent): Promise<void> {
       INSERT INTO analytics_events (
         event_type, event_name, properties, persona_id, 
         session_id, trace_id, duration_ms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($event_type, $event_name, $properties, $persona_id, 
+        $session_id, $trace_id, $duration_ms)
     `);
 
-        stmt.run(
-            event.eventType,
-            event.eventName,
-            event.properties ? JSON.stringify(event.properties) : null,
-            event.personaId ?? null,
-            event.sessionId ?? null,
-            event.traceId ?? null,
-            event.durationMs ?? null
-        );
+        stmt.run({
+            $event_type: event.eventType,
+            $event_name: event.eventName,
+            $properties: event.properties ? JSON.stringify(event.properties) : null,
+            $persona_id: event.personaId ?? null,
+            $session_id: event.sessionId ?? null,
+            $trace_id: event.traceId ?? null,
+            $duration_ms: event.durationMs ?? null,
+        });
 
         db.close();
     } catch (error) {
@@ -114,17 +116,17 @@ export async function logOtelMetric(metric: OtelMetric): Promise<void> {
 
         const stmt = db.prepare(`
       INSERT INTO otel_metrics (name, type, value, unit, attributes, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES ($name, $type, $value, $unit, $attributes, $timestamp)
     `);
 
-        stmt.run(
-            metric.name,
-            metric.type,
-            metric.value,
-            metric.unit ?? null,
-            metric.attributes ? JSON.stringify(metric.attributes) : null,
-            Date.now() * 1_000_000 // Convert to nanoseconds
-        );
+        stmt.run({
+            $name: metric.name,
+            $type: metric.type,
+            $value: metric.value,
+            $unit: metric.unit ?? null,
+            $attributes: metric.attributes ? JSON.stringify(metric.attributes) : null,
+            $timestamp: Date.now() * 1_000_000, // Convert to nanoseconds
+        });
 
         db.close();
     } catch (error) {
@@ -147,20 +149,21 @@ export async function logAnalyticsEventsBatch(
       INSERT INTO analytics_events (
         event_type, event_name, properties, persona_id, 
         session_id, trace_id, duration_ms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($event_type, $event_name, $properties, $persona_id, 
+        $session_id, $trace_id, $duration_ms)
     `);
 
         const insertMany = db.transaction((evts: AnalyticsEvent[]) => {
             for (const event of evts) {
-                stmt.run(
-                    event.eventType,
-                    event.eventName,
-                    event.properties ? JSON.stringify(event.properties) : null,
-                    event.personaId ?? null,
-                    event.sessionId ?? null,
-                    event.traceId ?? null,
-                    event.durationMs ?? null
-                );
+                stmt.run({
+                    $event_type: event.eventType,
+                    $event_name: event.eventName,
+                    $properties: event.properties ? JSON.stringify(event.properties) : null,
+                    $persona_id: event.personaId ?? null,
+                    $session_id: event.sessionId ?? null,
+                    $trace_id: event.traceId ?? null,
+                    $duration_ms: event.durationMs ?? null,
+                });
             }
         });
 
