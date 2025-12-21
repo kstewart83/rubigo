@@ -133,10 +133,13 @@ export async function getActiveSessions(
 ): Promise<number> {
   const interval = getTimeRangeInterval(range);
 
+  // SQLite stores timestamps as 'YYYY-MM-DD HH:MM:SS' in UTC (no timezone)
+  // DuckDB current_timestamp has local timezone offset
+  // Convert cutoff to UTC naive timestamp for comparison
   const result = await queryOne<{ count: number }>(`
     SELECT COUNT(DISTINCT session_id) AS count
     FROM rubigo.analytics_events
-    WHERE CAST(created_at AS TIMESTAMP) >= current_timestamp - ${interval}
+    WHERE created_at >= ((current_timestamp AT TIME ZONE 'UTC') - ${interval})::TIMESTAMP
       AND session_id IS NOT NULL
   `);
 
