@@ -74,6 +74,7 @@ interface PersonnelData {
     cellPhone: string | null;
     bio: string | null;
     isGlobalAdmin: boolean;
+    isAgent?: boolean;
 }
 
 interface Props {
@@ -155,6 +156,7 @@ export function PersonnelPageContent({
         space: "",
         manager: "",
         photo: "",
+        isAgent: false,
     });
     const [formError, setFormError] = useState("");
 
@@ -226,7 +228,7 @@ export function PersonnelPageContent({
 
         if (result.success) {
             setShowCreateDialog(false);
-            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "" });
+            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "", isAgent: false });
             router.refresh();
         } else {
             setFormError(result.error || "Failed to create");
@@ -252,6 +254,7 @@ export function PersonnelPageContent({
                 space: formData.space || undefined,
                 manager: formData.manager || undefined,
                 photo: formData.photo || undefined,
+                isAgent: formData.isAgent,
             },
             currentPersona.id,
             currentPersona.name
@@ -301,6 +304,7 @@ export function PersonnelPageContent({
             space: person.space || "",
             manager: person.manager || "",
             photo: person.photo || "",
+            isAgent: person.isAgent || false,
         });
         setFormError("");
         // Close the Sheet (detail panel) before opening the Edit dialog
@@ -331,7 +335,7 @@ export function PersonnelPageContent({
                 {isAdmin && (
                     <Button
                         onClick={() => {
-                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "" });
+                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "", isAgent: false });
                             setFormError("");
                             setShowCreateDialog(true);
                         }}
@@ -761,6 +765,27 @@ export function PersonnelPageContent({
                                 {formError}
                             </div>
                         )}
+                        {/* AI Agent Toggle - Prominent */}
+                        <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                            <div>
+                                <Label htmlFor="edit-isAgent" className="text-base font-medium">AI Agent</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Enable AI simulation for this personnel
+                                </p>
+                            </div>
+                            <button
+                                id="edit-isAgent"
+                                type="button"
+                                role="switch"
+                                aria-checked={formData.isAgent}
+                                onClick={() => setFormData({ ...formData, isAgent: !formData.isAgent })}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.isAgent ? "bg-purple-600" : "bg-muted"}`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${formData.isAgent ? "translate-x-5" : "translate-x-0"}`}
+                                />
+                            </button>
+                        </div>
                         <div>
                             <Label htmlFor="edit-name">Name</Label>
                             <Input
