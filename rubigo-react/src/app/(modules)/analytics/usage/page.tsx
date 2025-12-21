@@ -2,7 +2,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PersonaProvider } from "@/contexts/persona-context";
 import { getAllPersonnel } from "@/lib/personnel";
 import { getVersion } from "@/lib/config";
-import { AnalyticsTabs } from "../analytics-tabs";
 import { UsageDashboard } from "./usage-dashboard";
 
 const personnel = getAllPersonnel();
@@ -21,7 +20,6 @@ export default function UsagePage() {
                             Platform observability and performance insights
                         </p>
                     </div>
-                    <AnalyticsTabs />
                     <UsageDashboard />
                 </div>
             </AppShell>

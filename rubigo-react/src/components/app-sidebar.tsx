@@ -29,6 +29,9 @@ import {
     Mail,
     MessageCircle,
     MonitorPlay,
+    BarChart3,
+    Gauge,
+    PieChart,
 } from "lucide-react";
 
 import {
@@ -135,6 +138,17 @@ const sidebarModules: SidebarModule[] = [
         icon: FileText,
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
+        ],
+    },
+    {
+        id: "analytics",
+        label: "Analytics",
+        href: "/analytics",
+        icon: BarChart3,
+        subPages: [
+            { id: "overview", label: "Overview", href: "/analytics/overview", icon: BarChart3 },
+            { id: "performance", label: "Performance", href: "/analytics/performance", icon: Gauge },
+            { id: "usage", label: "Usage", href: "/analytics/usage", icon: PieChart },
         ],
     },
 ];
