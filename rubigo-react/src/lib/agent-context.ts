@@ -87,16 +87,21 @@ export async function joinContext(
         leftAt: null,
     });
 
-    // Schedule the first event (immediately)
+    // Schedule the first event with tier delay
+    const tierConfig = TIER_DELAYS[context.reactionTier as keyof typeof TIER_DELAYS] || TIER_DELAYS.sync;
+    const delaySeconds = Math.floor(Math.random() * (tierConfig.max - tierConfig.min + 1)) + tierConfig.min;
+    const scheduledFor = new Date(Date.now() + delaySeconds * 1000).toISOString();
+
     const eventId = await scheduleEvent({
         agentId,
         eventType: getEventTypeForContext(context.contextType),
         contextId,
-        scheduledFor: new Date().toISOString(), // Now!
+        scheduledFor,
         payload: {
             contextType: context.contextType,
             tier: context.reactionTier,
             relatedEntityId: context.relatedEntityId,
+            delaySeconds,
         },
     });
 
