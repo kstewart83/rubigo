@@ -1,8 +1,14 @@
 /**
- * Agent Reset API - Dev tool to clear agent state
+ * Agent Reset API - Dev tool to clear ALL agent state
  * 
  * POST /api/agents/reset
- * Clears all agent events and resets statuses to dormant
+ * Clears:
+ * - agent_events (thought/action log)
+ * - agent_scheduled_events (DES queue)
+ * - sync_context_participants (context memberships)
+ * - sync_contexts (active contexts)
+ * - agent_sessions (API tokens)
+ * - agent statuses → "dormant"
  */
 
 import { NextResponse } from "next/server";
@@ -12,10 +18,22 @@ import { eq, sql } from "drizzle-orm";
 
 export async function POST() {
     try {
-        // Clear all agent events
+        // 1. Clear agent events (thoughts/actions log)
         await db.delete(schema.agentEvents);
 
-        // Reset all agents to dormant status
+        // 2. Clear scheduled events (DES queue)
+        await db.delete(schema.agentScheduledEvents);
+
+        // 3. Clear sync context participants
+        await db.delete(schema.syncContextParticipants);
+
+        // 4. Clear sync contexts
+        await db.delete(schema.syncContexts);
+
+        // 5. Clear agent sessions (API tokens)
+        await db.delete(schema.agentSessions);
+
+        // 6. Reset all agents to dormant status
         await db
             .update(schema.personnel)
             .set({ agentStatus: "dormant" })
@@ -29,7 +47,14 @@ export async function POST() {
 
         return NextResponse.json({
             success: true,
-            message: "Agent state cleared",
+            message: "All agent state cleared",
+            cleared: {
+                agentEvents: true,
+                scheduledEvents: true,
+                syncContexts: true,
+                syncParticipants: true,
+                agentSessions: true,
+            },
             agentsReset: agents[0]?.count || 0,
         });
     } catch (error) {
