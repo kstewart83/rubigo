@@ -43,6 +43,40 @@ export {
     type SimulationStatus,
 } from "./agent-manager";
 
+// Collaboration: Chat
+export {
+    shouldRespondToChat,
+    generateChatResponse,
+    createChatObservation,
+    type ChatObservation,
+    type AgentChatContext,
+} from "./agent-chat";
+
+// Collaboration: Email
+export {
+    shouldRespondToEmail,
+    generateEmailResponse,
+    generateDraftEmail,
+    checkInbox,
+    createEmailObservation,
+    type EmailObservation,
+    type AgentEmailContext,
+} from "./agent-email";
+
+// Collaboration: Calendar
+export {
+    getUpcomingEvents,
+    isEventActive,
+    shouldJoinMeeting,
+    generateMeetingPrep,
+    createJoinMeetingAction,
+    createLeaveMeetingAction,
+    processCalendarCheck,
+    createCalendarEvent,
+    type CalendarEvent,
+    type AgentCalendarContext,
+} from "./agent-calendar";
+
 // Types
 export {
     type AgentEventType,
