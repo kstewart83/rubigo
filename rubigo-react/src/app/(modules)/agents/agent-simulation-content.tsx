@@ -121,62 +121,78 @@ export function AgentSimulationContent() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
                 <div className="text-muted-foreground">Loading agent simulation...</div>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Agent Simulation</h1>
-                    <p className="text-muted-foreground">
-                        Control and monitor AI agent behavior
-                    </p>
+        <div className="flex flex-col h-[calc(100vh-4rem)]">
+            {/* Header */}
+            <div className="flex-shrink-0 border-b px-6 py-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold">Agent Simulation</h1>
+                        <p className="text-muted-foreground text-sm">
+                            Control and monitor AI agent behavior
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                        <span className={simulation.ollamaAvailable ? "text-green-500" : "text-red-500"}>
+                            {simulation.ollamaAvailable ? "● Ollama Connected" : "○ Ollama Unavailable"}
+                        </span>
+                        <span className="text-muted-foreground">
+                            {simulation.ollamaModel || "No model"}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Control Panel */}
-                <AgentControlPanel
-                    agents={agents}
-                    simulation={simulation}
-                    onStart={handleStart}
-                    onStop={handleStop}
-                    onTick={handleTick}
-                    onSelectAgent={setSelectedAgentId}
-                />
-
-                {/* Thought Viewer */}
-                {selectedAgent ? (
-                    <AgentThoughtViewer
-                        agentId={selectedAgent.id}
-                        agentName={selectedAgent.name}
-                        status={selectedAgent.status}
-                        thoughts={thoughts}
-                        onClose={() => setSelectedAgentId(null)}
+            {/* Main Content - Full height flex */}
+            <div className="flex-1 flex min-h-0">
+                {/* Left Sidebar - Control Panel (fixed width) */}
+                <div className="w-80 flex-shrink-0 border-r overflow-y-auto p-4">
+                    <AgentControlPanel
+                        agents={agents}
+                        simulation={simulation}
+                        onStart={handleStart}
+                        onStop={handleStop}
+                        onTick={handleTick}
+                        onSelectAgent={setSelectedAgentId}
+                        className="border-0 shadow-none"
                     />
-                ) : (
-                    <div className="border rounded-lg p-8 flex items-center justify-center text-muted-foreground">
-                        Select an agent to view their thought stream
-                    </div>
-                )}
-            </div>
+                </div>
 
-            {/* Status Info */}
-            <div className="text-sm text-muted-foreground">
-                <p>
-                    Ollama: {simulation.ollamaAvailable ? "✅ Connected" : "❌ Unavailable"} |
-                    Agents: {agents.length} |
-                    Model: {simulation.ollamaModel || "N/A"}
-                </p>
-                {!simulation.ollamaAvailable && (
-                    <p className="text-amber-500 mt-1">
-                        💡 Start Ollama and run: <code>ollama pull gemma3:4b</code>
-                    </p>
-                )}
+                {/* Right Content - Thought Viewer (fills remaining space) */}
+                <div className="flex-1 min-w-0 overflow-y-auto p-6">
+                    {selectedAgent ? (
+                        <AgentThoughtViewer
+                            agentId={selectedAgent.id}
+                            agentName={selectedAgent.name}
+                            status={selectedAgent.status}
+                            thoughts={thoughts}
+                            maxHeight="calc(100vh - 12rem)"
+                            onClose={() => setSelectedAgentId(null)}
+                        />
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground border rounded-lg bg-muted/20">
+                            <div className="text-4xl mb-4">💭</div>
+                            <p className="text-lg">Select an agent to view their thought stream</p>
+                            <p className="text-sm mt-2">
+                                {agents.length === 0
+                                    ? "No agents configured. Mark personnel as agents to begin."
+                                    : `${agents.length} agent${agents.length !== 1 ? "s" : ""} available`
+                                }
+                            </p>
+                            {!simulation.ollamaAvailable && (
+                                <p className="text-amber-500 text-sm mt-4">
+                                    💡 Start Ollama: <code className="bg-muted px-2 py-1 rounded">ollama pull gemma3:4b</code>
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
