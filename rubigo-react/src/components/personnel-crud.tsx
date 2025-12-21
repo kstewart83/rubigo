@@ -73,6 +73,7 @@ interface FormData {
     deskPhone: string;
     cellPhone: string;
     bio: string;
+    isAgent: boolean;
 }
 
 const emptyForm: FormData = {
@@ -88,6 +89,7 @@ const emptyForm: FormData = {
     deskPhone: "",
     cellPhone: "",
     bio: "",
+    isAgent: false,
 };
 
 export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
@@ -123,6 +125,7 @@ export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
             deskPhone: person.deskPhone || "",
             cellPhone: person.cellPhone || "",
             bio: person.bio || "",
+            isAgent: person.isAgent || false,
         });
         setError(null);
         setShowEditDialog(true);
@@ -186,6 +189,7 @@ export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
                 deskPhone: formData.deskPhone || undefined,
                 cellPhone: formData.cellPhone || undefined,
                 bio: formData.bio || undefined,
+                isAgent: formData.isAgent,
             };
 
             const result = await updatePersonnel(
@@ -363,6 +367,32 @@ export function PersonnelCRUD({ personnel }: PersonnelCRUDProps) {
                     placeholder="Brief biography..."
                     rows={3}
                 />
+            </div>
+
+            {/* AI Agent Section */}
+            <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Label htmlFor="isAgent" className="text-base">AI Agent</Label>
+                        <p className="text-sm text-muted-foreground">
+                            Enable AI simulation for this personnel
+                        </p>
+                    </div>
+                    <button
+                        id="isAgent"
+                        type="button"
+                        role="switch"
+                        aria-checked={formData.isAgent}
+                        onClick={() => setFormData({ ...formData, isAgent: !formData.isAgent })}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.isAgent ? "bg-purple-600" : "bg-muted"
+                            }`}
+                    >
+                        <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${formData.isAgent ? "translate-x-5" : "translate-x-0"
+                                }`}
+                        />
+                    </button>
+                </div>
             </div>
 
             {error && (
