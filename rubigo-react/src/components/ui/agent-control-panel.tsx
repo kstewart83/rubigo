@@ -34,6 +34,7 @@ export interface AgentControlPanelProps {
     onStart?: () => void;
     onStop?: () => void;
     onTick?: () => void;
+    onReset?: () => void;
     onSelectAgent?: (agentId: string) => void;
     className?: string;
 }
@@ -47,6 +48,7 @@ export function AgentControlPanel({
     onStart,
     onStop,
     onTick,
+    onReset,
     onSelectAgent,
     className,
 }: AgentControlPanelProps) {
@@ -148,6 +150,14 @@ export function AgentControlPanel({
                             disabled={!simulation.running}
                         >
                             ⏭ Tick
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onReset}
+                            className="text-muted-foreground hover:text-destructive"
+                        >
+                            🗑 Reset
                         </Button>
                     </div>
 

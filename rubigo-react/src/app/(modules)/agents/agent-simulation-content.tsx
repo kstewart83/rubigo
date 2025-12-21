@@ -140,6 +140,24 @@ export function AgentSimulationContent() {
         executeTick();
     };
 
+    const handleReset = async () => {
+        try {
+            const response = await fetch("/api/agents/reset", { method: "POST" });
+            const data = await response.json();
+            console.log("Reset result:", data);
+
+            // Clear local state
+            setThoughts([]);
+            setSelectedAgentId(null);
+            setSimulation(prev => ({ ...prev, running: false, totalTicks: 0 }));
+
+            // Refresh status
+            await fetchStatus();
+        } catch (error) {
+            console.error("Reset error:", error);
+        }
+    };
+
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
     if (loading) {
@@ -182,6 +200,7 @@ export function AgentSimulationContent() {
                         onStart={handleStart}
                         onStop={handleStop}
                         onTick={handleTick}
+                        onReset={handleReset}
                         onSelectAgent={setSelectedAgentId}
                         className="border-0 shadow-none"
                     />
