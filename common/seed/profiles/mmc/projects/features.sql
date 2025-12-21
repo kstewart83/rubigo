@@ -41,3 +41,11 @@ INSERT INTO features (profile_id, id, name, description, objective_id, status) V
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-calendar-orphan-deviations', 'Orphaned Deviation Management', 'View and delete orphaned deviations from recurring events when pattern changes leave modifications/cancellations targeting dates that no longer occur', 'obj-calendar-recurrence', 'in_progress');
 
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-mcp-action-source', 'MCP Action Source Identification', 'Action logs distinguish MCP-originated operations from UI and API calls', 'obj-rubigo-audit', 'planned');
+
+-- ANALYTICS AND OBSERVABILITY (GH #33)
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-collection', 'Telemetry Collection', 'Automatic collection of page views, feature events, and session data via useAnalytics hook', 'obj-rubigo-metrics', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-otel', 'OpenTelemetry Instrumentation', 'Automatic span collection for HTTP requests, SSR, API routes, and DB queries via @vercel/otel', 'obj-rubigo-metrics', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-vitals', 'Web Vitals Collection', 'Automatic collection of Core Web Vitals (LCP, FCP, TTFB, CLS, INP) via useReportWebVitals', 'obj-rubigo-metrics', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-duckdb', 'DuckDB Analytical Queries', 'Read-only DuckDB attachment to SQLite for OLAP queries on telemetry data', 'obj-rubigo-metrics', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-warehouse', 'Parquet Warehousing', 'ETL process to archive old telemetry to Parquet files for historical analysis', 'obj-rubigo-metrics', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-dashboard', 'Analytics Discovery Dashboard', 'Admin-only /analytics route with overview, performance, and usage views', 'obj-rubigo-metrics', 'planned');
