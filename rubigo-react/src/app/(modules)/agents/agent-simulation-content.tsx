@@ -151,8 +151,8 @@ export function AgentSimulationContent() {
 
             {/* Main Content - Full height flex */}
             <div className="flex-1 flex min-h-0">
-                {/* Left Sidebar - Control Panel (fixed width) */}
-                <div className="w-96 flex-shrink-0 border-r overflow-y-auto p-4">
+                {/* Left Sidebar - Control Panel (1/3 width) */}
+                <div className="w-1/3 flex-shrink-0 border-r overflow-y-auto p-4">
                     <AgentControlPanel
                         agents={agents}
                         simulation={simulation}
@@ -164,8 +164,8 @@ export function AgentSimulationContent() {
                     />
                 </div>
 
-                {/* Right Content - Thought Viewer (fills remaining space) */}
-                <div className="flex-1 min-w-0 overflow-y-auto p-6">
+                {/* Right Content - Thought Viewer (2/3 width) */}
+                <div className="w-2/3 overflow-y-auto p-6">
                     {selectedAgent ? (
                         <AgentThoughtViewer
                             agentId={selectedAgent.id}
