@@ -156,7 +156,15 @@ export function AgentControlPanel({
                         <h4 className="text-sm font-medium text-muted-foreground">
                             Agents
                         </h4>
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {/* Column Headers */}
+                        {agents.length > 0 && (
+                            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground border-b">
+                                <span className="w-1/3">Name</span>
+                                <span className="w-1/4 text-center">Status</span>
+                                <span className="w-1/4 text-right">Last Activity</span>
+                            </div>
+                        )}
+                        <div className="space-y-1 max-h-64 overflow-y-auto">
                             {agents.map((agent) => (
                                 <AgentListItem
                                     key={agent.id}
@@ -195,6 +203,16 @@ function AgentListItem({
 }) {
     const lastActive = new Date(agent.lastActivity).toLocaleTimeString();
 
+    // Status display text and colors
+    const statusConfig: Record<AgentStatus, { text: string; color: string }> = {
+        dormant: { text: "Dormant", color: "text-gray-400" },
+        sleeping: { text: "Sleeping", color: "text-purple-400" },
+        idle: { text: "Idle", color: "text-blue-400" },
+        working: { text: "Working", color: "text-amber-400" },
+    };
+
+    const { text: statusText, color: statusColor } = statusConfig[agent.status] || statusConfig.dormant;
+
     return (
         <button
             onClick={onClick}
@@ -204,14 +222,17 @@ function AgentListItem({
                 "text-left"
             )}
         >
-            <div className="flex items-center gap-2">
+            <div className="w-1/3 flex items-center gap-2">
                 <AgentStatusIndicator status={agent.status} showLabel={false} size="sm" />
-                <span className="font-medium text-sm">{agent.name}</span>
+                <span className="font-medium text-sm truncate">{agent.name}</span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className={cn("w-1/4 text-center text-xs font-medium", statusColor)}>
+                {statusText}
+            </div>
+            <div className="w-1/4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
                 {agent.pendingActions > 0 && (
                     <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
-                        {agent.pendingActions} pending
+                        {agent.pendingActions}
                     </span>
                 )}
                 <span>{lastActive}</span>
