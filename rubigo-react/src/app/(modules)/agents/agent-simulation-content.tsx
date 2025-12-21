@@ -152,7 +152,7 @@ export function AgentSimulationContent() {
             {/* Main Content - Full height flex */}
             <div className="flex-1 flex min-h-0">
                 {/* Left Sidebar - Control Panel (fixed width) */}
-                <div className="w-80 flex-shrink-0 border-r overflow-y-auto p-4">
+                <div className="w-96 flex-shrink-0 border-r overflow-y-auto p-4">
                     <AgentControlPanel
                         agents={agents}
                         simulation={simulation}
