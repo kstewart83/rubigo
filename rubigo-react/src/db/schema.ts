@@ -567,6 +567,18 @@ export const agentEvents = sqliteTable("agent_events", {
 });
 
 /**
+ * Agent Sessions - API tokens for agent-authenticated requests
+ * Each agent gets their own token so their actions are logged under their identity
+ */
+export const agentSessions = sqliteTable("agent_sessions", {
+    id: text("id").primaryKey(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: text("created_at").notNull(), // ISO 8601
+    isActive: integer("is_active").notNull().default(1), // 1 = active, 0 = revoked
+});
+
+/**
  * Sync Contexts - Synchronous interaction zones
  * Represents shared interactions that multiple agents/people can participate in
  */
@@ -734,6 +746,9 @@ export type NewClassificationGuide = typeof classificationGuides.$inferInsert;
 // Agent Simulation
 export type AgentEvent = typeof agentEvents.$inferSelect;
 export type NewAgentEvent = typeof agentEvents.$inferInsert;
+
+export type AgentSession = typeof agentSessions.$inferSelect;
+export type NewAgentSession = typeof agentSessions.$inferInsert;
 
 export type SyncContext = typeof syncContexts.$inferSelect;
 export type NewSyncContext = typeof syncContexts.$inferInsert;
