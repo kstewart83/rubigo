@@ -162,6 +162,22 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId
                                             <span className="text-muted-foreground truncate">
                                                 {formatEventType(event.eventType)}
                                             </span>
+                                            {(() => {
+                                                try {
+                                                    const payload = event.payload ? JSON.parse(event.payload) : null;
+                                                    if (payload?.targetName) {
+                                                        return (
+                                                            <>
+                                                                <span className="text-muted-foreground">→</span>
+                                                                <span className="text-blue-400 truncate">
+                                                                    #{payload.targetName}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                } catch { }
+                                                return null;
+                                            })()}
                                         </div>
                                         <div className="text-[10px] text-muted-foreground mt-0.5">
                                             @ {new Date(event.scheduledFor).toLocaleTimeString([], {

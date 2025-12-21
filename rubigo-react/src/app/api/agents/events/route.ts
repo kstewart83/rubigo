@@ -50,11 +50,35 @@ export async function GET(request: NextRequest) {
         // Get current time for comparison
         const now = new Date().toISOString();
 
-        // Enrich events with ready status
-        const enrichedEvents = events.map(e => ({
-            ...e,
-            isReady: e.scheduledFor <= now,
-            msUntilReady: Math.max(0, new Date(e.scheduledFor).getTime() - Date.now()),
+        // Enrich events with ready status and target name
+        const enrichedEvents = await Promise.all(events.map(async e => {
+            let targetName: string | null = null;
+
+            // Try to get channel name from payload or context
+            if (e.eventType === "check_chat" && e.payload) {
+                try {
+                    const payload = JSON.parse(e.payload);
+                    if (payload.relatedEntityId) {
+                        const channels = await db
+                            .select({ name: schema.chatChannels.name })
+                            .from(schema.chatChannels)
+                            .where(eq(schema.chatChannels.id, payload.relatedEntityId))
+                            .limit(1);
+                        if (channels.length > 0) {
+                            targetName = channels[0].name;
+                        }
+                    }
+                } catch {
+                    // ignore parse errors
+                }
+            }
+
+            return {
+                ...e,
+                targetName,
+                isReady: e.scheduledFor <= now,
+                msUntilReady: Math.max(0, new Date(e.scheduledFor).getTime() - Date.now()),
+            };
         }));
 
         return NextResponse.json({

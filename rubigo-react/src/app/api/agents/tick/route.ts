@@ -220,7 +220,8 @@ async function processEvent(event: schema.AgentScheduledEvent): Promise<{
                 const result = await createChatContextForAgent(
                     event.agentId,
                     membership.channelId,
-                    "sync"
+                    "sync",
+                    membership.channelName || undefined
                 );
                 contexts.push(membership.channelName || membership.channelId);
             }

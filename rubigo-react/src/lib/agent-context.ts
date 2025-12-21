@@ -62,7 +62,8 @@ export async function createSyncContext(params: {
  */
 export async function joinContext(
     agentId: string,
-    contextId: string
+    contextId: string,
+    targetName?: string
 ): Promise<{ participantId: string; eventId: string }> {
     // Get context details
     const contexts = await db
@@ -101,6 +102,7 @@ export async function joinContext(
             contextType: context.contextType,
             tier: context.reactionTier,
             relatedEntityId: context.relatedEntityId,
+            targetName: targetName || context.relatedEntityId,
             delaySeconds,
         },
     });
@@ -195,7 +197,8 @@ export async function getActiveContextsForAgent(agentId: string): Promise<{
 export async function createChatContextForAgent(
     agentId: string,
     channelId: string,
-    tier: "sync" | "near_sync" | "async" = "sync"
+    tier: "sync" | "near_sync" | "async" = "sync",
+    channelName?: string
 ): Promise<{ contextId: string; eventId: string }> {
     // Create the context
     const contextId = await createSyncContext({
@@ -204,8 +207,8 @@ export async function createChatContextForAgent(
         relatedEntityId: channelId,
     });
 
-    // Join the agent
-    const { eventId } = await joinContext(agentId, contextId);
+    // Join the agent (pass channelName for payload)
+    const { eventId } = await joinContext(agentId, contextId, channelName);
 
     return { contextId, eventId };
 }
