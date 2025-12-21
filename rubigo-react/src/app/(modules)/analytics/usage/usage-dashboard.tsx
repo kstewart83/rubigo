@@ -19,7 +19,8 @@ interface PageView {
 interface UsageData {
     modules: ModuleUsage[];
     pages: PageView[];
-    sessions: number;
+    sessions24h: number;
+    sessions1h: number;
     error: string | null;
 }
 
@@ -70,15 +71,28 @@ export function UsageDashboard() {
 
     return (
         <div className="space-y-8">
-            {/* Active Sessions Summary */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/20 rounded-lg">
-                        <Users className="h-8 w-8" />
+            {/* Active Sessions Summary - Show both time ranges */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white/20 rounded-lg">
+                            <Users className="h-8 w-8" />
+                        </div>
+                        <div>
+                            <p className="text-sm opacity-80">Active Sessions (Last Hour)</p>
+                            <p className="text-4xl font-bold">{data?.sessions1h ?? 0}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm opacity-80">Active Sessions (Last 24 Hours)</p>
-                        <p className="text-4xl font-bold">{data?.sessions ?? 0}</p>
+                </div>
+                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-6 text-white">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white/20 rounded-lg">
+                            <Users className="h-8 w-8" />
+                        </div>
+                        <div>
+                            <p className="text-sm opacity-80">Active Sessions (Last 24 Hours)</p>
+                            <p className="text-4xl font-bold">{data?.sessions24h ?? 0}</p>
+                        </div>
                     </div>
                 </div>
             </div>

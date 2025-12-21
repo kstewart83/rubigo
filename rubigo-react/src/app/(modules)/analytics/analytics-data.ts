@@ -19,19 +19,21 @@ import {
 
 export async function fetchOverviewData(range: TimeRange = '24h') {
     try {
-        const [stats, vitals, topPages] = await Promise.all([
+        const [stats, vitals, topPages, sessions1h] = await Promise.all([
             getOverviewStats(range),
             getWebVitalsSummary(range),
             getTopPages(range, 5),
+            getActiveSessions('1h'),
         ]);
 
-        return { stats, vitals, topPages, error: null };
+        return { stats, vitals, topPages, sessions1h, error: null };
     } catch (error) {
         console.error('[Analytics] Failed to fetch overview data:', error);
         return {
             stats: null,
             vitals: [],
             topPages: [],
+            sessions1h: 0,
             error: 'Failed to load analytics data'
         };
     }
@@ -59,19 +61,21 @@ export async function fetchPerformanceData(range: TimeRange = '24h') {
 
 export async function fetchUsageData(range: TimeRange = '24h') {
     try {
-        const [modules, pages, sessions] = await Promise.all([
+        const [modules, pages, sessions24h, sessions1h] = await Promise.all([
             getFeatureUsageByModule(range),
             getTopPages(range, 10),
-            getActiveSessions(range),
+            getActiveSessions('24h'),
+            getActiveSessions('1h'),
         ]);
 
-        return { modules, pages, sessions, error: null };
+        return { modules, pages, sessions24h, sessions1h, error: null };
     } catch (error) {
         console.error('[Analytics] Failed to fetch usage data:', error);
         return {
             modules: [],
             pages: [],
-            sessions: 0,
+            sessions24h: 0,
+            sessions1h: 0,
             error: 'Failed to load usage data'
         };
     }

@@ -27,6 +27,7 @@ interface OverviewData {
     stats: OverviewStats | null;
     vitals: WebVital[];
     topPages: PageView[];
+    sessions1h: number;
     error: string | null;
 }
 
@@ -127,9 +128,15 @@ export function OverviewDashboard() {
     return (
         <div className="space-y-8">
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <StatCard
-                    title="Active Sessions"
+                    title="Sessions (1 Hour)"
+                    value={data?.sessions1h ?? 0}
+                    subtitle="Currently active"
+                    icon={Users}
+                />
+                <StatCard
+                    title="Sessions (24 Hours)"
                     value={stats?.active_sessions ?? 0}
                     subtitle="Last 24 hours"
                     icon={Users}
