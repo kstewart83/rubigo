@@ -783,19 +783,34 @@ async function main() {
     }
     allStats.calendarEvents = { created: calendarCreated, skipped: calendarSkipped, failed: calendarFailed, updated: 0, deleted: 0 };
 
+    // Build a mapping from seed calendar event IDs to remote IDs by matching on title
+    const seedEventIdToRemote = new Map<string, string>();
+    for (const event of data.calendarEvents) {
+        const remoteId = existingEventsByTitle.get(event.title);
+        if (remoteId) {
+            seedEventIdToRemote.set(event.id, remoteId);
+        }
+    }
+
     // 14. Calendar Deviations - sync orphaned deviation examples
     console.log(`\n📦 Syncing ${data.calendarDeviations.length} calendar deviations...`);
     let deviationCreated = 0, deviationSkipped = 0, deviationFailed = 0;
 
-    // Need to look up existing event IDs by title to resolve event_id
     for (const deviation of data.calendarDeviations) {
+        // Resolve seed event ID to remote event ID
+        const remoteEventId = seedEventIdToRemote.get(deviation.event_id);
+        if (!remoteEventId) {
+            console.log(`   ⚠️  Skipping deviation: event ${deviation.event_id} not found in database`);
+            deviationSkipped++;
+            continue;
+        }
+
         if (args.dryRun) {
             console.log(`   🆕 [DRY-RUN] Would create deviation for event: ${deviation.event_id}, date: ${deviation.original_date || deviation.new_date}`);
             deviationCreated++;
         } else {
-            // Use the createDeviation API (need to add to client)
             const result = await client.createCalendarDeviation({
-                eventId: deviation.event_id,
+                eventId: remoteEventId,
                 originalDate: deviation.original_date || undefined,
                 newDate: deviation.new_date || undefined,
                 cancelled: deviation.cancelled === 1,
