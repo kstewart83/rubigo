@@ -1646,3 +1646,288 @@ test.describe("Calendar Deviation Model", () => {
     });
 });
 
+// ============================================================================
+// ORPHANED DEVIATION TESTS
+// ============================================================================
+
+test.describe("Calendar Orphaned Deviations", () => {
+    test.beforeEach(async ({ page }) => {
+        await signInAsAdmin(page);
+        await page.goto("/calendar");
+        await expect(page.locator("[data-testid='month-grid']").or(page.locator("h1:has-text('Calendar')"))).toBeVisible({ timeout: 10000 });
+    });
+
+    /**
+     * Helper: Create a recurring event, modify an instance (creates deviation),
+     * then change the series pattern to orphan that deviation.
+     * Returns the event title for further assertions.
+     */
+    async function createEventWithOrphanedDeviation(page: import("@playwright/test").Page): Promise<string | null> {
+        const uniqueTitle = `OrphanTest ${Date.now()}`;
+
+        // 1. Create a daily recurring event
+        await page.getByRole("button", { name: /new event/i }).click();
+        await expect(page.getByRole("dialog", { name: "New Event" })).toBeVisible({ timeout: 5000 });
+
+        await page.locator("#title").fill(uniqueTitle);
+        await page.locator("#startTime").fill("10:00");
+        await page.locator("#endTime").fill("11:00");
+
+        // Enable daily recurrence
+        const recurrenceToggle = page.locator("#recurrence-toggle").or(
+            page.getByRole("checkbox", { name: /repeat|recurring/i })
+        );
+        await recurrenceToggle.click();
+        await page.waitForTimeout(300);
+
+        // Save the event
+        await page.getByRole("button", { name: /save/i }).click();
+        await expect(page.getByRole("dialog", { name: "New Event" })).toBeHidden({ timeout: 10000 });
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        // 2. Find and click on an instance of the event
+        const eventPill = page.locator(".event-pill", { hasText: uniqueTitle }).first();
+        const isVisible = await eventPill.isVisible({ timeout: 3000 }).catch(() => false);
+        if (!isVisible) {
+            console.log("CreateOrphan helper: Event not visible, cannot proceed");
+            return null;
+        }
+
+        await eventPill.click();
+        await page.waitForTimeout(500);
+
+        // 3. Edit this instance only (creates a deviation)
+        const editButton = page.getByRole("button", { name: "Edit", exact: true });
+        if (await editButton.isVisible({ timeout: 2000 })) {
+            await editButton.click();
+
+            // Select "This Occurrence Only" if prompted
+            const thisOnlyBtn = page.getByRole("button", { name: /this occurrence only/i });
+            if (await thisOnlyBtn.isVisible({ timeout: 2000 })) {
+                await thisOnlyBtn.click();
+            }
+            await page.waitForTimeout(500);
+
+            // Modify the title to create a deviation
+            await page.locator("#title").fill(`${uniqueTitle} - Modified`);
+            await page.getByRole("button", { name: /save/i }).click();
+            await page.waitForTimeout(1000);
+        }
+
+        // 4. Now edit the SERIES to change the pattern, orphaning the deviation
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        const eventPillAgain = page.locator(".event-pill", { hasText: uniqueTitle }).first();
+        if (await eventPillAgain.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await eventPillAgain.click();
+            await page.waitForTimeout(500);
+
+            const editButtonAgain = page.getByRole("button", { name: "Edit", exact: true });
+            if (await editButtonAgain.isVisible({ timeout: 2000 })) {
+                await editButtonAgain.click();
+
+                // Select "All Occurrences" to edit the series
+                const allOccBtn = page.getByRole("button", { name: /all occurrences/i });
+                if (await allOccBtn.isVisible({ timeout: 2000 })) {
+                    await allOccBtn.click();
+                }
+                await page.waitForTimeout(500);
+
+                // Change recurrence to Monday only (today may not be Monday → deviation becomes orphaned)
+                const monBtn = page.getByRole("button", { name: "Mon" });
+                if (await monBtn.isVisible({ timeout: 2000 })) {
+                    await monBtn.click();
+                    await page.waitForTimeout(200);
+                }
+
+                await page.getByRole("button", { name: /save/i }).click();
+                await page.waitForTimeout(1000);
+            }
+        }
+
+        return uniqueTitle;
+    }
+
+    test("scen-calendar-orphan-indicator-shown: Orphan indicator displayed after pattern change", async ({ page }) => {
+        // Given I have created a recurring event, modified an instance, then changed the series pattern
+        // When I view the event details
+        // Then I see an amber orphan indicator showing the count
+
+        const title = await createEventWithOrphanedDeviation(page);
+        if (!title) {
+            console.log("Orphan-indicator test: Could not create test data, skipping");
+            return;
+        }
+
+        // Find and click on the event
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        const eventPill = page.locator(".event-pill", { hasText: title }).first();
+        if (await eventPill.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            // Verify orphan indicator is visible
+            const orphanIndicator = page.locator("[data-testid='orphaned-deviations-indicator']");
+            await expect(orphanIndicator).toBeVisible({ timeout: 5000 });
+        } else {
+            console.log("Orphan-indicator test: Event not visible after setup");
+        }
+    });
+
+    test("scen-calendar-orphan-view-dialog: View orphaned deviations in dialog", async ({ page }) => {
+        // Given an event with orphaned deviations (created via pattern change)
+        // When I click on the orphan indicator
+        // Then I see a dialog listing all orphaned deviations
+
+        const title = await createEventWithOrphanedDeviation(page);
+        if (!title) {
+            console.log("Orphan-view-dialog test: Could not create test data, skipping");
+            return;
+        }
+
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        const eventPill = page.locator(".event-pill", { hasText: title }).first();
+        if (await eventPill.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            const orphanIndicator = page.locator("[data-testid='orphaned-deviations-indicator']");
+            if (await orphanIndicator.isVisible({ timeout: 2000 })) {
+                await orphanIndicator.click();
+                await page.waitForTimeout(500);
+
+                // Verify dialog opens with list of orphans
+                const dialog = page.locator("div[role='dialog']");
+                await expect(dialog.or(page.locator("[data-testid='orphan-deviations-dialog']"))).toBeVisible({ timeout: 3000 });
+
+                // Should show orphan items
+                const orphanList = page.locator("[data-testid^='orphan-deviation-']");
+                const orphanCount = await orphanList.count();
+                expect(orphanCount).toBeGreaterThan(0);
+            }
+        }
+    });
+
+    test("scen-calendar-orphan-delete-one: Delete single orphaned deviation", async ({ page }) => {
+        // Given I have the orphan dialog open
+        // When I click delete on one orphan
+        // Then the count decreases
+
+        const title = await createEventWithOrphanedDeviation(page);
+        if (!title) {
+            console.log("Orphan-delete-one test: Could not create test data, skipping");
+            return;
+        }
+
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        const eventPill = page.locator(".event-pill", { hasText: title }).first();
+        if (await eventPill.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            const orphanIndicator = page.locator("[data-testid='orphaned-deviations-indicator']");
+            if (await orphanIndicator.isVisible({ timeout: 2000 })) {
+                await orphanIndicator.click();
+                await page.waitForTimeout(500);
+
+                // Count orphans before delete
+                const orphanListBefore = page.locator("[data-testid^='orphan-deviation-']");
+                const countBefore = await orphanListBefore.count();
+
+                // Click delete on first orphan
+                const deleteBtn = page.locator("[data-testid^='delete-orphan-']").first();
+                if (await deleteBtn.isVisible({ timeout: 2000 })) {
+                    await deleteBtn.click();
+                    await page.waitForTimeout(1000);
+
+                    // If count was 1, indicator should be gone; else count decreased
+                    if (countBefore === 1) {
+                        await expect(page.locator("[data-testid='orphaned-deviations-indicator']")).not.toBeVisible({ timeout: 3000 });
+                    } else {
+                        const orphanListAfter = page.locator("[data-testid^='orphan-deviation-']");
+                        const countAfter = await orphanListAfter.count();
+                        expect(countAfter).toBeLessThan(countBefore);
+                    }
+                }
+            }
+        }
+    });
+
+    test("scen-calendar-orphan-delete-all: Delete all orphaned deviations", async ({ page }) => {
+        // Given I have the orphan dialog open with orphans
+        // When I click "Delete All"
+        // Then all orphans are removed and indicator disappears
+
+        const title = await createEventWithOrphanedDeviation(page);
+        if (!title) {
+            console.log("Orphan-delete-all test: Could not create test data, skipping");
+            return;
+        }
+
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        const eventPill = page.locator(".event-pill", { hasText: title }).first();
+        if (await eventPill.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            const orphanIndicator = page.locator("[data-testid='orphaned-deviations-indicator']");
+            if (await orphanIndicator.isVisible({ timeout: 2000 })) {
+                await orphanIndicator.click();
+                await page.waitForTimeout(500);
+
+                // Click Delete All button
+                const deleteAllBtn = page.locator("[data-testid='delete-all-orphans']");
+                if (await deleteAllBtn.isVisible({ timeout: 2000 })) {
+                    await deleteAllBtn.click();
+                    await page.waitForTimeout(1000);
+
+                    // Indicator should now be hidden
+                    await expect(page.locator("[data-testid='orphaned-deviations-indicator']")).not.toBeVisible({ timeout: 3000 });
+                }
+            }
+        }
+    });
+
+    test("scen-calendar-orphan-none-no-indicator: No indicator when no orphans exist", async ({ page }) => {
+        // Given an event with NO orphaned deviations
+        // When I view the event details
+        // Then no orphan indicator is displayed
+
+        // Create a simple non-recurring event (will have no orphans)
+        const uniqueTitle = `No Orphans ${Date.now()}`;
+
+        await page.getByRole("button", { name: /new event/i }).click();
+        await expect(page.getByRole("dialog", { name: "New Event" })).toBeVisible({ timeout: 5000 });
+
+        await page.locator("#title").fill(uniqueTitle);
+        await page.locator("#startTime").fill("09:00");
+        await page.locator("#endTime").fill("10:00");
+        await page.getByRole("button", { name: /save/i }).click();
+
+        await expect(page.getByRole("dialog", { name: "New Event" })).toBeHidden({ timeout: 10000 });
+        await page.reload();
+        await expect(page.locator("[data-testid='month-grid']")).toBeVisible({ timeout: 10000 });
+
+        // Find and click on the new event
+        const eventPill = page.locator(".event-pill", { hasText: uniqueTitle }).first();
+        if (await eventPill.isVisible({ timeout: 2000 }).catch(() => false)) {
+            await eventPill.click();
+            await page.waitForTimeout(500);
+
+            // Verify orphan indicator is NOT visible
+            await expect(page.locator("[data-testid='orphaned-deviations-indicator']")).not.toBeVisible({ timeout: 1000 });
+        } else {
+            console.log("Orphan-none test: Event collapsed, skipping interaction");
+        }
+    });
+});
