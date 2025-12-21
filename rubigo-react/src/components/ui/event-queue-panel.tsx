@@ -163,6 +163,13 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId
                                                 {formatEventType(event.eventType)}
                                             </span>
                                         </div>
+                                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                                            @ {new Date(event.scheduledFor).toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                                second: "2-digit"
+                                            })}
+                                        </div>
                                     </div>
                                     <div className="text-right flex-shrink-0 min-w-[60px]">
                                         {event.isReady ? (
@@ -170,7 +177,7 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, selectedEventId
                                                 Ready
                                             </span>
                                         ) : (
-                                            <span className="text-amber-500">
+                                            <span className="text-amber-500 font-medium">
                                                 {formatCountdown(event.msUntilReady)}
                                             </span>
                                         )}
