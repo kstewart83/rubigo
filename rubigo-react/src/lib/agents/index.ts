@@ -28,6 +28,21 @@ export {
     type ParsedReActResponse,
 } from "./agent-persona";
 
+// Scheduler
+export {
+    AgentScheduler,
+    type SchedulerCallbacks,
+} from "./agent-scheduler";
+
+// Manager (main thread interface)
+export {
+    AgentManager,
+    getAgentManager,
+    resetAgentManager,
+    type AgentManagerOptions,
+    type SimulationStatus,
+} from "./agent-manager";
+
 // Types
 export {
     type AgentEventType,
