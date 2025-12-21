@@ -24,6 +24,7 @@ export function AgentSimulationContent() {
     });
     const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<ScheduledEvent | null>(null);
+    const [processingEventId, setProcessingEventId] = useState<string | null>(null);
     const [thoughts, setThoughts] = useState<ThoughtEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -102,9 +103,21 @@ export function AgentSimulationContent() {
     // Execute a tick - call the backend API
     const executeTick = useCallback(async () => {
         try {
+            // Get the first ready event to mark as processing
+            const eventsRes = await fetch("/api/agents/events?page=1&limit=1");
+            const eventsData = await eventsRes.json();
+            const firstEvent = eventsData.events?.[0];
+
+            if (firstEvent?.isReady) {
+                setProcessingEventId(firstEvent.id);
+            }
+
             const response = await fetch("/api/agents/tick", { method: "POST" });
             const data = await response.json();
             console.log("Tick result:", data);
+
+            // Clear processing state
+            setProcessingEventId(null);
 
             // Refresh status after tick
             await fetchStatus();
@@ -117,6 +130,7 @@ export function AgentSimulationContent() {
             setSimulation(prev => ({ ...prev, totalTicks: prev.totalTicks + 1 }));
         } catch (error) {
             console.error("Tick error:", error);
+            setProcessingEventId(null);
         }
     }, [fetchStatus, fetchEvents, selectedAgentId]);
 
@@ -249,6 +263,7 @@ export function AgentSimulationContent() {
                                 }
                             }}
                             selectedEventId={selectedEvent?.id}
+                            processingEventId={processingEventId}
                         />
                     </div>
                 </div>

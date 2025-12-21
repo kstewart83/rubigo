@@ -39,9 +39,10 @@ interface EventQueuePanelProps {
     onSelectEvent?: (event: ScheduledEvent) => void;
     onEventsRefresh?: (events: ScheduledEvent[]) => void;
     selectedEventId?: string | null;
+    processingEventId?: string | null;
 }
 
-export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh, selectedEventId }: EventQueuePanelProps) {
+export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh, selectedEventId, processingEventId }: EventQueuePanelProps) {
     const [events, setEvents] = useState<ScheduledEvent[]>([]);
     const [pagination, setPagination] = useState<Pagination | null>(null);
     const [currentTime, setCurrentTime] = useState<string>("");
@@ -139,18 +140,24 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                     <div className="space-y-1">
                         {events.map((event) => {
                             const isSelected = selectedEventId === event.id;
+                            const isProcessing = processingEventId === event.id;
                             return (
                                 <button
                                     key={event.id}
                                     onClick={() => onSelectEvent?.(event)}
-                                    className={`w-full flex items-center gap-2 p-2 rounded text-xs text-left transition-colors ${isSelected
-                                        ? "bg-primary/20 border border-primary/40 ring-1 ring-primary/20"
-                                        : event.isReady
-                                            ? "bg-green-500/10 border border-green-500/20 hover:bg-green-500/20"
-                                            : "bg-muted/50 hover:bg-muted"
+                                    disabled={isProcessing}
+                                    className={`w-full flex items-center gap-2 p-2 rounded text-xs text-left transition-colors ${isProcessing
+                                        ? "bg-amber-500/20 border border-amber-500/40 animate-pulse"
+                                        : isSelected
+                                            ? "bg-primary/20 border border-primary/40 ring-1 ring-primary/20"
+                                            : event.isReady
+                                                ? "bg-green-500/10 border border-green-500/20 hover:bg-green-500/20"
+                                                : "bg-muted/50 hover:bg-muted"
                                         }`}
                                 >
-                                    {event.isReady ? (
+                                    {isProcessing ? (
+                                        <RefreshCw className="h-3 w-3 text-amber-500 flex-shrink-0 animate-spin" />
+                                    ) : event.isReady ? (
                                         <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
                                     ) : (
                                         <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -189,8 +196,12 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                                             })}
                                         </div>
                                     </div>
-                                    <div className="text-right flex-shrink-0 min-w-[60px]">
-                                        {event.isReady ? (
+                                    <div className="text-right flex-shrink-0 min-w-[70px]">
+                                        {isProcessing ? (
+                                            <span className="text-amber-500 font-medium">
+                                                Processing...
+                                            </span>
+                                        ) : event.isReady ? (
                                             <span className="text-green-600 dark:text-green-400 font-medium">
                                                 Ready
                                             </span>
