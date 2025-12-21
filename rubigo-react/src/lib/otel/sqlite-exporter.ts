@@ -52,8 +52,9 @@ function getDatabase(): Database {
         const dbPath = getDatabasePath();
         db = new Database(dbPath);
 
-        // Ensure the table exists
+        // Ensure all analytics tables exist
         db.exec(`
+      -- OpenTelemetry Spans (traces)
       CREATE TABLE IF NOT EXISTS otel_spans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trace_id TEXT NOT NULL,
@@ -73,6 +74,34 @@ function getDatabase(): Database {
       CREATE INDEX IF NOT EXISTS idx_otel_spans_trace ON otel_spans(trace_id);
       CREATE INDEX IF NOT EXISTS idx_otel_spans_time ON otel_spans(start_time);
       CREATE INDEX IF NOT EXISTS idx_otel_spans_name ON otel_spans(name);
+      
+      -- OpenTelemetry Metrics
+      CREATE TABLE IF NOT EXISTS otel_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        value REAL NOT NULL,
+        unit TEXT,
+        attributes TEXT,
+        timestamp INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_otel_metrics_name_time ON otel_metrics(name, timestamp);
+      
+      -- Analytics Events (user behavior)
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        event_name TEXT NOT NULL,
+        properties TEXT,
+        persona_id INTEGER,
+        session_id TEXT,
+        trace_id TEXT,
+        duration_ms INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_type_time ON analytics_events(event_type, created_at);
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id);
     `);
     }
     return db;
