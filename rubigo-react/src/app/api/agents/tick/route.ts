@@ -1,38 +1,126 @@
 /**
- * Agent Tick API - MVP implementation
+ * Agent Tick API - DES Event Processor
  * 
  * POST /api/agents/tick
- * Processes one agent per call, making them "think" via Ollama
+ * 
+ * Processes the next event from the priority queue.
+ * Events are only processed if scheduled_for <= now.
+ * After processing, handlers schedule the next event.
  */
 
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import { eq, and, ne, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import {
+    getNextReadyEvent,
+    markEventProcessed,
+    scheduleNextContextCheck,
+    getTimeUntilNextEvent,
+    getPendingEvents,
+    TIER_DELAYS,
+} from "@/lib/agent-events";
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma3:4b";
 
-interface OllamaResponse {
-    response: string;
-    done: boolean;
+/**
+ * Generate a unique ID
+ */
+function generateId(): string {
+    return Math.random().toString(36).substring(2, 10);
 }
 
 /**
- * Call Ollama to generate a thought for an agent
+ * Handle check_chat event
+ * Calls the respond-chat logic inline
  */
-async function generateThought(
-    agentName: string,
-    agentTitle: string,
-    agentDepartment: string
-): Promise<string> {
-    const systemPrompt = `You are ${agentName}, a ${agentTitle} in the ${agentDepartment} department.
-You are an AI agent simulating a real employee in a workplace. 
-Think about what you might be doing right now at work.
-Respond with a brief internal thought (1-2 sentences) about your current work activity.
-Be specific and realistic. Don't break character.`;
+async function handleCheckChat(
+    agentId: string,
+    contextId: string | null,
+    payload: Record<string, unknown> | null
+): Promise<{ responded: boolean; response?: string; channel?: string }> {
+    // Get agent info
+    const agents = await db
+        .select()
+        .from(schema.personnel)
+        .where(eq(schema.personnel.id, agentId))
+        .limit(1);
 
-    const userPrompt = "What are you thinking about right now?";
+    if (agents.length === 0) {
+        return { responded: false };
+    }
+
+    const agent = agents[0];
+
+    // Get the channel ID from context or payload
+    let channelId: string | null = null;
+
+    if (contextId) {
+        const contexts = await db
+            .select()
+            .from(schema.syncContexts)
+            .where(eq(schema.syncContexts.id, contextId))
+            .limit(1);
+
+        if (contexts.length > 0) {
+            channelId = contexts[0].relatedEntityId;
+        }
+    }
+
+    if (!channelId && payload?.relatedEntityId) {
+        channelId = payload.relatedEntityId as string;
+    }
+
+    if (!channelId) {
+        return { responded: false };
+    }
+
+    // Get recent messages not from this agent
+    const recentMessages = await db
+        .select({
+            id: schema.chatMessages.id,
+            content: schema.chatMessages.content,
+            senderId: schema.chatMessages.senderId,
+            senderName: schema.personnel.name,
+        })
+        .from(schema.chatMessages)
+        .innerJoin(
+            schema.personnel,
+            eq(schema.chatMessages.senderId, schema.personnel.id)
+        )
+        .where(eq(schema.chatMessages.channelId, channelId))
+        .orderBy(schema.chatMessages.sentAt)
+        .limit(10);
+
+    // Filter to messages not from this agent
+    const otherMessages = recentMessages.filter(m => m.senderId !== agentId);
+
+    if (otherMessages.length === 0) {
+        return { responded: false };
+    }
+
+    // Get the most recent message to respond to
+    const targetMessage = otherMessages[otherMessages.length - 1];
+
+    // Build context for Ollama
+    const messageHistory = recentMessages
+        .slice(-5)
+        .map(m => `${m.senderName}: ${m.content}`)
+        .join("\n");
+
+    const systemPrompt = `You are ${agent.name}, a ${agent.title || "Employee"} at work.
+You are responding to a message in a chat channel.
+Be professional but friendly. Keep responses concise (1-3 sentences).
+Don't use emojis excessively. Stay in character.`;
+
+    const userPrompt = `Recent conversation:
+${messageHistory}
+
+The latest message from ${targetMessage.senderName} is:
+"${targetMessage.content}"
+
+Respond naturally as ${agent.name}:`;
 
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
@@ -50,123 +138,154 @@ Be specific and realistic. Don't break character.`;
             throw new Error(`Ollama error: ${response.status}`);
         }
 
-        const data = (await response.json()) as OllamaResponse;
-        return data.response.trim();
+        const data = await response.json();
+        const responseContent = data.response.trim();
+
+        // Post the response
+        const messageId = generateId();
+        await db.insert(schema.chatMessages).values({
+            id: messageId,
+            channelId,
+            senderId: agentId,
+            content: responseContent,
+            sentAt: new Date().toISOString(),
+        });
+
+        // Record as agent event
+        await db.insert(schema.agentEvents).values({
+            id: generateId(),
+            personnelId: agentId,
+            timestamp: new Date().toISOString(),
+            eventType: "action",
+            content: `Responded: "${responseContent}"`,
+            targetEntity: `chat:${channelId}`,
+            contextId,
+        });
+
+        // Get channel name for response
+        const channels = await db
+            .select()
+            .from(schema.chatChannels)
+            .where(eq(schema.chatChannels.id, channelId))
+            .limit(1);
+
+        return {
+            responded: true,
+            response: responseContent,
+            channel: channels[0]?.name || channelId,
+        };
     } catch (error) {
-        console.error("Ollama generation error:", error);
-        throw error;
+        console.error("Chat response error:", error);
+        return { responded: false };
     }
 }
 
 /**
- * Generate a unique ID
+ * Process an event based on its type
  */
-function generateId(): string {
-    return Math.random().toString(16).substring(2, 8) + Date.now().toString(36);
+async function processEvent(event: schema.AgentScheduledEvent): Promise<{
+    action: string;
+    details: Record<string, unknown>;
+    scheduleNext: boolean;
+    nextTier: keyof typeof TIER_DELAYS;
+}> {
+    const payload = event.payload ? JSON.parse(event.payload) : null;
+
+    switch (event.eventType) {
+        case "check_chat": {
+            const result = await handleCheckChat(event.agentId, event.contextId, payload);
+            return {
+                action: result.responded ? "responded_to_chat" : "checked_chat_no_response",
+                details: result,
+                scheduleNext: true,
+                nextTier: (payload?.tier as keyof typeof TIER_DELAYS) || "sync",
+            };
+        }
+
+        case "think": {
+            // Generate a random thought (existing logic)
+            return {
+                action: "thought",
+                details: { thought: "Thinking..." },
+                scheduleNext: true,
+                nextTier: "async",
+            };
+        }
+
+        default:
+            return {
+                action: "unknown_event_type",
+                details: { eventType: event.eventType },
+                scheduleNext: false,
+                nextTier: "sync",
+            };
+    }
 }
 
 export async function POST() {
     try {
-        // Get all agents that are marked as agents and not dormant
-        const agents = await db
-            .select({
-                id: schema.personnel.id,
-                name: schema.personnel.name,
-                title: schema.personnel.title,
-                department: schema.personnel.department,
-                agentStatus: schema.personnel.agentStatus,
-            })
-            .from(schema.personnel)
-            .where(
-                and(
-                    eq(schema.personnel.isAgent, true),
-                    ne(schema.personnel.agentStatus, "dormant")
-                )
-            );
+        // Get next ready event
+        const event = await getNextReadyEvent();
 
-        if (agents.length === 0) {
-            // No active agents, try to activate one that's dormant
-            const dormantAgents = await db
-                .select({
-                    id: schema.personnel.id,
-                    name: schema.personnel.name,
-                    title: schema.personnel.title,
-                    department: schema.personnel.department,
-                })
-                .from(schema.personnel)
-                .where(
-                    and(
-                        eq(schema.personnel.isAgent, true),
-                        eq(schema.personnel.agentStatus, "dormant")
-                    )
-                )
-                .limit(1);
-
-            if (dormantAgents.length === 0) {
-                return NextResponse.json(
-                    { success: false, message: "No agents available" },
-                    { status: 404 }
-                );
-            }
-
-            // Activate the dormant agent
-            const agent = dormantAgents[0];
-            await db
-                .update(schema.personnel)
-                .set({
-                    agentStatus: "idle",
-                })
-                .where(eq(schema.personnel.id, agent.id));
+        if (!event) {
+            // No events ready - return info about next scheduled event
+            const msUntilNext = await getTimeUntilNextEvent();
+            const pending = await getPendingEvents(5);
 
             return NextResponse.json({
                 success: true,
-                message: `Activated agent: ${agent.name}`,
-                agentId: agent.id,
-                action: "activated",
+                action: "no_events_ready",
+                message: msUntilNext === null
+                    ? "No events in queue"
+                    : `Next event in ${Math.ceil(msUntilNext / 1000)} seconds`,
+                pendingCount: pending.total,
+                nextEvents: pending.events.map(e => ({
+                    id: e.id,
+                    type: e.eventType,
+                    scheduledFor: e.scheduledFor,
+                    agentId: e.agentId,
+                })),
             });
         }
 
-        // Pick the first agent to process (simple round-robin could be added later)
-        const agent = agents[0];
+        // Get agent name for response
+        const agents = await db
+            .select({ name: schema.personnel.name })
+            .from(schema.personnel)
+            .where(eq(schema.personnel.id, event.agentId))
+            .limit(1);
 
-        // Update status to "working"
-        await db
-            .update(schema.personnel)
-            .set({ agentStatus: "working" })
-            .where(eq(schema.personnel.id, agent.id));
+        const agentName = agents[0]?.name || event.agentId;
 
-        // Generate a thought via Ollama
-        const thought = await generateThought(
-            agent.name,
-            agent.title || "Employee",
-            agent.department || "General"
-        );
+        // Process the event
+        const result = await processEvent(event);
 
-        // Record the thought as an event
-        await db.insert(schema.agentEvents).values({
-            id: generateId(),
-            personnelId: agent.id,
-            timestamp: new Date().toISOString(),
-            eventType: "thought",
-            content: thought,
-            targetEntity: null,
-            metadata: null,
-        });
+        // Mark as processed
+        await markEventProcessed(event.id);
 
-        // Update agent back to idle
-        await db
-            .update(schema.personnel)
-            .set({
-                agentStatus: "idle",
-            })
-            .where(eq(schema.personnel.id, agent.id));
+        // Schedule next event if needed
+        let nextEventId: string | null = null;
+        if (result.scheduleNext && event.contextId) {
+            nextEventId = await scheduleNextContextCheck(
+                event.agentId,
+                event.contextId,
+                event.eventType,
+                result.nextTier
+            );
+        }
 
         return NextResponse.json({
             success: true,
-            agentId: agent.id,
-            agentName: agent.name,
-            thought,
-            action: "thought",
+            eventId: event.id,
+            agentId: event.agentId,
+            agentName,
+            eventType: event.eventType,
+            action: result.action,
+            details: result.details,
+            nextEventId,
+            nextEventIn: result.scheduleNext
+                ? `${TIER_DELAYS[result.nextTier].min}-${TIER_DELAYS[result.nextTier].max} seconds`
+                : null,
         });
     } catch (error) {
         console.error("Tick error:", error);
