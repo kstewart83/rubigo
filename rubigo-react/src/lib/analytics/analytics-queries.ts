@@ -136,7 +136,7 @@ export async function getActiveSessions(
   const result = await queryOne<{ count: number }>(`
     SELECT COUNT(DISTINCT session_id) AS count
     FROM rubigo.analytics_events
-    WHERE created_at >= current_timestamp - ${interval}
+    WHERE CAST(created_at AS TIMESTAMP) >= current_timestamp - ${interval}
       AND session_id IS NOT NULL
   `);
 
