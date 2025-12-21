@@ -39,3 +39,5 @@ INSERT INTO features (profile_id, id, name, description, objective_id, status) V
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-mcp-server', 'MCP Server Integration', 'Model Context Protocol server that exposes Rubigo data entities as resources and provides tools for CRUD operations, enabling AI agents and LLM-based tools to interact with the platform', 'obj-rubigo-integration', 'planned');
 
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-calendar-orphan-deviations', 'Orphaned Deviation Management', 'View and delete orphaned deviations from recurring events when pattern changes leave modifications/cancellations targeting dates that no longer occur', 'obj-calendar-recurrence', 'in_progress');
+
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-mcp-action-source', 'MCP Action Source Identification', 'Action logs distinguish MCP-originated operations from UI and API calls', 'obj-rubigo-audit', 'planned');
