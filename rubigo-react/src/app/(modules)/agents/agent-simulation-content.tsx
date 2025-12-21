@@ -159,6 +159,19 @@ export function AgentSimulationContent() {
         }
     };
 
+    const handleActivate = async (agentId: string) => {
+        try {
+            const response = await fetch(`/api/agents/${agentId}/activate`, { method: "POST" });
+            const data = await response.json();
+            console.log("Activate result:", data);
+
+            // Refresh status to show the event in queue
+            await fetchStatus();
+        } catch (error) {
+            console.error("Activate error:", error);
+        }
+    };
+
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
     if (loading) {
@@ -202,6 +215,7 @@ export function AgentSimulationContent() {
                         onStop={handleStop}
                         onTick={handleTick}
                         onReset={handleReset}
+                        onActivate={handleActivate}
                         onSelectAgent={setSelectedAgentId}
                         className="border-0 shadow-none"
                     />

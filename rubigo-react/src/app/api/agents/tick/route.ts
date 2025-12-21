@@ -192,6 +192,51 @@ async function processEvent(event: schema.AgentScheduledEvent): Promise<{
     const payload = event.payload ? JSON.parse(event.payload) : null;
 
     switch (event.eventType) {
+        case "activate": {
+            // Set agent status to active
+            await db
+                .update(schema.personnel)
+                .set({ agentStatus: "active" })
+                .where(eq(schema.personnel.id, event.agentId));
+
+            // Get agent's channel memberships
+            const memberships = await db
+                .select({
+                    channelId: schema.chatMembers.channelId,
+                    channelName: schema.chatChannels.name,
+                })
+                .from(schema.chatMembers)
+                .innerJoin(
+                    schema.chatChannels,
+                    eq(schema.chatMembers.channelId, schema.chatChannels.id)
+                )
+                .where(eq(schema.chatMembers.personnelId, event.agentId));
+
+            // Create sync contexts and schedule check events for each channel
+            const contexts: string[] = [];
+            for (const membership of memberships) {
+                // Import the context creation function
+                const { createChatContextForAgent } = await import("@/lib/agent-context");
+                const result = await createChatContextForAgent(
+                    event.agentId,
+                    membership.channelId,
+                    "sync"
+                );
+                contexts.push(membership.channelName || membership.channelId);
+            }
+
+            return {
+                action: "activated",
+                details: {
+                    status: "active",
+                    contextsJoined: contexts,
+                    channelsMonitoring: contexts.length,
+                },
+                scheduleNext: false, // Context creation schedules the events
+                nextTier: "sync",
+            };
+        }
+
         case "check_chat": {
             const result = await handleCheckChat(event.agentId, event.contextId, payload);
             return {

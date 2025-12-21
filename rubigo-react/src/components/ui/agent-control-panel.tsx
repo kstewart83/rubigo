@@ -35,6 +35,7 @@ export interface AgentControlPanelProps {
     onStop?: () => void;
     onTick?: () => void;
     onReset?: () => void;
+    onActivate?: (agentId: string) => void;
     onSelectAgent?: (agentId: string) => void;
     className?: string;
 }
@@ -49,13 +50,13 @@ export function AgentControlPanel({
     onStop,
     onTick,
     onReset,
+    onActivate,
     onSelectAgent,
     className,
 }: AgentControlPanelProps) {
     const [expanded, setExpanded] = useState(true);
 
-    const activeAgents = agents.filter(a => a.status !== "dormant").length;
-    const workingAgents = agents.filter(a => a.status === "working").length;
+    const activeAgents = agents.filter(a => a.status === "active").length;
 
     return (
         <Card
@@ -111,12 +112,6 @@ export function AgentControlPanel({
                             <span className="text-muted-foreground">Agents:</span>
                             <span className="ml-2 font-medium">
                                 {activeAgents}/{agents.length} active
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-muted-foreground">Working:</span>
-                            <span className="ml-2 font-medium text-amber-400">
-                                {workingAgents}
                             </span>
                         </div>
                     </div>
@@ -180,6 +175,7 @@ export function AgentControlPanel({
                                     key={agent.id}
                                     agent={agent}
                                     onClick={() => onSelectAgent?.(agent.id)}
+                                    onActivate={() => onActivate?.(agent.id)}
                                 />
                             ))}
                             {agents.length === 0 && (
@@ -207,47 +203,57 @@ export function AgentControlPanel({
 function AgentListItem({
     agent,
     onClick,
+    onActivate,
 }: {
     agent: AgentInfo;
     onClick?: () => void;
+    onActivate?: () => void;
 }) {
     const lastActive = new Date(agent.lastActivity).toLocaleTimeString();
 
     // Status display text and colors
     const statusConfig: Record<AgentStatus, { text: string; color: string }> = {
         dormant: { text: "Dormant", color: "text-gray-400" },
-        sleeping: { text: "Sleeping", color: "text-purple-400" },
-        idle: { text: "Idle", color: "text-blue-400" },
-        working: { text: "Working", color: "text-amber-400" },
+        active: { text: "Active", color: "text-green-400" },
     };
 
     const { text: statusText, color: statusColor } = statusConfig[agent.status] || statusConfig.dormant;
 
     return (
-        <button
-            onClick={onClick}
+        <div
             className={cn(
                 "w-full flex items-center justify-between p-2 rounded-lg",
-                "bg-muted/50 hover:bg-muted transition-colors",
-                "text-left"
+                "bg-muted/50 hover:bg-muted transition-colors"
             )}
         >
-            <div className="w-1/3 flex items-center gap-2">
+            <button
+                onClick={onClick}
+                className="w-1/3 flex items-center gap-2 text-left"
+            >
                 <AgentStatusIndicator status={agent.status} showLabel={false} size="sm" />
                 <span className="font-medium text-sm truncate">{agent.name}</span>
-            </div>
-            <div className={cn("w-1/4 text-center text-xs font-medium", statusColor)}>
+            </button>
+            <div className={cn("w-1/6 text-center text-xs font-medium", statusColor)}>
                 {statusText}
             </div>
-            <div className="w-1/4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
-                {agent.pendingActions > 0 && (
-                    <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
-                        {agent.pendingActions}
-                    </span>
+            <div className="w-1/6 text-center">
+                {agent.status === "dormant" ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onActivate?.();
+                        }}
+                        className="h-6 px-2 text-xs text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                    >
+                        ▶ Activate
+                    </Button>
+                ) : (
+                    <span className="text-xs text-muted-foreground">{lastActive}</span>
                 )}
-                <span>{lastActive}</span>
             </div>
-        </button>
+        </div>
     );
 }
 

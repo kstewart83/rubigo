@@ -616,7 +616,7 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     id: text("id").primaryKey(),
     agentId: text("agent_id").references(() => personnel.id).notNull(),
     eventType: text("event_type", {
-        enum: ["check_chat", "check_email", "check_calendar", "check_tasks", "think"]
+        enum: ["activate", "check_chat", "check_email", "check_calendar", "check_tasks", "think"]
     }).notNull(),
     contextId: text("context_id").references(() => syncContexts.id), // Optional link to context
     scheduledFor: text("scheduled_for").notNull(), // ISO 8601 - the priority key
@@ -778,7 +778,7 @@ export type AgentScheduledEvent = typeof agentScheduledEvents.$inferSelect;
 export type NewAgentScheduledEvent = typeof agentScheduledEvents.$inferInsert;
 
 // Agent Status enum for type safety
-export const AGENT_STATUSES = ["dormant", "sleeping", "idle", "working"] as const;
+export const AGENT_STATUSES = ["dormant", "active"] as const;
 export type AgentStatus = (typeof AGENT_STATUSES)[number];
 
 // Reaction Tiers with timing configurations
