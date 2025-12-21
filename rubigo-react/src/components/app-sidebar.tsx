@@ -113,6 +113,10 @@ const sidebarModules: SidebarModule[] = [
         label: "Personnel",
         href: "/personnel",
         icon: Users,
+        subPages: [
+            { id: "directory", label: "Directory", href: "/personnel", icon: Users },
+            { id: "agents", label: "AI Agents", href: "/agents", icon: Bot },
+        ],
     },
     {
         id: "projects",
@@ -137,12 +141,6 @@ const sidebarModules: SidebarModule[] = [
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
         ],
-    },
-    {
-        id: "agents",
-        label: "AI Agents",
-        href: "/agents",
-        icon: Bot,
     },
 ];
 
