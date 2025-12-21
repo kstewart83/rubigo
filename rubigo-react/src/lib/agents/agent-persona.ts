@@ -5,7 +5,9 @@
  * unique personalities derived from their bio and role.
  */
 
-import type { Personnel } from "@/db/schema";
+import type { personnel } from "@/db/schema";
+
+type Personnel = typeof personnel.$inferSelect;
 
 export interface PersonaTraits {
     role: string;
@@ -180,16 +182,16 @@ export interface ParsedReActResponse {
 export function parseReActResponse(llmOutput: string): ParsedReActResponse {
     const raw = llmOutput.trim();
 
-    // Extract thought
-    const thoughtMatch = raw.match(/THOUGHT:\s*(.+?)(?=\nACTION:|$)/s);
+    // Extract thought (use [\s\S] instead of /s flag for compatibility)
+    const thoughtMatch = raw.match(/THOUGHT:\s*([\s\S]+?)(?=\nACTION:|$)/);
     const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
 
     // Extract action
-    const actionMatch = raw.match(/ACTION:\s*(.+?)(?=\nRESPONSE:|$)/s);
+    const actionMatch = raw.match(/ACTION:\s*([\s\S]+?)(?=\nRESPONSE:|$)/);
     const action = actionMatch ? actionMatch[1].trim() : "WAIT";
 
     // Extract response if present
-    const responseMatch = raw.match(/RESPONSE:\s*(.+?)$/s);
+    const responseMatch = raw.match(/RESPONSE:\s*([\s\S]+?)$/);
     const response = responseMatch ? responseMatch[1].trim() : undefined;
 
     return { thought, action, response, raw };
