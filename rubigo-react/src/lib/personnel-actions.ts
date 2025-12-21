@@ -57,7 +57,7 @@ async function logAction(
     entityId: string,
     action: "create" | "update" | "delete",
     changes: Record<string, unknown>,
-    source: "ui" | "api" = "ui"
+    source: "ui" | "api" | "mcp" = "ui"
 ) {
     await db.insert(schema.actionLogs).values({
         id: generateId(),
@@ -83,7 +83,7 @@ export async function createPersonnel(
     input: PersonnelInput,
     actorId: string,
     actorName: string,
-    source: "ui" | "api" = "ui"
+    source: "ui" | "api" | "mcp" = "ui"
 ): Promise<ActionResult> {
     try {
         // Validation
@@ -151,7 +151,7 @@ export async function updatePersonnel(
     input: Partial<PersonnelInput>,
     actorId: string,
     actorName: string,
-    source: "ui" | "api" = "ui"
+    source: "ui" | "api" | "mcp" = "ui"
 ): Promise<ActionResult> {
     try {
         // Check exists
@@ -222,7 +222,7 @@ export async function deletePersonnel(
     id: string,
     actorId: string,
     actorName: string,
-    source: "ui" | "api" = "ui"
+    source: "ui" | "api" | "mcp" = "ui"
 ): Promise<ActionResult> {
     try {
         // Check exists

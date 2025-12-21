@@ -664,3 +664,192 @@ test.describe("MCP Access Control - rule-mcp-auth", () => {
         // This would require a different token type or user role
     });
 });
+
+// ============================================================================
+// ACTION SOURCE TESTS - rule-mcp-action-identified, rule-mcp-action-logged
+// ============================================================================
+
+test.describe("MCP Action Source - feat-mcp-action-source", () => {
+    /**
+     * Scenario: scen-mcp-action-logged
+     * Given I invoke an MCP tool to create a personnel record
+     * When the operation completes
+     * Then an entry exists in the action_logs table with source=mcp
+     */
+    test("scen-mcp-action-logged: MCP operations logged with mcp source", async ({ request }) => {
+        // Initialize
+        await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: mcpRequest("initialize", {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "e2e-test", version: "1.0.0" },
+            }),
+        });
+
+        // Create personnel via MCP
+        const uniqueEmail = `mcp-source-test-${Date.now()}@example.com`;
+        const createResponse = await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: mcpRequest("tools/call", {
+                name: "create_personnel",
+                arguments: {
+                    name: "MCP Source Test User",
+                    email: uniqueEmail,
+                    department: "IT",
+                    title: "Test",
+                },
+            }),
+        });
+
+        expect(createResponse.ok()).toBe(true);
+        const createBody = await createResponse.json();
+
+        // Extract created personnel ID
+        let personnelId: string | undefined;
+        if (createBody.result?.content) {
+            const textContent = createBody.result.content.find(
+                (c: { type: string }) => c.type === "text"
+            );
+            if (textContent) {
+                const result = JSON.parse(textContent.text);
+                personnelId = result.id;
+            }
+        }
+
+        expect(personnelId).toBeDefined();
+
+        // Query action logs API to verify source=mcp
+        const logsResponse = await request.get(`${API_URL}/api/action-logs`, {
+            headers,
+        });
+
+        expect(logsResponse.ok()).toBe(true);
+        const logs = await logsResponse.json();
+
+        // Find the action log for our created personnel
+        const mcpLog = logs.find(
+            (log: { entityId: string; source: string; action: string }) =>
+                log.entityId === personnelId && log.source === "mcp" && log.action === "create"
+        );
+
+        expect(mcpLog).toBeDefined();
+        expect(mcpLog.source).toBe("mcp");
+
+        // Cleanup: delete the test personnel
+        if (personnelId) {
+            await request.post(`${API_URL}/api/mcp`, {
+                headers,
+                data: mcpRequest("tools/call", {
+                    name: "delete_personnel",
+                    arguments: { id: personnelId },
+                }),
+            });
+        }
+    });
+
+    /**
+     * Scenario: scen-mcp-action-distinct-from-api
+     * Given operations from both MCP and API have created personnel records
+     * When I query the action_logs table
+     * Then MCP operations have source=mcp and API operations have source=api
+     */
+    test("scen-mcp-action-distinct-from-api: MCP source distinguishable from API", async ({ request }) => {
+        // Initialize MCP
+        await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: mcpRequest("initialize", {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "e2e-test", version: "1.0.0" },
+            }),
+        });
+
+        const timestamp = Date.now();
+
+        // 1. Create personnel via MCP
+        const mcpResponse = await request.post(`${API_URL}/api/mcp`, {
+            headers,
+            data: mcpRequest("tools/call", {
+                name: "create_personnel",
+                arguments: {
+                    name: "MCP Test User",
+                    email: `mcp-test-${timestamp}@example.com`,
+                    department: "IT",
+                    title: "MCP Created",
+                },
+            }),
+        });
+
+        expect(mcpResponse.ok()).toBe(true);
+        const mcpBody = await mcpResponse.json();
+        let mcpPersonnelId: string | undefined;
+        if (mcpBody.result?.content) {
+            const textContent = mcpBody.result.content.find(
+                (c: { type: string }) => c.type === "text"
+            );
+            if (textContent) {
+                mcpPersonnelId = JSON.parse(textContent.text).id;
+            }
+        }
+
+        // 2. Create personnel via regular API
+        const apiResponse = await request.post(`${API_URL}/api/personnel`, {
+            headers,
+            data: {
+                name: "API Test User",
+                email: `api-test-${timestamp}@example.com`,
+                department: "IT",
+                title: "API Created",
+            },
+        });
+
+        expect(apiResponse.ok()).toBe(true);
+        const apiBody = await apiResponse.json();
+        const apiPersonnelId = apiBody.id;
+
+        // 3. Query action logs
+        const logsResponse = await request.get(`${API_URL}/api/action-logs`, {
+            headers,
+        });
+
+        expect(logsResponse.ok()).toBe(true);
+        const logs = await logsResponse.json();
+
+        // Verify MCP log has source=mcp
+        if (mcpPersonnelId) {
+            const mcpLog = logs.find(
+                (log: { entityId: string; source: string }) =>
+                    log.entityId === mcpPersonnelId
+            );
+            expect(mcpLog).toBeDefined();
+            expect(mcpLog.source).toBe("mcp");
+        }
+
+        // Verify API log has source=api
+        if (apiPersonnelId) {
+            const apiLog = logs.find(
+                (log: { entityId: string; source: string }) =>
+                    log.entityId === apiPersonnelId
+            );
+            expect(apiLog).toBeDefined();
+            expect(apiLog.source).toBe("api");
+        }
+
+        // Cleanup
+        if (mcpPersonnelId) {
+            await request.post(`${API_URL}/api/mcp`, {
+                headers,
+                data: mcpRequest("tools/call", {
+                    name: "delete_personnel",
+                    arguments: { id: mcpPersonnelId },
+                }),
+            });
+        }
+        if (apiPersonnelId) {
+            await request.delete(`${API_URL}/api/personnel/${apiPersonnelId}`, {
+                headers,
+            });
+        }
+    });
+});

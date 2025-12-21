@@ -347,20 +347,20 @@ const toolHandlers: Record<string, ToolHandler> = {
             args as { name: string; email: string; department: Department } & Record<string, unknown>,
             actor.actorId,
             actor.actorName,
-            "api"
+            "mcp"
         );
         return result.success ? successResult(result) : errorResult(result.error || "Unknown error");
     },
     update_personnel: async (args, actor) => {
         if (!actor.isAdmin) return errorResult("Admin privileges required");
         const { id, ...input } = args as { id: string } & Record<string, unknown>;
-        const result = await updatePersonnel(id, input, actor.actorId, actor.actorName, "api");
+        const result = await updatePersonnel(id, input, actor.actorId, actor.actorName, "mcp");
         return result.success ? successResult(result) : errorResult(result.error || "Unknown error");
     },
     delete_personnel: async (args, actor) => {
         if (!actor.isAdmin) return errorResult("Admin privileges required");
         const { id } = args as { id: string };
-        const result = await deletePersonnel(id, actor.actorId, actor.actorName, "api");
+        const result = await deletePersonnel(id, actor.actorId, actor.actorName, "mcp");
         return result.success ? successResult(result) : errorResult(result.error || "Unknown error");
     },
     // Project handlers
