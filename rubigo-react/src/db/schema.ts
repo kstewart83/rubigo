@@ -38,7 +38,7 @@ export const personnel = sqliteTable("personnel", {
     // Agent Simulation fields
     isAgent: integer("is_agent", { mode: "boolean" }).default(false),
     agentStatus: text("agent_status", {
-        enum: ["dormant", "sleeping", "idle", "working"]
+        enum: ["dormant", "active"]
     }).default("dormant"),
     agentPersona: text("agent_persona"), // JSON: personality traits, communication style
     // Access Control: Subject attributes

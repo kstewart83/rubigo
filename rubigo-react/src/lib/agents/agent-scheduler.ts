@@ -190,10 +190,10 @@ export class AgentScheduler {
             return { success: false, action: { type: "wait" }, error: "Agent not found", durationMs: 0 };
         }
 
-        // Update agent status to working
-        state.status = "working";
+        // Update agent status to active (processing)
+        state.status = "active";
         state.pendingActionCount = Math.max(0, state.pendingActionCount - 1);
-        await this.callbacks.onAgentStateChange?.(event.agentId, "working");
+        await this.callbacks.onAgentStateChange?.(event.agentId, "active");
 
         const startTime = Date.now();
         let result: ActionResult;
@@ -210,10 +210,10 @@ export class AgentScheduler {
             this.callbacks.onError?.(error instanceof Error ? error : new Error(String(error)), event);
         }
 
-        // Update agent state back to idle
-        state.status = "idle";
+        // Update agent state - stays active while running
+        state.status = "active";
         state.lastActivityAt = new Date().toISOString();
-        await this.callbacks.onAgentStateChange?.(event.agentId, "idle");
+        await this.callbacks.onAgentStateChange?.(event.agentId, "active");
 
         await this.callbacks.onEventProcessed?.(event, result);
 
@@ -347,7 +347,7 @@ export class AgentScheduler {
 
         // Check Ollama and update agent states accordingly
         const health = await this.ollamaClient.isAvailable();
-        const newStatus: AgentStatus = health.available ? "idle" : "dormant";
+        const newStatus: AgentStatus = health.available ? "active" : "dormant";
 
         for (const [agentId, state] of this.agentStates) {
             state.status = newStatus;
