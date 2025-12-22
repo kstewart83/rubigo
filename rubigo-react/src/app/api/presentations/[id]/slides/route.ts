@@ -43,7 +43,7 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// POST - Add a new slide to presentation
+// POST - Add a new slide or insert existing slide to presentation
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params;
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             );
         }
 
-        const { layout, title, content, notes, afterPosition, isVertical } = body;
+        const { layout, title, content, notes, afterPosition, isVertical, existingSlideId } = body;
         const now = new Date().toISOString();
 
         // Get the max position
@@ -84,19 +84,48 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             ? afterPosition + 1
             : (maxPos?.maxPosition ?? -1) + 1;
 
-        // Create the slide
-        const [newSlide] = await db
-            .insert(slides)
-            .values({
-                title: title || null,
-                layout: layout || "content",
-                contentJson: JSON.stringify(content || {}),
-                notes: notes || null,
-                createdBy: presentation.createdBy,
-                createdAt: now,
-                updatedAt: now,
-            })
-            .returning();
+        let slideId: number;
+        let slideTitle: string | null;
+        let slideLayout: string | null;
+
+        // Check if inserting an existing slide or creating a new one
+        if (existingSlideId) {
+            // Verify the slide exists
+            const [existingSlide] = await db
+                .select()
+                .from(slides)
+                .where(eq(slides.id, existingSlideId))
+                .limit(1);
+
+            if (!existingSlide) {
+                return NextResponse.json(
+                    { error: "Slide not found" },
+                    { status: 404 }
+                );
+            }
+
+            slideId = existingSlide.id;
+            slideTitle = existingSlide.title;
+            slideLayout = existingSlide.layout;
+        } else {
+            // Create a new slide
+            const [newSlide] = await db
+                .insert(slides)
+                .values({
+                    title: title || null,
+                    layout: layout || "content",
+                    contentJson: JSON.stringify(content || {}),
+                    notes: notes || null,
+                    createdBy: presentation.createdBy,
+                    createdAt: now,
+                    updatedAt: now,
+                })
+                .returning();
+
+            slideId = newSlide.id;
+            slideTitle = newSlide.title;
+            slideLayout = newSlide.layout;
+        }
 
         // Link to presentation
         let verticalPos = 0;
@@ -111,7 +140,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         await db.insert(presentationSlides).values({
             presentationId,
-            slideId: newSlide.id,
+            slideId,
             position: isVertical ? afterPosition ?? 0 : newPosition,
             verticalPosition: verticalPos,
         });
@@ -123,22 +152,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .where(eq(presentations.id, presentationId));
 
         await logAction(
-            "addSlide",
+            existingSlideId ? "insertSlide" : "addSlide",
             "slide",
-            String(newSlide.id),
+            String(slideId),
             "create",
             presentation.createdBy || "system",
             "System",
-            { presentationId, position: newPosition }
+            { presentationId, position: newPosition, existingSlide: !!existingSlideId }
         );
 
         return NextResponse.json({
             slide: {
-                id: newSlide.id,
-                title: newSlide.title,
-                layout: newSlide.layout,
+                id: slideId,
+                title: slideTitle,
+                layout: slideLayout,
                 content: content || {},
-                notes: newSlide.notes,
+                notes: notes || null,
                 position: newPosition,
                 verticalPosition: verticalPos,
             },

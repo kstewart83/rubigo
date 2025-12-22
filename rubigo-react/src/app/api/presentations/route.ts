@@ -41,25 +41,39 @@ async function logAction(
 // GET - List all presentations
 export async function GET() {
     try {
-        // Get presentations with slide count
-        const result = await db
-            .select({
-                id: presentations.id,
-                title: presentations.title,
-                description: presentations.description,
-                theme: presentations.theme,
-                aspectRatio: presentations.aspectRatio,
-                transition: presentations.transition,
-                createdBy: presentations.createdBy,
-                createdAt: presentations.createdAt,
-                updatedAt: presentations.updatedAt,
-                slideCount: sql<number>`(
-                    SELECT COUNT(*) FROM presentation_slides 
-                    WHERE presentation_slides.presentation_id = ${presentations.id}
-                )`,
-            })
+        // Get presentations
+        const presentationsData = await db
+            .select()
             .from(presentations)
             .orderBy(desc(presentations.updatedAt));
+
+        // Get slide counts separately (Drizzle subquery interpolation issue workaround)
+        const slideCounts = await db
+            .select({
+                presentationId: presentationSlides.presentationId,
+                count: sql<number>`COUNT(*)`.as("count"),
+            })
+            .from(presentationSlides)
+            .groupBy(presentationSlides.presentationId);
+
+        // Create a lookup map
+        const countMap = new Map(
+            slideCounts.map(sc => [sc.presentationId, sc.count])
+        );
+
+        // Combine results
+        const result = presentationsData.map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            theme: p.theme,
+            aspectRatio: p.aspectRatio,
+            transition: p.transition,
+            createdBy: p.createdBy,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            slideCount: countMap.get(p.id) || 0,
+        }));
 
         return NextResponse.json({ presentations: result });
     } catch (error) {

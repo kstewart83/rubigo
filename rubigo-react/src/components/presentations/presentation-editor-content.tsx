@@ -16,6 +16,7 @@ import {
     GripVertical,
     Monitor,
     Download,
+    Library,
 } from "lucide-react";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { exportToPptx, downloadPptx } from "@/lib/presentations/export-pptx";
 
 // ============================================================================
@@ -85,6 +93,16 @@ export function PresentationEditorContent({ presentationId }: Props) {
     const [editingNotes, setEditingNotes] = useState("");
     const [editingLayout, setEditingLayout] = useState("content");
     const [hasChanges, setHasChanges] = useState(false);
+
+    // Insert existing slide dialog
+    const [showInsertDialog, setShowInsertDialog] = useState(false);
+    const [availableSlides, setAvailableSlides] = useState<{
+        id: number;
+        title: string;
+        layout: string | null;
+        usageCount: number;
+        usedIn: string[];
+    }[]>([]);
 
     // Sync editing states when slide changes
     useEffect(() => {
@@ -139,6 +157,43 @@ export function PresentationEditorContent({ presentationId }: Props) {
             }
         } catch (err) {
             console.error("Failed to add slide:", err);
+        }
+    };
+
+    const fetchAvailableSlides = async () => {
+        try {
+            const res = await fetch(`/api/slides?excludePresentation=${presentationId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setAvailableSlides(data.slides || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch available slides:", err);
+        }
+    };
+
+    const openInsertDialog = async () => {
+        await fetchAvailableSlides();
+        setShowInsertDialog(true);
+    };
+
+    const handleInsertExisting = async (slideId: number) => {
+        try {
+            const res = await fetch(`/api/presentations/${presentationId}/slides`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    existingSlideId: slideId,
+                }),
+            });
+
+            if (res.ok) {
+                await fetchPresentation();
+                setSelectedSlide(slides.length);
+                setShowInsertDialog(false);
+            }
+        } catch (err) {
+            console.error("Failed to insert slide:", err);
         }
     };
 
@@ -313,6 +368,10 @@ export function PresentationEditorContent({ presentationId }: Props) {
                     <Button variant="outline" size="sm" onClick={handleAddSlide}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Slide
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={openInsertDialog}>
+                        <Library className="mr-2 h-4 w-4" />
+                        Insert Existing
                     </Button>
                     <Button
                         variant="outline"
@@ -628,6 +687,60 @@ export function PresentationEditorContent({ presentationId }: Props) {
                     <kbd className="px-2 py-0.5 bg-muted rounded">Ctrl+S</kbd> to save
                 </div>
             </div>
+
+            {/* Insert Existing Slide Dialog */}
+            <Dialog open={showInsertDialog} onOpenChange={setShowInsertDialog}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Insert Existing Slide</DialogTitle>
+                        <DialogDescription>
+                            Select a slide from your library to add to this presentation.
+                            Slides can be reused across multiple presentations.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                        {availableSlides.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <p>No slides available to insert.</p>
+                                <p className="text-sm">All slides are already in this presentation or none exist yet.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-3 pr-2">
+                                {availableSlides.map((slide) => (
+                                    <Card
+                                        key={slide.id}
+                                        className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                                        onClick={() => handleInsertExisting(slide.id)}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <h4 className="font-medium">{slide.title}</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Layout: {slide.layout || "content"}
+                                                    {slide.usageCount > 0 && (
+                                                        <span className="ml-2">
+                                                            • Used in {slide.usageCount} presentation{slide.usageCount !== 1 ? "s" : ""}
+                                                        </span>
+                                                    )}
+                                                </p>
+                                                {slide.usedIn.length > 0 && (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {slide.usedIn.slice(0, 3).join(", ")}
+                                                        {slide.usedIn.length > 3 && ` +${slide.usedIn.length - 3} more`}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Button variant="ghost" size="sm">
+                                                Insert
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

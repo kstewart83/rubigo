@@ -624,6 +624,7 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     payload: text("payload"), // JSON with event-specific details
     createdAt: text("created_at").notNull(), // ISO 8601
     processedAt: text("processed_at"), // ISO 8601, null until processed
+});
 
 // Collaboration: Presentations
 // ============================================================================
