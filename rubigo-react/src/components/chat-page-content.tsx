@@ -28,6 +28,7 @@ import {
     Users,
     Smile,
     Reply,
+    X,
 } from "lucide-react";
 import {
     createChannel,
@@ -90,6 +91,9 @@ export function ChatPageContent() {
     const [emojiPickerForMessage, setEmojiPickerForMessage] = useState<string | null>(null);
     const [messageReactions, setMessageReactions] = useState<Record<string, ReactionGroup[]>>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Threading state
+    const [activeThread, setActiveThread] = useState<{ messageId: string; senderName: string; content: string } | null>(null);
 
     // Load channels on mount
     const loadChannels = useCallback(async () => {
@@ -261,11 +265,13 @@ export function ChatPageContent() {
         const result = await sendMessage(
             selectedChannel,
             currentPersona.id,
-            messageInput.trim()
+            messageInput.trim(),
+            activeThread?.messageId
         );
 
         if (result.success) {
             setMessageInput("");
+            setActiveThread(null); // Clear thread after sending
             // Reload messages
             const msgs = await getMessages(selectedChannel);
             setMessages(msgs);
@@ -480,11 +486,38 @@ export function ChatPageContent() {
                                                         className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                                                         data-testid="reply-button"
                                                         title="Reply in thread"
+                                                        onClick={() => setActiveThread({
+                                                            messageId: msg.id,
+                                                            senderName: msg.senderName,
+                                                            content: msg.content
+                                                        })}
                                                     >
                                                         <Reply className="h-3 w-3" />
                                                     </Button>
                                                 </div>
                                                 <p className="text-sm mt-0.5">{msg.content}</p>
+
+                                                {/* Thread reply count indicator */}
+                                                {(() => {
+                                                    const replyCount = messages.filter(m => m.threadId === msg.id).length;
+                                                    if (replyCount > 0) {
+                                                        return (
+                                                            <button
+                                                                data-testid="reply-count"
+                                                                className="text-xs text-primary hover:underline mt-1 flex items-center gap-1"
+                                                                onClick={() => setActiveThread({
+                                                                    messageId: msg.id,
+                                                                    senderName: msg.senderName,
+                                                                    content: msg.content
+                                                                })}
+                                                            >
+                                                                <Reply className="h-3 w-3" />
+                                                                {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
 
                                                 {/* Reactions display */}
                                                 {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
@@ -532,6 +565,32 @@ export function ChatPageContent() {
                                 <div ref={messagesEndRef} />
                             </div>
                         </ScrollArea>
+
+                        {/* Thread Reply Indicator */}
+                        {activeThread && (
+                            <div
+                                data-testid="thread-reply-bar"
+                                className="px-4 py-2 bg-muted/50 border-t flex items-center justify-between"
+                            >
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Reply className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Replying to</span>
+                                    <span className="font-medium">{activeThread.senderName}</span>
+                                    <span className="text-muted-foreground truncate max-w-[200px]">
+                                        &quot;{activeThread.content}&quot;
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => setActiveThread(null)}
+                                    data-testid="cancel-reply-button"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
 
                         {/* Message Input */}
                         <div className="p-4 border-t">

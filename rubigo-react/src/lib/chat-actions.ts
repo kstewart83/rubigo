@@ -311,7 +311,8 @@ export async function getUserDirectMessages(userId: string): Promise<ChatChannel
 export async function sendMessage(
     channelId: string,
     senderId: string,
-    content: string
+    content: string,
+    threadId?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
     try {
         const now = new Date().toISOString();
@@ -322,6 +323,7 @@ export async function sendMessage(
             channelId,
             senderId,
             content,
+            threadId: threadId ?? null,
             sentAt: now,
             deleted: false,
         });

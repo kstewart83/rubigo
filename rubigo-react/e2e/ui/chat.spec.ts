@@ -542,22 +542,23 @@ test.describe("Chat UX - Threaded Replies", () => {
         await replyButton.click();
         await page.waitForTimeout(300);
 
+        // Then a thread reply bar appears showing who I'm replying to
+        const threadReplyBar = page.locator("[data-testid='thread-reply-bar']");
+        await expect(threadReplyBar).toBeVisible({ timeout: 3000 });
+        await expect(threadReplyBar).toContainText("Replying to");
+
         // When I type and send my response
         const replyMessage = `Thread reply ${Date.now()}`;
-        const threadInput = page.locator("[data-testid='thread-input']")
-            .or(page.locator("[data-testid='message-input']"));
-        await threadInput.fill(replyMessage);
-
-        const sendButton = page.locator("[data-testid='send-reply-button']")
-            .or(page.locator("[data-testid='send-button']"));
-        await sendButton.click();
+        await page.locator("[data-testid='message-input']").fill(replyMessage);
+        await page.locator("[data-testid='send-button']").click();
         await page.waitForTimeout(500);
 
-        // Then it appears in a threaded view under the original message
-        const threadContainer = page.locator("[data-testid='thread-container']")
-            .or(messageBubble.locator("[data-testid='thread-replies']"));
-        await expect(threadContainer).toBeVisible({ timeout: 5000 });
-        await expect(threadContainer.getByText(replyMessage)).toBeVisible();
+        // Then the reply bar closes
+        await expect(threadReplyBar).not.toBeVisible({ timeout: 3000 });
+
+        // And my reply appears in the message list
+        const replyBubble = page.locator("[data-testid='message-bubble']", { hasText: replyMessage });
+        await expect(replyBubble).toBeVisible({ timeout: 5000 });
     });
 
     test("scen-chat-thread-indicator: Thread reply count shown", async ({ page }) => {
