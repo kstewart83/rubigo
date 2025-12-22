@@ -716,7 +716,10 @@ export function FilesPageContent() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem
-                                                        onClick={() => handleDownload(file.id, file.name)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDownload(file.id, file.name);
+                                                        }}
                                                     >
                                                         <Download className="h-4 w-4 mr-2" />
                                                         Download
