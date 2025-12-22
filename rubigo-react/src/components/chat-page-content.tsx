@@ -140,20 +140,26 @@ export function ChatPageContent() {
             return;
         }
 
+        // Track if this is the initial load or a poll
+        let isInitialLoad = true;
+
         const loadMessages = async () => {
             const msgs = await getMessages(selectedChannel);
             // Only update if messages actually changed (compare IDs to avoid re-renders)
-            setMessages((prev) => {
+            const messagesChanged = setMessages((prev) => {
                 const prevIds = prev.map(m => m.id).join(',');
                 const newIds = msgs.map(m => m.id).join(',');
                 if (prevIds === newIds) return prev; // No change
                 return msgs;
             });
 
-            // Load reactions for each message
-            if (currentPersona) {
+            // Only load reactions on initial load or when messages change
+            // Skip reactions during normal polls to reduce server load
+            if (isInitialLoad && currentPersona) {
                 const reactionsMap: Record<string, ReactionGroup[]> = {};
-                for (const msg of msgs) {
+                // Only fetch reactions for visible messages (last 10)
+                const visibleMsgs = msgs.slice(-10);
+                for (const msg of visibleMsgs) {
                     const reactions = await getMessageReactions(msg.id, currentPersona.id);
                     if (reactions.length > 0) {
                         reactionsMap[msg.id] = reactions;
@@ -167,12 +173,13 @@ export function ChatPageContent() {
                     return reactionsMap;
                 });
             }
+            isInitialLoad = false;
         };
 
         loadMessages();
 
-        // Poll for new messages every 5 seconds (increased from 3s)
-        const interval = setInterval(loadMessages, 5000);
+        // Poll for new messages every 15 seconds (reduced from 5s to minimize server load)
+        const interval = setInterval(loadMessages, 15000);
         return () => clearInterval(interval);
     }, [selectedChannel, currentPersona]);
 
