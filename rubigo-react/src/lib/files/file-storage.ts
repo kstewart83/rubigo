@@ -198,13 +198,14 @@ export class FileStorageService {
      * Download file content by reassembling chunks.
      */
     async downloadFile(fileId: string, versionId?: string): Promise<Uint8Array | null> {
-        // Get version
-        let version: FileVersion | undefined;
+        // Get version - use raw DB column names
+        type VersionRow = { id: string; root_hash: string; size: number };
+        let version: VersionRow | undefined;
 
         if (versionId) {
             version = this.db.prepare(`
-        SELECT * FROM file_versions WHERE id = ?
-      `).get(versionId) as FileVersion | undefined;
+        SELECT id, root_hash, size FROM file_versions WHERE id = ?
+      `).get(versionId) as VersionRow | undefined;
         } else {
             // Get current version
             const file = this.db.prepare(`
@@ -214,14 +215,14 @@ export class FileStorageService {
             if (!file?.current_version_id) return null;
 
             version = this.db.prepare(`
-        SELECT * FROM file_versions WHERE id = ?
-      `).get(file.current_version_id) as FileVersion | undefined;
+        SELECT id, root_hash, size FROM file_versions WHERE id = ?
+      `).get(file.current_version_id) as VersionRow | undefined;
         }
 
         if (!version) return null;
 
         // Get chunk refs from tree
-        const chunkRefs = this.treeTraverser.getChunkRefs(version.rootHash);
+        const chunkRefs = this.treeTraverser.getChunkRefs(version.root_hash);
 
         // Reassemble file
         const result = new Uint8Array(version.size);
