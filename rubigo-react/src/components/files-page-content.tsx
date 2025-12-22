@@ -51,6 +51,7 @@ interface FileItem {
     mimeType: string | null;
     totalSize: number;
     ownerId: number;
+    checksum: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -285,7 +286,10 @@ export function FilesPageContent() {
             const a = document.createElement("a");
             a.href = blobUrl;
             a.download = fileName;
+            a.style.display = "none";
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(blobUrl);
         } catch (error) {
             console.error("Download failed:", error);
