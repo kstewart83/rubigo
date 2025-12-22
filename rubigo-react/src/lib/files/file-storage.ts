@@ -33,6 +33,7 @@ export interface StoredFile {
     typeMismatch: boolean;
     totalSize: number;
     ownerId: number;
+    checksum: string | null;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
@@ -243,7 +244,10 @@ export class FileStorageService {
      */
     getFile(fileId: string): StoredFile | null {
         const row = this.db.prepare(`
-      SELECT * FROM files WHERE id = ? AND deleted_at IS NULL
+      SELECT f.*, v.checksum 
+      FROM files f 
+      LEFT JOIN file_versions v ON f.current_version_id = v.id
+      WHERE f.id = ? AND f.deleted_at IS NULL
     `).get(fileId) as Record<string, unknown> | undefined;
 
         if (!row) return null;
@@ -259,6 +263,7 @@ export class FileStorageService {
             typeMismatch: (row.type_mismatch as number) === 1,
             totalSize: row.total_size as number,
             ownerId: row.owner_id as number,
+            checksum: row.checksum as string | null,
             createdAt: row.created_at as string,
             updatedAt: row.updated_at as string,
             deletedAt: row.deleted_at as string | null,
@@ -270,8 +275,16 @@ export class FileStorageService {
      */
     listFiles(profileId: string, folderId: string | null): StoredFile[] {
         const query = folderId
-            ? `SELECT * FROM files WHERE profile_id = ? AND folder_id = ? AND deleted_at IS NULL ORDER BY name`
-            : `SELECT * FROM files WHERE profile_id = ? AND folder_id IS NULL AND deleted_at IS NULL ORDER BY name`;
+            ? `SELECT f.*, v.checksum 
+               FROM files f 
+               LEFT JOIN file_versions v ON f.current_version_id = v.id
+               WHERE f.profile_id = ? AND f.folder_id = ? AND f.deleted_at IS NULL 
+               ORDER BY f.name`
+            : `SELECT f.*, v.checksum 
+               FROM files f 
+               LEFT JOIN file_versions v ON f.current_version_id = v.id
+               WHERE f.profile_id = ? AND f.folder_id IS NULL AND f.deleted_at IS NULL 
+               ORDER BY f.name`;
 
         const rows = (folderId
             ? this.db.prepare(query).all(profileId, folderId)
@@ -288,6 +301,7 @@ export class FileStorageService {
             typeMismatch: (row.type_mismatch as number) === 1,
             totalSize: row.total_size as number,
             ownerId: row.owner_id as number,
+            checksum: row.checksum as string | null,
             createdAt: row.created_at as string,
             updatedAt: row.updated_at as string,
             deletedAt: row.deleted_at as string | null,

@@ -27,6 +27,7 @@ import {
     Share2,
     Copy,
     Check,
+    Fingerprint,
 } from "lucide-react";
 
 // ============================================================================
@@ -49,6 +50,7 @@ interface FileDetails {
     mimeType: string | null;
     totalSize: number;
     ownerId: number;
+    checksum: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -284,7 +286,7 @@ export function FilePreviewPanel({
                     </SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="h-[calc(100vh-100px)] pr-4">
+                <ScrollArea className="h-[calc(100vh-100px)] px-4">
                     <div className="space-y-6 py-4">
                         {/* Preview */}
                         <div>
@@ -378,6 +380,15 @@ export function FilePreviewPanel({
                                         {formatDate(file.createdAt)}
                                     </span>
                                 </div>
+                                {file.checksum && (
+                                    <div className="flex items-start gap-2 text-muted-foreground">
+                                        <Fingerprint className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                        <span className="flex-shrink-0">SHA256:</span>
+                                        <code className="text-foreground text-xs font-mono break-all">
+                                            {file.checksum}
+                                        </code>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
