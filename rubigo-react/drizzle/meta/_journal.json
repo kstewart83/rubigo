@@ -64,6 +64,20 @@
       "when": 1766284000000,
       "tag": "0008_add_analytics_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1766427000000,
+      "tag": "0009_add_presentation_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1766428000000,
+      "tag": "0010_add_agent_sessions",
+      "breakpoints": true
     }
   ]
 }

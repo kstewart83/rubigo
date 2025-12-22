@@ -77,3 +77,47 @@ CREATE TABLE IF NOT EXISTS email_recipients (
 CREATE INDEX IF NOT EXISTS idx_email_threads_profile ON email_threads(profile_id);
 CREATE INDEX IF NOT EXISTS idx_emails_profile ON emails(profile_id);
 CREATE INDEX IF NOT EXISTS idx_email_recipients_profile ON email_recipients(profile_id);
+
+-- ============================================================================
+-- Presentations: Slides, Presentations, Junction Table
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS slides (
+    id INTEGER NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    title TEXT,
+    layout TEXT DEFAULT 'content',
+    content_json TEXT DEFAULT '{}',
+    notes TEXT,
+    created_by TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (id, profile_id)
+);
+
+CREATE TABLE IF NOT EXISTS presentations (
+    id INTEGER NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    title TEXT NOT NULL,
+    description TEXT,
+    theme TEXT DEFAULT 'dark',
+    aspect_ratio TEXT DEFAULT '16:9',
+    transition TEXT DEFAULT 'fade',
+    created_by TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (id, profile_id)
+);
+
+CREATE TABLE IF NOT EXISTS presentation_slides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id TEXT NOT NULL REFERENCES profile(id),
+    presentation_id INTEGER NOT NULL,
+    slide_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    vertical_position INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_slides_profile ON slides(profile_id);
+CREATE INDEX IF NOT EXISTS idx_presentations_profile ON presentations(profile_id);
+CREATE INDEX IF NOT EXISTS idx_presentation_slides_profile ON presentation_slides(profile_id);
