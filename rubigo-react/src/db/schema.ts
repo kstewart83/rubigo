@@ -545,6 +545,7 @@ export const screenShareSessions = sqliteTable("screen_share_sessions", {
 });
 
 // ============================================================================
+
 // Agent Simulation
 // ============================================================================
 
@@ -623,6 +624,77 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     payload: text("payload"), // JSON with event-specific details
     createdAt: text("created_at").notNull(), // ISO 8601
     processedAt: text("processed_at"), // ISO 8601, null until processed
+
+// Collaboration: Presentations
+// ============================================================================
+
+/**
+ * Slides - Independent, reusable slide entities
+ * Slides can be used across multiple presentations
+ */
+export const slides = sqliteTable("slides", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    title: text("title"),
+    layout: text("layout", {
+        enum: ["title", "content", "two-column", "code", "image", "blank"]
+    }).default("content"),
+    contentJson: text("content_json").notNull().default("{}"), // JSON slide content
+    notes: text("notes"), // Presenter notes
+    createdBy: text("created_by").references(() => personnel.id),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
+});
+
+/**
+ * Presentations - Container for ordered slides
+ */
+export const presentations = sqliteTable("presentations", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    title: text("title").notNull(),
+    description: text("description"),
+    theme: text("theme", {
+        enum: ["light", "dark", "corporate", "creative"]
+    }).default("dark"),
+    aspectRatio: text("aspect_ratio").default("16:9"), // 16:9, 4:3, custom
+    transition: text("transition", {
+        enum: ["none", "fade", "slide", "zoom", "cube"]
+    }).default("fade"),
+    createdBy: text("created_by").references(() => personnel.id),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    // Access Control
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    sco: text("sco"),
+});
+
+/**
+ * Presentation Slides - Junction table with ordering
+ * Supports vertical sub-slides (position, verticalPosition)
+ */
+export const presentationSlides = sqliteTable("presentation_slides", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    presentationId: integer("presentation_id").references(() => presentations.id, { onDelete: "cascade" }).notNull(),
+    slideId: integer("slide_id").references(() => slides.id).notNull(),
+    position: integer("position").notNull(), // Horizontal position (main slide)
+    verticalPosition: integer("vertical_position").default(0), // Vertical sub-slide position (0 = main)
+    customTransition: text("custom_transition", {
+        enum: ["none", "fade", "slide", "zoom", "cube"]
+    }), // Override presentation default
+});
+
+/**
+ * Slide Files - Links slides to File Manager files
+ */
+export const slideFiles = sqliteTable("slide_files", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slideId: integer("slide_id").references(() => slides.id, { onDelete: "cascade" }).notNull(),
+    fileId: text("file_id").notNull(), // References File Manager
+    caption: text("caption"),
+    displayOrder: integer("display_order").default(0),
+
 });
 
 // ============================================================================
@@ -756,6 +828,19 @@ export type NewChatReaction = typeof chatReactions.$inferInsert;
 // Collaboration: Screen Share
 export type ScreenShareSession = typeof screenShareSessions.$inferSelect;
 export type NewScreenShareSession = typeof screenShareSessions.$inferInsert;
+
+// Collaboration: Presentations
+export type Slide = typeof slides.$inferSelect;
+export type NewSlide = typeof slides.$inferInsert;
+
+export type PresentationType = typeof presentations.$inferSelect;
+export type NewPresentation = typeof presentations.$inferInsert;
+
+export type PresentationSlide = typeof presentationSlides.$inferSelect;
+export type NewPresentationSlide = typeof presentationSlides.$inferInsert;
+
+export type SlideFile = typeof slideFiles.$inferSelect;
+export type NewSlideFile = typeof slideFiles.$inferInsert;
 
 // Access Control
 export type ClassificationGuide = typeof classificationGuides.$inferSelect;
