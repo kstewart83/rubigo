@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -302,7 +303,7 @@ export function FilesPageContent() {
     };
 
     // Handle file delete
-    const handleDelete = async (fileId: string) => {
+    const handleDelete = async (fileId: string, fileName: string) => {
         try {
             const response = await fetch(`/api/files/${fileId}`, {
                 method: "DELETE",
@@ -310,10 +311,20 @@ export function FilesPageContent() {
 
             const data = await response.json();
             if (data.success) {
+                toast.success(`"${fileName}" deleted`, {
+                    description: "The file has been moved to trash.",
+                });
                 loadContent();
+            } else {
+                toast.error("Delete failed", {
+                    description: data.error || "Could not delete the file.",
+                });
             }
         } catch (error) {
             console.error("Delete failed:", error);
+            toast.error("Delete failed", {
+                description: "An unexpected error occurred.",
+            });
         }
     };
 
@@ -544,7 +555,10 @@ export function FilesPageContent() {
                                             Download
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => handleDelete(file.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(file.id, file.name);
+                                            }}
                                             className="text-destructive"
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -628,7 +642,10 @@ export function FilesPageContent() {
                                                         Download
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => handleDelete(file.id)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(file.id, file.name);
+                                                        }}
                                                         className="text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />
