@@ -50,3 +50,33 @@ INSERT INTO features (profile_id, id, name, description, objective_id, status) V
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-warehouse', 'Parquet Warehousing', 'ETL process to archive old telemetry to Parquet files for historical analysis', 'obj-rubigo-metrics', 'planned');
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-dashboard', 'Analytics Discovery Dashboard', 'Admin-only /analytics route with overview, performance, and usage views', 'obj-rubigo-metrics', 'complete');
 
+-- FILE MANAGER FEATURES (GH #26)
+-- Core File Operations
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-upload', 'File Upload', 'Upload files to shared storage with progress indication and chunked upload support for large files', 'obj-files-core', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-download', 'File Download', 'Download files from shared storage with streaming support for large files', 'obj-files-core', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-crud', 'File Management', 'Create, rename, move, copy, and delete files within the file manager', 'obj-files-core', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-versions', 'File Versioning', 'Track file versions and allow users to view or restore previous versions', 'obj-files-core', 'planned');
+
+-- Organization and Navigation
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-folders', 'Folder Management', 'Create, rename, move, and delete folders to organize files hierarchically', 'obj-files-organization', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-browser', 'File Browser', 'Navigate folder hierarchy with breadcrumb trail, grid/list view toggle, and sorting options', 'obj-files-organization', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-search', 'File Search', 'Search files by name, type, date, or content across the workspace', 'obj-files-organization', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-dnd', 'Drag and Drop', 'Drag files and folders to move, organize, or upload directly from desktop', 'obj-files-organization', 'planned');
+
+-- Preview and Inspection
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-image', 'Image Preview', 'Preview image files (PNG, JPG, GIF, WebP, SVG) directly in the browser', 'obj-files-preview', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-doc', 'Document Preview', 'Preview PDF and common document formats with pagination', 'obj-files-preview', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-text', 'Text Preview', 'Preview text and code files with syntax highlighting', 'obj-files-preview', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-details', 'File Details Panel', 'View file metadata including size, type, dates, owner, and version history', 'obj-files-preview', 'planned');
+
+-- Collaboration Integration
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-chat-share', 'Share to Chat', 'Share files directly in chat conversations from the file manager', 'obj-files-collab', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-email-attach', 'Email Attachment', 'Attach files from the file manager when composing emails', 'obj-files-collab', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-calendar-link', 'Calendar Event Files', 'Link files to calendar events as meeting materials or minutes', 'obj-files-collab', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-quick-share', 'Quick Share Link', 'Generate shareable links for files with optional expiration', 'obj-files-collab', 'planned');
+
+-- Security and Validation
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-magika', 'AI File Type Detection', 'Use Google Magika to detect file types with high accuracy, preventing extension-based spoofing', 'obj-files-security', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-access', 'File Access Control', 'Respect platform ABAC controls for file visibility and modification', 'obj-files-security', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-quota', 'Storage Quotas', 'Track and enforce per-user or per-workspace storage limits', 'obj-files-security', 'planned');
+
