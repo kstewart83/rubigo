@@ -111,9 +111,15 @@ async function handleCheckChat(
     const agentMessages = recentMessages.filter(m => m.senderId === agentId);
     const lastAgentMessage = agentMessages[agentMessages.length - 1];
 
-    if (lastAgentMessage && lastAgentMessage.sentAt > targetMessage.sentAt) {
-        // Agent already responded after this message, skip
-        return { responded: false };
+    if (lastAgentMessage) {
+        // Compare as Date objects to handle different timestamp formats
+        const lastAgentTime = new Date(lastAgentMessage.sentAt).getTime();
+        const targetTime = new Date(targetMessage.sentAt).getTime();
+
+        if (lastAgentTime > targetTime) {
+            // Agent already responded after this message, skip
+            return { responded: false };
+        }
     }
 
     // Build context for Ollama
