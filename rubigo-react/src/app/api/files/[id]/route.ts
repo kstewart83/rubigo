@@ -18,6 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const { id } = await params;
         const { searchParams } = new URL(request.url);
         const versionId = searchParams.get("version"); // Optional: specific version
+        const forceDownload = searchParams.get("download") === "true"; // Force download prompt
 
         const db = getDb();
         const storage = new FileStorageService(db);
@@ -57,7 +58,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         // Return file with appropriate headers
         const response = new NextResponse(data);
         response.headers.set("Content-Type", file.mimeType || "application/octet-stream");
-        response.headers.set("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
+
+        // Use inline for previews, attachment for explicit downloads
+        const disposition = forceDownload ? "attachment" : "inline";
+        response.headers.set("Content-Disposition", `${disposition}; filename="${encodeURIComponent(file.name)}"`);
         response.headers.set("Content-Length", data.length.toString());
 
         // Cache headers for immutable content

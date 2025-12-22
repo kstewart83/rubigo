@@ -276,9 +276,11 @@ export function FilesPageContent() {
     // Handle file download
     const handleDownload = async (fileId: string, fileName: string, versionId?: string) => {
         try {
-            const url = versionId
-                ? `/api/files/${fileId}?version=${versionId}`
-                : `/api/files/${fileId}`;
+            // Use download=true to force attachment disposition
+            let url = `/api/files/${fileId}?download=true`;
+            if (versionId) {
+                url += `&version=${versionId}`;
+            }
             const response = await fetch(url);
             if (!response.ok) throw new Error("Download failed");
 
