@@ -128,7 +128,7 @@ export function FilesPageContent() {
     const [folders, setFolders] = useState<FolderItem[]>([]);
     const [files, setFiles] = useState<FileItem[]>([]);
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: null, name: "Files" }]);
-    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [viewMode, setViewMode] = useState<"grid" | "list">("list");
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<StorageStats | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -417,22 +417,22 @@ export function FilesPageContent() {
                         {/* View toggle */}
                         <div className="flex border rounded-md">
                             <Button
-                                variant={viewMode === "grid" ? "secondary" : "ghost"}
-                                size="icon"
-                                className="h-8 w-8 rounded-r-none"
-                                onClick={() => setViewMode("grid")}
-                                data-testid="grid-view-button"
-                            >
-                                <Grid3X3 className="h-4 w-4" />
-                            </Button>
-                            <Button
                                 variant={viewMode === "list" ? "secondary" : "ghost"}
                                 size="icon"
-                                className="h-8 w-8 rounded-l-none"
+                                className="h-8 w-8 rounded-r-none"
                                 onClick={() => setViewMode("list")}
                                 data-testid="list-view-button"
                             >
                                 <List className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                                size="icon"
+                                className="h-8 w-8 rounded-l-none"
+                                onClick={() => setViewMode("grid")}
+                                data-testid="grid-view-button"
+                            >
+                                <Grid3X3 className="h-4 w-4" />
                             </Button>
                         </div>
 
