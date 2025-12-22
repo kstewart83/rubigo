@@ -27,6 +27,7 @@ import {
     Send,
     Users,
     Smile,
+    Reply,
 } from "lucide-react";
 import {
     createChannel,
@@ -44,6 +45,8 @@ import {
     type ReactionGroup,
 } from "@/lib/chat-actions";
 import type { ChatChannel } from "@/db/schema";
+import { getUserColor } from "@/lib/user-color";
+import { PersonnelPopover } from "@/components/chat/personnel-popover";
 
 // Common emoji set for reactions (simple inline grid - no external deps)
 const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀"];
@@ -403,92 +406,129 @@ export function ChatPageContent() {
                                 data-testid="message-list"
                                 className="space-y-4 message-list"
                             >
-                                {messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        data-testid="message-bubble"
-                                        className="flex gap-3 group"
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                            {msg.senderName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-baseline gap-2">
-                                                <span
-                                                    data-testid="message-sender"
-                                                    className="font-medium text-sm message-sender"
-                                                >
-                                                    {msg.senderName}
-                                                </span>
-                                                <span
-                                                    data-testid="message-timestamp"
-                                                    className="text-xs text-muted-foreground message-timestamp"
-                                                >
-                                                    {new Date(msg.sentAt).toLocaleTimeString(
-                                                        [],
-                                                        {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        }
-                                                    )}
-                                                </span>
-                                                {/* Add reaction button - shows on hover */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => setEmojiPickerForMessage(
-                                                        emojiPickerForMessage === msg.id ? null : msg.id
-                                                    )}
-                                                    data-testid="add-reaction-button"
-                                                >
-                                                    <Smile className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                            <p className="text-sm mt-0.5">{msg.content}</p>
+                                {messages.map((msg) => {
+                                    const isOwnMessage = msg.senderId === currentPersona?.id;
+                                    const userColor = getUserColor(msg.senderId);
 
-                                            {/* Reactions display */}
-                                            {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
-                                                <div className="flex gap-1 mt-1 flex-wrap" data-testid="reactions-container">
-                                                    {messageReactions[msg.id].map((reaction) => (
-                                                        <button
-                                                            key={reaction.emoji}
-                                                            data-testid="reaction-pill"
-                                                            title={reaction.users.map(u => u.name).join(", ")}
-                                                            onClick={() => handleReactionToggle(msg.id, reaction.emoji)}
-                                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${reaction.hasReacted
-                                                                ? "bg-primary/10 border-primary/30"
-                                                                : "bg-muted/50 border-transparent hover:border-border"
-                                                                }`}
-                                                        >
-                                                            <span>{reaction.emoji}</span>
-                                                            <span className="text-muted-foreground">{reaction.count}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Emoji picker dropdown */}
-                                            {emojiPickerForMessage === msg.id && (
+                                    return (
+                                        <div
+                                            key={msg.id}
+                                            data-testid="message-bubble"
+                                            data-own-message={isOwnMessage ? "true" : "false"}
+                                            data-user-color={userColor}
+                                            className={`flex gap-3 group ${isOwnMessage ? "flex-row-reverse" : ""}`}
+                                        >
+                                            <PersonnelPopover
+                                                personnelId={msg.senderId}
+                                                personnelName={msg.senderName}
+                                                currentUserId={currentPersona?.id}
+                                                onStartDM={handleStartDM}
+                                            >
                                                 <div
-                                                    className="absolute mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
-                                                    data-testid="emoji-picker"
+                                                    data-testid="message-avatar"
+                                                    className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium cursor-pointer hover:ring-2 hover:ring-primary/50"
                                                 >
-                                                    {COMMON_EMOJIS.map((emoji) => (
-                                                        <button
-                                                            key={emoji}
-                                                            data-testid="emoji-option"
-                                                            onClick={() => handleReactionToggle(msg.id, emoji)}
-                                                            className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
-                                                        >
-                                                            {emoji}
-                                                        </button>
-                                                    ))}
+                                                    {msg.senderName.charAt(0).toUpperCase()}
                                                 </div>
-                                            )}
+                                            </PersonnelPopover>
+                                            <div
+                                                className={`flex-1 max-w-[75%] ${isOwnMessage ? "text-right" : ""}`}
+                                                style={{ backgroundColor: userColor }}
+                                            >
+                                                <div className={`flex items-baseline gap-2 p-2 rounded-lg ${isOwnMessage ? "flex-row-reverse" : ""}`}>
+                                                    <PersonnelPopover
+                                                        personnelId={msg.senderId}
+                                                        personnelName={msg.senderName}
+                                                        currentUserId={currentPersona?.id}
+                                                        onStartDM={handleStartDM}
+                                                    >
+                                                        <span
+                                                            data-testid="message-sender"
+                                                            className="font-medium text-sm message-sender cursor-pointer hover:underline"
+                                                        >
+                                                            {msg.senderName}
+                                                        </span>
+                                                    </PersonnelPopover>
+                                                    <span
+                                                        data-testid="message-timestamp"
+                                                        className="text-xs text-muted-foreground message-timestamp"
+                                                    >
+                                                        {new Date(msg.sentAt).toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </span>
+                                                    {/* Add reaction button - shows on hover */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => setEmojiPickerForMessage(
+                                                            emojiPickerForMessage === msg.id ? null : msg.id
+                                                        )}
+                                                        data-testid="add-reaction-button"
+                                                    >
+                                                        <Smile className="h-3 w-3" />
+                                                    </Button>
+                                                    {/* Reply button - shows on hover */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        data-testid="reply-button"
+                                                        title="Reply in thread"
+                                                    >
+                                                        <Reply className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                                <p className="text-sm mt-0.5">{msg.content}</p>
+
+                                                {/* Reactions display */}
+                                                {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
+                                                    <div className="flex gap-1 mt-1 flex-wrap" data-testid="reactions-container">
+                                                        {messageReactions[msg.id].map((reaction) => (
+                                                            <button
+                                                                key={reaction.emoji}
+                                                                data-testid="reaction-pill"
+                                                                title={reaction.users.map(u => u.name).join(", ")}
+                                                                onClick={() => handleReactionToggle(msg.id, reaction.emoji)}
+                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${reaction.hasReacted
+                                                                    ? "bg-primary/10 border-primary/30"
+                                                                    : "bg-muted/50 border-transparent hover:border-border"
+                                                                    }`}
+                                                            >
+                                                                <span>{reaction.emoji}</span>
+                                                                <span className="text-muted-foreground">{reaction.count}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Emoji picker dropdown */}
+                                                {emojiPickerForMessage === msg.id && (
+                                                    <div
+                                                        className="absolute mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
+                                                        data-testid="emoji-picker"
+                                                    >
+                                                        {COMMON_EMOJIS.map((emoji) => (
+                                                            <button
+                                                                key={emoji}
+                                                                data-testid="emoji-option"
+                                                                onClick={() => handleReactionToggle(msg.id, emoji)}
+                                                                className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 <div ref={messagesEndRef} />
                             </div>
                         </ScrollArea>
