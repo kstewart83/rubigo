@@ -18,7 +18,7 @@ export interface FileVersion {
     size: number;
     chunkCount: number;
     checksum: string;
-    createdBy: number;
+    createdBy: string;
     createdAt: string;
 }
 
@@ -32,7 +32,7 @@ export interface StoredFile {
     detectedType: string | null;
     typeMismatch: boolean;
     totalSize: number;
-    ownerId: number;
+    ownerId: string;
     checksum: string | null;
     createdAt: string;
     updatedAt: string;
@@ -96,7 +96,7 @@ export class FileStorageService {
         mimeType?: string;
         detectedType?: string;
         typeMismatch?: boolean;
-        ownerId: number;
+        ownerId: string;
         existingFileId?: string;
     }): Promise<UploadResult> {
         const { profileId, folderId, name, data, mimeType, detectedType, typeMismatch, ownerId, existingFileId } = params;
@@ -263,7 +263,7 @@ export class FileStorageService {
             detectedType: row.detected_type as string | null,
             typeMismatch: (row.type_mismatch as number) === 1,
             totalSize: row.total_size as number,
-            ownerId: row.owner_id as number,
+            ownerId: row.owner_id as string,
             checksum: row.checksum as string | null,
             createdAt: row.created_at as string,
             updatedAt: row.updated_at as string,
@@ -301,7 +301,7 @@ export class FileStorageService {
             detectedType: row.detected_type as string | null,
             typeMismatch: (row.type_mismatch as number) === 1,
             totalSize: row.total_size as number,
-            ownerId: row.owner_id as number,
+            ownerId: row.owner_id as string,
             checksum: row.checksum as string | null,
             createdAt: row.created_at as string,
             updatedAt: row.updated_at as string,
@@ -325,7 +325,7 @@ export class FileStorageService {
             size: row.size as number,
             chunkCount: row.chunk_count as number,
             checksum: row.checksum as string,
-            createdBy: row.created_by as number,
+            createdBy: row.created_by as string,
             createdAt: row.created_at as string,
         }));
     }
