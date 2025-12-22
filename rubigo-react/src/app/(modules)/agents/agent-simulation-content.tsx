@@ -28,7 +28,7 @@ export function AgentSimulationContent() {
     const [thoughts, setThoughts] = useState<ThoughtEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch agents and Ollama status
+    // Fetch agents, Ollama status, and loop status
     const fetchStatus = useCallback(async () => {
         try {
             // Fetch Ollama health
@@ -39,10 +39,16 @@ export function AgentSimulationContent() {
             const agentsRes = await fetch("/api/agents");
             const agentsData = await agentsRes.json();
 
+            // Fetch loop status
+            const loopRes = await fetch("/api/agents/loop/status");
+            const loopData = await loopRes.json();
+
             setSimulation(prev => ({
                 ...prev,
                 ollamaAvailable: health.available,
                 ollamaModel: health.model,
+                running: loopData.running || false,
+                totalTicks: loopData.tickCount || prev.totalTicks,
             }));
 
             setAgents(
@@ -138,23 +144,39 @@ export function AgentSimulationContent() {
         }
     }, [fetchStatus, fetchEvents, selectedAgentId]);
 
-    // Auto-tick when running
+    // Poll for status updates when loop is running
     useEffect(() => {
         if (simulation.running) {
-            // Run a tick every 5 seconds
-            const interval = setInterval(executeTick, 5000);
-            // Also run one immediately
-            executeTick();
+            // Poll status every 3 seconds to get tick count updates
+            const interval = setInterval(fetchStatus, 3000);
             return () => clearInterval(interval);
         }
-    }, [simulation.running, executeTick]);
+    }, [simulation.running, fetchStatus]);
 
-    const handleStart = () => {
-        setSimulation(prev => ({ ...prev, running: true }));
+    const handleStart = async () => {
+        try {
+            const res = await fetch("/api/agents/loop/start", { method: "POST" });
+            const data = await res.json();
+            console.log("Loop started:", data);
+            if (data.success) {
+                setSimulation(prev => ({ ...prev, running: true, totalTicks: 0 }));
+            }
+        } catch (error) {
+            console.error("Error starting loop:", error);
+        }
     };
 
-    const handleStop = () => {
-        setSimulation(prev => ({ ...prev, running: false }));
+    const handleStop = async () => {
+        try {
+            const res = await fetch("/api/agents/loop/stop", { method: "POST" });
+            const data = await res.json();
+            console.log("Loop stopped:", data);
+            if (data.success) {
+                setSimulation(prev => ({ ...prev, running: false }));
+            }
+        } catch (error) {
+            console.error("Error stopping loop:", error);
+        }
     };
 
     const handleTick = () => {
@@ -163,6 +185,11 @@ export function AgentSimulationContent() {
 
     const handleReset = async () => {
         try {
+            // Stop the loop first if running
+            if (simulation.running) {
+                await fetch("/api/agents/loop/stop", { method: "POST" });
+            }
+
             const response = await fetch("/api/agents/reset", { method: "POST" });
             const data = await response.json();
             console.log("Reset result:", data);
