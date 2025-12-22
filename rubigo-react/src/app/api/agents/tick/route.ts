@@ -115,9 +115,15 @@ async function handleCheckChat(
         // Compare as Date objects to handle different timestamp formats
         const lastAgentTime = new Date(lastAgentMessage.sentAt).getTime();
         const targetTime = new Date(targetMessage.sentAt).getTime();
+        const now = Date.now();
 
+        // Skip if agent already responded after this message
         if (lastAgentTime > targetTime) {
-            // Agent already responded after this message, skip
+            return { responded: false };
+        }
+
+        // Debounce: Skip if agent responded within last 5 seconds (prevents concurrent duplicates)
+        if (now - lastAgentTime < 5000) {
             return { responded: false };
         }
     }
