@@ -328,6 +328,32 @@ export function FilesPageContent() {
         }
     };
 
+    // Handle folder delete
+    const handleDeleteFolder = async (folderId: string, folderName: string) => {
+        try {
+            const response = await fetch(`/api/files/folders/${folderId}`, {
+                method: "DELETE",
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                toast.success(`"${folderName}" deleted`, {
+                    description: "Folder has been removed.",
+                });
+                loadContent();
+            } else {
+                toast.error("Delete failed", {
+                    description: data.error || "Could not delete the folder.",
+                });
+            }
+        } catch (error) {
+            console.error("Delete folder failed:", error);
+            toast.error("Delete failed", {
+                description: "An unexpected error occurred.",
+            });
+        }
+    };
+
     // Drag and drop handlers
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -509,17 +535,45 @@ export function FilesPageContent() {
                     <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {/* Folders */}
                         {filteredFolders.map((folder) => (
-                            <button
+                            <div
                                 key={folder.id}
                                 data-testid="folder-item"
-                                onClick={() => navigateToFolder(folder.id, folder.name)}
-                                className="flex flex-col items-center p-4 rounded-lg border hover:bg-accent transition-colors"
+                                className="relative flex flex-col items-center p-4 rounded-lg border hover:bg-accent transition-colors group"
                             >
-                                <Folder className="h-12 w-12 text-blue-500 mb-2" />
-                                <span className="text-sm font-medium truncate w-full text-center">
-                                    {folder.name}
-                                </span>
-                            </button>
+                                <button
+                                    onClick={() => navigateToFolder(folder.id, folder.name)}
+                                    className="flex flex-col items-center w-full"
+                                >
+                                    <Folder className="h-12 w-12 text-blue-500 mb-2" />
+                                    <span className="text-sm font-medium truncate w-full text-center">
+                                        {folder.name}
+                                    </span>
+                                </button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 h-6 w-6"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteFolder(folder.id, folder.name);
+                                            }}
+                                            className="text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                         ))}
 
                         {/* Files */}
@@ -587,7 +641,7 @@ export function FilesPageContent() {
                                     <tr
                                         key={folder.id}
                                         data-testid="folder-row"
-                                        className="border-b hover:bg-accent cursor-pointer"
+                                        className="border-b hover:bg-accent cursor-pointer group"
                                         onClick={() => navigateToFolder(folder.id, folder.name)}
                                     >
                                         <td className="py-2">
@@ -600,7 +654,32 @@ export function FilesPageContent() {
                                         <td className="py-2 text-muted-foreground">
                                             {formatDate(folder.createdAt)}
                                         </td>
-                                        <td className="py-2"></td>
+                                        <td className="py-2">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="opacity-0 group-hover:opacity-100 h-6 w-6"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteFolder(folder.id, folder.name);
+                                                        }}
+                                                        className="text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </td>
                                     </tr>
                                 ))}
 
