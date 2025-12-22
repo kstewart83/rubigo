@@ -128,18 +128,20 @@ async function handleCheckChat(
         .map(m => `${m.senderName}: ${m.content}`)
         .join("\n");
 
-    const systemPrompt = `You are ${agent.name}, a ${agent.title || "Employee"} at work.
-You are responding to a message in a chat channel.
+    const systemPrompt = `You are ${agent.name}, a ${agent.title || "Employee"} at a company called MMC.
+You are chatting with coworkers in a work chat channel.
+Respond naturally as yourself - just write what you would say.
 Be professional but friendly. Keep responses concise (1-3 sentences).
-Don't use emojis excessively. Stay in character.`;
+Do NOT include any preamble like "Here's my response" or quotes around your message.
+Do NOT describe what you're doing - just write your actual response.
+Don't use emojis excessively.`;
 
     const userPrompt = `Recent conversation:
 ${messageHistory}
 
-The latest message from ${targetMessage.senderName} is:
-"${targetMessage.content}"
+${targetMessage.senderName} just said: "${targetMessage.content}"
 
-Respond naturally as ${agent.name}:`;
+Write your response (just the message text, nothing else):`;
 
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
