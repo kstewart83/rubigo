@@ -315,11 +315,25 @@ export async function POST() {
         // Schedule next event if needed
         let nextEventId: string | null = null;
         if (result.scheduleNext && event.contextId) {
+            // Carry forward the context info from original event
+            let extraPayload: Record<string, unknown> = {};
+            if (event.payload) {
+                try {
+                    const parsed = JSON.parse(event.payload);
+                    extraPayload = {
+                        contextType: parsed.contextType,
+                        relatedEntityId: parsed.relatedEntityId,
+                        targetName: parsed.targetName,
+                    };
+                } catch { /* ignore */ }
+            }
+
             nextEventId = await scheduleNextContextCheck(
                 event.agentId,
                 event.contextId,
                 event.eventType,
-                result.nextTier
+                result.nextTier,
+                extraPayload
             );
         }
 

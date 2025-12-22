@@ -77,7 +77,8 @@ export async function scheduleNextContextCheck(
     agentId: string,
     contextId: string,
     eventType: schema.NewAgentScheduledEvent["eventType"],
-    tier: keyof typeof TIER_DELAYS = "sync"
+    tier: keyof typeof TIER_DELAYS = "sync",
+    extraPayload?: Record<string, unknown>
 ): Promise<string> {
     const delaySeconds = getDelayForTier(tier);
     const scheduledFor = addSeconds(new Date(), delaySeconds);
@@ -87,7 +88,11 @@ export async function scheduleNextContextCheck(
         eventType,
         contextId,
         scheduledFor,
-        payload: { tier, delaySeconds },
+        payload: {
+            tier,
+            delaySeconds,
+            ...extraPayload,
+        },
     });
 }
 
