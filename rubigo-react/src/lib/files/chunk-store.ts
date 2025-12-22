@@ -138,7 +138,7 @@ export class ChunkStore {
      * Check if a chunk exists by hash.
      */
     exists(hash: string): boolean {
-        return this.stmtExists.get(hash) !== undefined;
+        return this.stmtExists.get(hash) != null;
     }
 
     /**
