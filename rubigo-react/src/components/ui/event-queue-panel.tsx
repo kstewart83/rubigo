@@ -7,7 +7,7 @@
  * Shows event type, agent, scheduled time, and ready status.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw, Clock, CheckCircle } from "lucide-react";
@@ -49,6 +49,10 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
 
+    // Use ref for callback to avoid dependency issues
+    const onEventsRefreshRef = useRef(onEventsRefresh);
+    onEventsRefreshRef.current = onEventsRefresh;
+
     const fetchEvents = useCallback(async (pageNum: number) => {
         setLoading(true);
         try {
@@ -59,14 +63,14 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                 setEvents(data.events);
                 setPagination(data.pagination);
                 setCurrentTime(data.currentTime);
-                onEventsRefresh?.(data.events);
+                onEventsRefreshRef.current?.(data.events);
             }
         } catch (error) {
             console.error("Failed to fetch events:", error);
         } finally {
             setLoading(false);
         }
-    }, [onEventsRefresh]);
+    }, []);
 
     // Fetch on mount and when page changes
     useEffect(() => {
