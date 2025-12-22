@@ -9,11 +9,11 @@ CREATE TABLE IF NOT EXISTS chunks (
   ref_count INTEGER NOT NULL DEFAULT 1,  -- Reference counting for GC
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Index for garbage collection (find orphaned chunks)
 CREATE INDEX IF NOT EXISTS idx_chunks_ref_count ON chunks(ref_count);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- B-tree nodes for file structure (content-addressed)
 CREATE TABLE IF NOT EXISTS file_nodes (
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS file_nodes (
   child_count INTEGER NOT NULL,       -- Number of children
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Folder hierarchy
 CREATE TABLE IF NOT EXISTS folders (
@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS folders (
   UNIQUE(profile_id, parent_id, name),
   FOREIGN KEY (owner_id) REFERENCES personnel(id)
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(profile_id, parent_id);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- File metadata
 CREATE TABLE IF NOT EXISTS files (
@@ -61,14 +61,14 @@ CREATE TABLE IF NOT EXISTS files (
   FOREIGN KEY (folder_id) REFERENCES folders(id),
   FOREIGN KEY (owner_id) REFERENCES personnel(id)
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_files_folder ON files(profile_id, folder_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_files_owner ON files(owner_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_files_deleted ON files(deleted_at);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- File versions (immutable snapshots)
 CREATE TABLE IF NOT EXISTS file_versions (
@@ -85,12 +85,12 @@ CREATE TABLE IF NOT EXISTS file_versions (
   FOREIGN KEY (root_hash) REFERENCES file_nodes(hash),
   FOREIGN KEY (created_by) REFERENCES personnel(id)
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_file_versions_file ON file_versions(file_id, version_number);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_file_versions_root ON file_versions(root_hash);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Share links with optional expiration
 CREATE TABLE IF NOT EXISTS file_shares (
@@ -104,14 +104,14 @@ CREATE TABLE IF NOT EXISTS file_shares (
   FOREIGN KEY (file_id) REFERENCES files(id),
   FOREIGN KEY (created_by) REFERENCES personnel(id)
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_file_shares_token ON file_shares(token);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_file_shares_file ON file_shares(file_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_file_shares_expires ON file_shares(expires_at);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Upload sessions for chunked uploads
 CREATE TABLE IF NOT EXISTS upload_sessions (
@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
   FOREIGN KEY (folder_id) REFERENCES folders(id),
   FOREIGN KEY (owner_id) REFERENCES personnel(id)
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_upload_sessions_status ON upload_sessions(status);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_upload_sessions_expires ON upload_sessions(expires_at);

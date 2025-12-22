@@ -3,11 +3,11 @@
 
 -- Add agent simulation columns to personnel table
 ALTER TABLE personnel ADD COLUMN is_agent INTEGER DEFAULT 0;
--->statement-breakpoint
+--> statement-breakpoint
 ALTER TABLE personnel ADD COLUMN agent_status TEXT DEFAULT 'dormant';
--->statement-breakpoint
+--> statement-breakpoint
 ALTER TABLE personnel ADD COLUMN agent_persona TEXT;
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Create agent_events table for thought/action logging
 CREATE TABLE IF NOT EXISTS agent_events (
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS agent_events (
     parent_event_id TEXT,
     metadata TEXT
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Create sync_contexts table for synchronous interaction zones
 CREATE TABLE IF NOT EXISTS sync_contexts (
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS sync_contexts (
     started_at TEXT NOT NULL,
     ended_at TEXT
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Create sync_context_participants table for tracking participants
 CREATE TABLE IF NOT EXISTS sync_context_participants (
@@ -42,19 +42,19 @@ CREATE TABLE IF NOT EXISTS sync_context_participants (
     joined_at TEXT NOT NULL,
     left_at TEXT
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 -- Create indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_agent_events_personnel ON agent_events(personnel_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_agent_events_timestamp ON agent_events(timestamp);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_agent_events_context ON agent_events(context_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_sync_contexts_type ON sync_contexts(context_type);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_sync_contexts_active ON sync_contexts(started_at) WHERE ended_at IS NULL;
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_sync_participants_context ON sync_context_participants(context_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_sync_participants_personnel ON sync_context_participants(personnel_id);

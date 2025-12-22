@@ -17,14 +17,14 @@ CREATE TABLE IF NOT EXISTS otel_spans (
   resource TEXT,                             -- JSON
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_otel_spans_trace ON otel_spans(trace_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_otel_spans_time ON otel_spans(start_time);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_otel_spans_name ON otel_spans(name);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- OpenTelemetry Metrics
 CREATE TABLE IF NOT EXISTS otel_metrics (
@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS otel_metrics (
   timestamp INTEGER NOT NULL,                -- nanoseconds since epoch
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_otel_metrics_name_time ON otel_metrics(name, timestamp);
--->statement-breakpoint
+--> statement-breakpoint
 
 -- High-level analytics events (user behavior)
 CREATE TABLE IF NOT EXISTS analytics_events (
@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   duration_ms INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
--->statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS idx_analytics_events_type_time ON analytics_events(event_type, created_at);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id);
--->statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_analytics_events_trace ON analytics_events(trace_id);
