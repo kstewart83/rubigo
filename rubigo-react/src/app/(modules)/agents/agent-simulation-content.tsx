@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AgentControlPanel } from "@/components/ui/agent-control-panel";
 import { AgentThoughtViewer } from "@/components/ui/agent-thought-viewer";
 import { EventQueuePanel, type ScheduledEvent } from "@/components/ui/event-queue-panel";
@@ -62,6 +62,10 @@ export function AgentSimulationContent() {
     }, []);
 
     // Fetch selected agent's events
+    // Use ref for agents to prevent callback recreation
+    const agentsRef = useRef(agents);
+    agentsRef.current = agents;
+
     const fetchEvents = useCallback(async (agentId: string) => {
         try {
             const res = await fetch(`/api/agents/${agentId}/events?limit=50`);
@@ -77,7 +81,7 @@ export function AgentSimulationContent() {
                 }) => ({
                     id: e.id,
                     timestamp: e.timestamp,
-                    agentName: agents.find(a => a.id === agentId)?.name || agentId,
+                    agentName: agentsRef.current.find(a => a.id === agentId)?.name || agentId,
                     eventType: e.eventType,
                     content: e.content,
                     targetEntity: e.targetEntity,
@@ -86,7 +90,7 @@ export function AgentSimulationContent() {
         } catch (error) {
             console.error("Error fetching events:", error);
         }
-    }, [agents]);
+    }, []);
 
     // Initial load
     useEffect(() => {
