@@ -27,6 +27,7 @@ export interface Person {
     cellPhone?: string;
     bio?: string;
     isGlobalAdmin?: boolean;
+    isAgent?: boolean;
     // Access control fields
     clearanceLevel?: string;      // "public" | "low" | "moderate" | "high"
     tenantClearances?: string;    // JSON array: ["moderate:🍎", "high:🍌"]

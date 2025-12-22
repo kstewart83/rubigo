@@ -42,41 +42,10 @@ INSERT INTO features (profile_id, id, name, description, objective_id, status) V
 
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-mcp-action-source', 'MCP Action Source Identification', 'Action logs distinguish MCP-originated operations from UI and API calls', 'obj-rubigo-audit', 'planned');
 
--- ANALYTICS AND OBSERVABILITY (GH #33)
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-collection', 'Telemetry Collection', 'Automatic collection of page views, feature events, and session data via useAnalytics hook', 'obj-rubigo-metrics', 'complete');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-otel', 'OpenTelemetry Instrumentation', 'Automatic span collection for HTTP requests, SSR, API routes, and DB queries via @vercel/otel', 'obj-rubigo-metrics', 'complete');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-vitals', 'Web Vitals Collection', 'Automatic collection of Core Web Vitals (LCP, FCP, TTFB, CLS, INP) via useReportWebVitals', 'obj-rubigo-metrics', 'complete');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-duckdb', 'DuckDB Analytical Queries', 'Read-only DuckDB attachment to SQLite for OLAP queries on telemetry data', 'obj-rubigo-metrics', 'complete');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-warehouse', 'Parquet Warehousing', 'ETL process to archive old telemetry to Parquet files for historical analysis', 'obj-rubigo-metrics', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-analytics-dashboard', 'Analytics Discovery Dashboard', 'Admin-only /analytics route with overview, performance, and usage views', 'obj-rubigo-metrics', 'complete');
-
--- FILE MANAGER FEATURES (GH #26)
--- Core File Operations
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-upload', 'File Upload', 'Upload files to shared storage with progress indication and chunked upload support for large files', 'obj-files-core', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-download', 'File Download', 'Download files from shared storage with streaming support for large files', 'obj-files-core', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-crud', 'File Management', 'Create, rename, move, copy, and delete files within the file manager', 'obj-files-core', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-versions', 'File Versioning', 'Track file versions and allow users to view or restore previous versions', 'obj-files-core', 'planned');
-
--- Organization and Navigation
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-folders', 'Folder Management', 'Create, rename, move, and delete folders to organize files hierarchically', 'obj-files-organization', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-browser', 'File Browser', 'Navigate folder hierarchy with breadcrumb trail, grid/list view toggle, and sorting options', 'obj-files-organization', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-search', 'File Search', 'Search files by name, type, date, or content across the workspace', 'obj-files-organization', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-dnd', 'Drag and Drop', 'Drag files and folders to move, organize, or upload directly from desktop', 'obj-files-organization', 'planned');
-
--- Preview and Inspection
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-image', 'Image Preview', 'Preview image files (PNG, JPG, GIF, WebP, SVG) directly in the browser', 'obj-files-preview', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-doc', 'Document Preview', 'Preview PDF and common document formats with pagination', 'obj-files-preview', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-preview-text', 'Text Preview', 'Preview text and code files with syntax highlighting', 'obj-files-preview', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-details', 'File Details Panel', 'View file metadata including size, type, dates, owner, and version history', 'obj-files-preview', 'planned');
-
--- Collaboration Integration
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-chat-share', 'Share to Chat', 'Share files directly in chat conversations from the file manager', 'obj-files-collab', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-email-attach', 'Email Attachment', 'Attach files from the file manager when composing emails', 'obj-files-collab', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-calendar-link', 'Calendar Event Files', 'Link files to calendar events as meeting materials or minutes', 'obj-files-collab', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-quick-share', 'Quick Share Link', 'Generate shareable links for files with optional expiration', 'obj-files-collab', 'planned');
-
--- Security and Validation
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-magika', 'AI File Type Detection', 'Use Google Magika to detect file types with high accuracy, preventing extension-based spoofing', 'obj-files-security', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-access', 'File Access Control', 'Respect platform ABAC controls for file visibility and modification', 'obj-files-security', 'planned');
-INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-files-quota', 'Storage Quotas', 'Track and enforce per-user or per-workspace storage limits', 'obj-files-security', 'planned');
-
+-- Agent Simulation Features
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-event-loop', 'Agent Event Loop', 'Discrete event simulation scheduler that manages agent lifecycle (dormant, sleeping, idle, working) with priority-based event processing', 'obj-rubigo-agent-sim', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-ollama', 'Local LLM Integration', 'Integration with Ollama for airgapped LLM inference to generate agent thoughts, decisions, and actions using persona-specific prompts', 'obj-rubigo-agent-sim', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-indicators', 'Agent UI Indicators', 'Visual badges and status indicators that distinguish AI agents from human personnel in the directory and collaboration features', 'obj-rubigo-agent-sim', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-collab', 'Agent Collaboration Integration', 'Agents can read and respond to chat messages, read and compose emails, and check calendar events', 'obj-rubigo-agent-sim', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-viewer', 'Agent Thought Viewer', 'UI component to observe an agent''s internal thought process, action history, and current synchronous context', 'obj-rubigo-agent-sim', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-sync-context', 'Synchronous Context Management', 'Track shared interactions (meetings, active chats) as first-class objects with participants and reaction-time tiers', 'obj-rubigo-agent-sim', 'planned');

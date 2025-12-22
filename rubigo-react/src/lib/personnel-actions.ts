@@ -30,6 +30,7 @@ export interface PersonnelInput {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
+    isAgent?: boolean;
 }
 
 export interface ActionResult {
@@ -181,6 +182,7 @@ export async function updatePersonnel(
         if (input.deskPhone !== undefined) updates.deskPhone = input.deskPhone?.trim() || null;
         if (input.cellPhone !== undefined) updates.cellPhone = input.cellPhone?.trim() || null;
         if (input.bio !== undefined) updates.bio = input.bio?.trim() || null;
+        if (input.isAgent !== undefined) updates.isAgent = input.isAgent;
 
         if (Object.keys(updates).length === 0) {
             return { success: false, error: "No updates provided" };
