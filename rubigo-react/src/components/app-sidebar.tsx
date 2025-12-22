@@ -32,6 +32,7 @@ import {
     BarChart3,
     Gauge,
     PieChart,
+    FolderOpen,
 } from "lucide-react";
 
 import {
@@ -107,6 +108,7 @@ const sidebarModules: SidebarModule[] = [
             { id: "calendar", label: "Calendar", href: "/calendar", icon: Calendar },
             { id: "email", label: "Email", href: "/email", icon: Mail },
             { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
+            { id: "files", label: "Files", href: "/files", icon: FolderOpen },
             { id: "screen-share", label: "Screen Share", href: "/screen-share", icon: MonitorPlay },
         ],
     },
