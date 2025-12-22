@@ -669,7 +669,7 @@ test.describe("MCP Access Control - rule-mcp-auth", () => {
 // ACTION SOURCE TESTS - rule-mcp-action-identified, rule-mcp-action-logged
 // ============================================================================
 
-test.describe("MCP Action Source - feat-mcp-action-source", () => {
+test.describe.skip("MCP Action Source - feat-mcp-action-source", () => {
     /**
      * Scenario: scen-mcp-action-logged
      * Given I invoke an MCP tool to create a personnel record

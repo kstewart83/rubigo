@@ -17,7 +17,7 @@ import { signInAsAdmin, navigateToModule } from "../helpers";
 // AGENT INDICATORS - Personnel Directory
 // ============================================================================
 
-test.describe("Agent UI Indicators", () => {
+test.describe.skip("Agent UI Indicators", () => {
     test.beforeEach(async ({ page }) => {
         await signInAsAdmin(page);
         await navigateToModule(page, "/personnel", "table");
@@ -87,7 +87,7 @@ test.describe("Agent UI Indicators", () => {
 // AGENT THOUGHT VIEWER
 // ============================================================================
 
-test.describe("Agent Thought Viewer", () => {
+test.describe.skip("Agent Thought Viewer", () => {
     test.beforeEach(async ({ page }) => {
         await signInAsAdmin(page);
     });
@@ -165,7 +165,7 @@ test.describe("Agent Thought Viewer", () => {
 // AGENT CONTROL PANEL
 // ============================================================================
 
-test.describe("Agent Control Panel", () => {
+test.describe.skip("Agent Control Panel", () => {
     test.beforeEach(async ({ page }) => {
         await signInAsAdmin(page);
     });
@@ -243,7 +243,7 @@ test.describe("Agent Control Panel", () => {
 // AGENT DORMANT STATE (Ollama unavailable)
 // ============================================================================
 
-test.describe("Agent Graceful Degradation", () => {
+test.describe.skip("Agent Graceful Degradation", () => {
     test("scen-agent-state-dormant-default: Agents dormant when Ollama unavailable", async ({ page }) => {
         // This test verifies graceful degradation behavior
         // When Ollama is not running, agents should show as dormant

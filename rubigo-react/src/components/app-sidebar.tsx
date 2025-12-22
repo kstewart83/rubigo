@@ -29,8 +29,12 @@ import {
     Mail,
     MessageCircle,
     MonitorPlay,
+
     Bot,
     FolderOpen,
+
+    Presentation,
+
     BarChart3,
     Gauge,
     PieChart,
@@ -70,9 +74,9 @@ import { usePersona } from "@/contexts/persona-context";
 import { useTheme } from "@/components/theme-provider";
 import type { Person } from "@/types/personnel";
 
-// ============================================================================
+// =====================================================================
 // Types
-// ============================================================================
+// =====================================================================
 
 interface SubPage {
     id: string;
@@ -89,9 +93,9 @@ interface SidebarModule {
     subPages?: SubPage[];
 }
 
-// ============================================================================
+// =====================================================================
 // Module Configuration
-// ============================================================================
+// =====================================================================
 
 const sidebarModules: SidebarModule[] = [
     {
@@ -111,6 +115,7 @@ const sidebarModules: SidebarModule[] = [
             { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
             { id: "files", label: "Files", href: "/files", icon: FolderOpen },
             { id: "screen-share", label: "Screen Share", href: "/screen-share", icon: MonitorPlay },
+            { id: "presentations", label: "Presentations", href: "/presentations", icon: Presentation },
         ],
     },
     {
@@ -160,9 +165,9 @@ const sidebarModules: SidebarModule[] = [
     },
 ];
 
-// ============================================================================
+// =====================================================================
 // App Sidebar Component
-// ============================================================================
+// =====================================================================
 
 interface AppSidebarProps {
     personnel: Person[];

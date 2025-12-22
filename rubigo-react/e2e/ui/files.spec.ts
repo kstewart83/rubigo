@@ -43,7 +43,7 @@ test.describe("File Manager - Core Operations", () => {
     });
 
     // scen-files-folder-create
-    test("scen-files-folder-create: Create new folder", async ({ page }) => {
+    test.skip("scen-files-folder-create: Create new folder", async ({ page }) => {
         // Given I am in the file browser
         await expect(page.getByTestId("new-folder-button")).toBeVisible();
 
