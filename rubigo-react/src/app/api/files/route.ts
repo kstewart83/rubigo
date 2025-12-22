@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         const file = formData.get("file") as File | null;
         const profileId = (formData.get("profileId") as string) || "mmc";
         const folderId = formData.get("folderId") as string | null;
-        const ownerId = parseInt(formData.get("ownerId") as string, 10);
+        const ownerId = formData.get("ownerId") as string | null;
         const existingFileId = formData.get("fileId") as string | null; // For new version
         const skipValidation = formData.get("skipValidation") === "true";
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!ownerId || isNaN(ownerId)) {
+        if (!ownerId) {
             return NextResponse.json(
                 { success: false, error: "ownerId is required" },
                 { status: 400 }
