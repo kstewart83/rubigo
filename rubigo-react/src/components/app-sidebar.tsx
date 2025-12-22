@@ -29,10 +29,7 @@ import {
     Mail,
     MessageCircle,
     MonitorPlay,
-    BarChart3,
-    Gauge,
-    PieChart,
-    FolderOpen,
+    Bot,
 } from "lucide-react";
 
 import {
@@ -117,6 +114,10 @@ const sidebarModules: SidebarModule[] = [
         label: "Personnel",
         href: "/personnel",
         icon: Users,
+        subPages: [
+            { id: "directory", label: "Directory", href: "/personnel", icon: Users },
+            { id: "agents", label: "AI Agents", href: "/agents", icon: Bot },
+        ],
     },
     {
         id: "projects",
@@ -321,7 +322,7 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
                                                                             asChild
                                                                             isActive={isSubPageActive}
                                                                         >
-                                                                            <Link href={subPage.href}>
+                                                                            <Link href={subPage.href} className="flex items-center gap-2 w-full">
                                                                                 {subPage.icon && (
                                                                                     <subPage.icon className="size-4" />
                                                                                 )}

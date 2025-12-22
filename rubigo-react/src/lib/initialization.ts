@@ -8,7 +8,7 @@
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 // ============================================================================
 // Types
@@ -336,6 +336,36 @@ export async function validateApiToken(token: string | null): Promise<ApiAuthRes
         return { valid: false, error: "No token provided" };
     }
 
+    // First, check if this is an agent token
+    const agentSession = await db
+        .select({
+            session: schema.agentSessions,
+            personnel: schema.personnel,
+        })
+        .from(schema.agentSessions)
+        .innerJoin(
+            schema.personnel,
+            eq(schema.agentSessions.personnelId, schema.personnel.id)
+        )
+        .where(
+            and(
+                eq(schema.agentSessions.token, token),
+                eq(schema.agentSessions.isActive, 1)
+            )
+        )
+        .limit(1);
+
+    if (agentSession.length > 0) {
+        // Token belongs to an agent
+        const { personnel } = agentSession[0];
+        return {
+            valid: true,
+            actorId: personnel.id,
+            actorName: personnel.name,
+        };
+    }
+
+    // Not an agent token - check if it's the Global Admin token
     const storedToken = process.env[API_TOKEN_ENV_KEY];
     if (!storedToken) {
         return { valid: false, error: "API not available (system not initialized)" };
