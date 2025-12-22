@@ -41,6 +41,7 @@ import {
     getMessages,
     toggleReaction,
     getMessageReactions,
+    getAllPersonnel,
     type ChatChannelWithMembers,
     type ChatMessageWithSender,
     type ReactionGroup,
@@ -95,6 +96,12 @@ export function ChatPageContent() {
     // Threading state
     const [activeThread, setActiveThread] = useState<{ messageId: string; senderName: string; content: string } | null>(null);
 
+    // Mention autocomplete state
+    const [showMentionAutocomplete, setShowMentionAutocomplete] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState("");
+    const [mentionPersonnel, setMentionPersonnel] = useState<Array<{ id: string; name: string }>>([]);
+    const [allPersonnel, setAllPersonnel] = useState<Array<{ id: string; name: string }>>([]);
+
     // Load channels on mount
     const loadChannels = useCallback(async () => {
         if (!currentPersona) return;
@@ -138,6 +145,20 @@ export function ChatPageContent() {
     useEffect(() => {
         loadChannels();
     }, [loadChannels]);
+
+    // Load personnel for mention autocomplete
+    useEffect(() => {
+        const loadPersonnelForMentions = async () => {
+            try {
+                const personnelList = await getAllPersonnel();
+                setAllPersonnel(personnelList);
+                setMentionPersonnel(personnelList);
+            } catch (error) {
+                console.error("Failed to load personnel for mentions:", error);
+            }
+        };
+        loadPersonnelForMentions();
+    }, []);
 
     // Load messages when channel selected
     useEffect(() => {
@@ -495,7 +516,66 @@ export function ChatPageContent() {
                                                         <Reply className="h-3 w-3" />
                                                     </Button>
                                                 </div>
-                                                <p className="text-sm mt-0.5">{msg.content}</p>
+                                                <p className="text-sm mt-0.5">
+                                                    {(() => {
+                                                        // Parse @mentions in content
+                                                        const mentionRegex = /@([A-Za-z][A-Za-z ]+?)(?=\s|$|[.,!?])/g;
+                                                        const parts: React.ReactNode[] = [];
+                                                        let lastIndex = 0;
+                                                        let match;
+                                                        let keyIndex = 0;
+
+                                                        while ((match = mentionRegex.exec(msg.content)) !== null) {
+                                                            // Add text before the mention
+                                                            if (match.index > lastIndex) {
+                                                                parts.push(msg.content.slice(lastIndex, match.index));
+                                                            }
+
+                                                            // Find personnel by name
+                                                            const mentionedName = match[1];
+                                                            const mentionedPerson = allPersonnel.find(
+                                                                p => p.name.toLowerCase() === mentionedName.toLowerCase()
+                                                            );
+
+                                                            // Add the mention as a styled span
+                                                            parts.push(
+                                                                mentionedPerson ? (
+                                                                    <PersonnelPopover
+                                                                        key={`mention-${msg.id}-${keyIndex++}`}
+                                                                        personnelId={mentionedPerson.id}
+                                                                        personnelName={mentionedPerson.name}
+                                                                        currentUserId={currentPersona?.id}
+                                                                        onStartDM={handleStartDM}
+                                                                    >
+                                                                        <span
+                                                                            data-testid="mention"
+                                                                            className="text-primary font-medium bg-primary/10 px-1 rounded cursor-pointer hover:bg-primary/20"
+                                                                        >
+                                                                            @{mentionedName}
+                                                                        </span>
+                                                                    </PersonnelPopover>
+                                                                ) : (
+                                                                    <span
+                                                                        key={`mention-${msg.id}-${keyIndex++}`}
+                                                                        data-testid="mention"
+                                                                        className="text-primary font-medium bg-primary/10 px-1 rounded"
+                                                                    >
+                                                                        @{mentionedName}
+                                                                    </span>
+                                                                )
+                                                            );
+
+                                                            lastIndex = match.index + match[0].length;
+                                                        }
+
+                                                        // Add remaining text
+                                                        if (lastIndex < msg.content.length) {
+                                                            parts.push(msg.content.slice(lastIndex));
+                                                        }
+
+                                                        return parts.length > 0 ? parts : msg.content;
+                                                    })()}
+                                                </p>
 
                                                 {/* Thread reply count indicator */}
                                                 {(() => {
@@ -625,14 +705,67 @@ export function ChatPageContent() {
                                         </div>
                                     )}
                                 </div>
-                                <Input
-                                    data-testid="message-input"
-                                    placeholder={`Message ${selectedChannelInfo?.name ?? ""}...`}
-                                    value={messageInput}
-                                    onChange={(e) => setMessageInput(e.target.value)}
-                                    onKeyDown={handleKeyPress}
-                                    className="flex-1"
-                                />
+                                <div className="flex-1 relative">
+                                    <Input
+                                        data-testid="message-input"
+                                        placeholder={`Message ${selectedChannelInfo?.name ?? ""}...`}
+                                        value={messageInput}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setMessageInput(value);
+
+                                            // Check for @ mention trigger
+                                            const lastAtIndex = value.lastIndexOf('@');
+                                            if (lastAtIndex >= 0) {
+                                                const afterAt = value.slice(lastAtIndex + 1);
+                                                // Only show if no space after @ (still typing the mention)
+                                                if (!afterAt.includes(' ')) {
+                                                    setMentionQuery(afterAt.toLowerCase());
+                                                    setShowMentionAutocomplete(true);
+                                                } else {
+                                                    setShowMentionAutocomplete(false);
+                                                }
+                                            } else {
+                                                setShowMentionAutocomplete(false);
+                                            }
+                                        }}
+                                        onKeyDown={handleKeyPress}
+                                        className="flex-1"
+                                    />
+                                    {/* Mention Autocomplete */}
+                                    {showMentionAutocomplete && (
+                                        <div
+                                            data-testid="mention-autocomplete"
+                                            className="absolute bottom-full mb-2 left-0 w-full max-h-48 overflow-y-auto bg-popover border rounded-lg shadow-lg z-50"
+                                        >
+                                            {mentionPersonnel
+                                                .filter(p => p.name.toLowerCase().includes(mentionQuery))
+                                                .slice(0, 5)
+                                                .map((person) => (
+                                                    <button
+                                                        key={person.id}
+                                                        data-testid="mention-option"
+                                                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-accent text-left text-sm"
+                                                        onClick={() => {
+                                                            // Replace @query with @Name
+                                                            const lastAtIndex = messageInput.lastIndexOf('@');
+                                                            const beforeAt = messageInput.slice(0, lastAtIndex);
+                                                            setMessageInput(`${beforeAt}@${person.name} `);
+                                                            setShowMentionAutocomplete(false);
+                                                        }}
+                                                    >
+                                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                                            {person.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span>{person.name}</span>
+                                                    </button>
+                                                ))}
+                                            {mentionPersonnel.filter(p => p.name.toLowerCase().includes(mentionQuery)).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <Button
                                     data-testid="send-button"
                                     onClick={handleSendMessage}
@@ -795,8 +928,6 @@ export function ChatPageContent() {
 // ============================================================================
 // Person Search Component  
 // ============================================================================
-
-import { getAllPersonnel } from "@/lib/personnel";
 
 function PersonSearch({
     query,

@@ -537,3 +537,21 @@ export async function getMessageReactions(
 
     return Array.from(groups.values());
 }
+
+// ============================================================================
+// Personnel Operations (for mentions)
+// ============================================================================
+
+/**
+ * Get all personnel for mention autocomplete
+ */
+export async function getAllPersonnel(): Promise<{ id: string; name: string }[]> {
+    try {
+        const all = await db.select({ id: personnel.id, name: personnel.name }).from(personnel);
+        return all;
+    } catch (error) {
+        console.error("Failed to get personnel:", error);
+        return [];
+    }
+}
+
