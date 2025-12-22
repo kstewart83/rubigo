@@ -7,15 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { FileStorageService } from "@/lib/files";
-
-// Magika is optional - gracefully degrade if not available
-let validateUpload: typeof import("@/lib/files/magika").validateUpload | null = null;
-try {
-    const magika = require("@/lib/files/magika");
-    validateUpload = magika.validateUpload;
-} catch {
-    console.warn("Magika not available - file type validation disabled");
-}
+import { validateUpload } from "@/lib/files/magika";
 
 export interface FileMetadata {
     id: string;
@@ -84,12 +76,12 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
 
-        // Magika validation (if available)
+        // Magika validation
         let detectedType: string | null = null;
         let typeMismatch = false;
         let warnings: string[] = [];
 
-        if (validateUpload && !skipValidation) {
+        if (!skipValidation) {
             try {
                 const validation = await validateUpload(data, file.name, file.type);
                 detectedType = validation.detected.label;
