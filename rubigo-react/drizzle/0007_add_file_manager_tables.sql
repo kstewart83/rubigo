@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS folders (
   profile_id TEXT NOT NULL,
   parent_id TEXT,                     -- NULL for root folder
   name TEXT NOT NULL,
-  owner_id INTEGER NOT NULL,
+  owner_id TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(profile_id, parent_id, name),
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS files (
   detected_type TEXT,                 -- From Google Magika
   type_mismatch INTEGER DEFAULT 0,    -- 1 if extension != detected type
   total_size INTEGER NOT NULL DEFAULT 0,
-  owner_id INTEGER NOT NULL,
+  owner_id TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME,                -- Soft delete
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS file_versions (
   size INTEGER NOT NULL,              -- Total file size in bytes
   chunk_count INTEGER NOT NULL,       -- Total number of chunks
   checksum TEXT NOT NULL,             -- SHA-256 of entire file content
-  created_by INTEGER NOT NULL,
+  created_by TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (file_id) REFERENCES files(id),
   FOREIGN KEY (root_hash) REFERENCES file_nodes(hash),
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS file_shares (
   token TEXT UNIQUE NOT NULL,         -- URL-safe share token
   expires_at DATETIME,                -- NULL for no expiration
   access_count INTEGER DEFAULT 0,     -- Track usage
-  created_by INTEGER NOT NULL,
+  created_by TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (file_id) REFERENCES files(id),
   FOREIGN KEY (created_by) REFERENCES personnel(id)
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
   uploaded_size INTEGER DEFAULT 0,
   chunk_hashes TEXT,                  -- JSON array of chunk hashes in order
   status TEXT DEFAULT 'pending',      -- 'pending' | 'uploading' | 'processing' | 'complete' | 'failed'
-  owner_id INTEGER NOT NULL,
+  owner_id TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL,       -- Auto-cleanup incomplete uploads
   FOREIGN KEY (folder_id) REFERENCES folders(id),
