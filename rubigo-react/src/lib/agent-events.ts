@@ -13,7 +13,7 @@ import { eq, and, lte, isNull, asc } from "drizzle-orm";
  * Delay configurations by reaction tier (in seconds)
  */
 export const TIER_DELAYS = {
-    sync: { min: 30, max: 30 },         // 30 seconds (for testing visibility)
+    sync: { min: 10, max: 10 },         // 10 seconds (for testing)
     near_sync: { min: 60, max: 120 },   // 1-2 minutes
     async: { min: 300, max: 900 },      // 5-15 minutes
 } as const;
