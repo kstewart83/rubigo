@@ -72,6 +72,7 @@ export async function scheduleEvent(params: {
 
 /**
  * Schedule the next event for a context based on its reaction tier
+ * Prevents duplicate events for the same agent/context/eventType
  */
 export async function scheduleNextContextCheck(
     agentId: string,
@@ -79,7 +80,26 @@ export async function scheduleNextContextCheck(
     eventType: schema.NewAgentScheduledEvent["eventType"],
     tier: keyof typeof TIER_DELAYS = "sync",
     payload?: Record<string, unknown>
-): Promise<string> {
+): Promise<string | null> {
+    // Check if there's already a pending event for this agent/context/eventType
+    const existing = await db
+        .select({ id: schema.agentScheduledEvents.id })
+        .from(schema.agentScheduledEvents)
+        .where(
+            and(
+                eq(schema.agentScheduledEvents.agentId, agentId),
+                eq(schema.agentScheduledEvents.contextId, contextId),
+                eq(schema.agentScheduledEvents.eventType, eventType),
+                isNull(schema.agentScheduledEvents.processedAt)
+            )
+        )
+        .limit(1);
+
+    if (existing.length > 0) {
+        // Already have a pending event, skip scheduling
+        return null;
+    }
+
     const delaySeconds = getDelayForTier(tier);
     const scheduledFor = addSeconds(new Date(), delaySeconds);
 
