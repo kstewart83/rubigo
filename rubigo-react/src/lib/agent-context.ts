@@ -100,10 +100,8 @@ export async function joinContext(
         scheduledFor,
         payload: {
             contextType: context.contextType,
-            tier: context.reactionTier,
             relatedEntityId: context.relatedEntityId,
             targetName: targetName || context.relatedEntityId,
-            delaySeconds,
         },
     });
 

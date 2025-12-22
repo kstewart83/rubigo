@@ -316,11 +316,11 @@ export async function POST() {
         let nextEventId: string | null = null;
         if (result.scheduleNext && event.contextId) {
             // Carry forward the context info from original event
-            let extraPayload: Record<string, unknown> = {};
+            let payload: Record<string, unknown> | undefined;
             if (event.payload) {
                 try {
                     const parsed = JSON.parse(event.payload);
-                    extraPayload = {
+                    payload = {
                         contextType: parsed.contextType,
                         relatedEntityId: parsed.relatedEntityId,
                         targetName: parsed.targetName,
@@ -333,7 +333,7 @@ export async function POST() {
                 event.contextId,
                 event.eventType,
                 result.nextTier,
-                extraPayload
+                payload
             );
         }
 
