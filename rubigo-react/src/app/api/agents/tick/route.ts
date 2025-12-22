@@ -320,11 +320,16 @@ export async function POST() {
             if (event.payload) {
                 try {
                     const parsed = JSON.parse(event.payload);
-                    payload = {
-                        contextType: parsed.contextType,
-                        relatedEntityId: parsed.relatedEntityId,
-                        targetName: parsed.targetName,
-                    };
+                    // Only include fields that are defined
+                    const fields: Record<string, unknown> = {};
+                    if (parsed.contextType) fields.contextType = parsed.contextType;
+                    if (parsed.relatedEntityId) fields.relatedEntityId = parsed.relatedEntityId;
+                    if (parsed.targetName) fields.targetName = parsed.targetName;
+
+                    // Only set payload if we have at least one field
+                    if (Object.keys(fields).length > 0) {
+                        payload = fields;
+                    }
                 } catch { /* ignore */ }
             }
 
