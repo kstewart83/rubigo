@@ -310,7 +310,7 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
                                                                             asChild
                                                                             isActive={isSubPageActive}
                                                                         >
-                                                                            <Link href={subPage.href}>
+                                                                            <Link href={subPage.href} className="flex items-center gap-2 w-full">
                                                                                 {subPage.icon && (
                                                                                     <subPage.icon className="size-4" />
                                                                                 )}
