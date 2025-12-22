@@ -83,6 +83,7 @@ async function handleCheckChat(
             content: schema.chatMessages.content,
             senderId: schema.chatMessages.senderId,
             senderName: schema.personnel.name,
+            sentAt: schema.chatMessages.sentAt,
         })
         .from(schema.chatMessages)
         .innerJoin(
@@ -105,6 +106,15 @@ async function handleCheckChat(
 
     // Get the most recent message to respond to
     const targetMessage = otherMessages[otherMessages.length - 1];
+
+    // Check if agent already responded after this message
+    const agentMessages = recentMessages.filter(m => m.senderId === agentId);
+    const lastAgentMessage = agentMessages[agentMessages.length - 1];
+
+    if (lastAgentMessage && lastAgentMessage.sentAt > targetMessage.sentAt) {
+        // Agent already responded after this message, skip
+        return { responded: false };
+    }
 
     // Build context for Ollama
     const messageHistory = recentMessages
