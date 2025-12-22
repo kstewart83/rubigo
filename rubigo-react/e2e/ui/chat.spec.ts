@@ -654,9 +654,9 @@ test.describe("Chat UX - @Mentions", () => {
         const mentionAutocomplete = page.locator("[data-testid='mention-autocomplete']");
         await expect(mentionAutocomplete).toBeVisible({ timeout: 3000 });
 
-        // Get the name of the first option
+        // Get the name of the first option (from the span, not the avatar initial)
         const firstOption = mentionAutocomplete.locator("[data-testid='mention-option']").first();
-        const personName = await firstOption.textContent();
+        const personName = await firstOption.locator("span").textContent();
 
         // When I click on a colleague's name
         await firstOption.click();

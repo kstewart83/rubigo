@@ -518,8 +518,19 @@ export function ChatPageContent() {
                                                 </div>
                                                 <p className="text-sm mt-0.5">
                                                     {(() => {
-                                                        // Parse @mentions in content
-                                                        const mentionRegex = /@([A-Za-z][A-Za-z ]+?)(?=\s|$|[.,!?])/g;
+                                                        // Parse @mentions by looking for exact personnel names
+                                                        if (allPersonnel.length === 0) return msg.content;
+
+                                                        // Build regex from personnel names (sorted longest first for greedy match)
+                                                        const sortedNames = [...allPersonnel]
+                                                            .map(p => p.name)
+                                                            .sort((a, b) => b.length - a.length);
+
+                                                        const namesPattern = sortedNames
+                                                            .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                                                            .join('|');
+                                                        const mentionRegex = new RegExp(`@(${namesPattern})`, 'gi');
+
                                                         const parts: React.ReactNode[] = [];
                                                         let lastIndex = 0;
                                                         let match;
@@ -531,7 +542,7 @@ export function ChatPageContent() {
                                                                 parts.push(msg.content.slice(lastIndex, match.index));
                                                             }
 
-                                                            // Find personnel by name
+                                                            // Find personnel by name (case-insensitive)
                                                             const mentionedName = match[1];
                                                             const mentionedPerson = allPersonnel.find(
                                                                 p => p.name.toLowerCase() === mentionedName.toLowerCase()
@@ -549,16 +560,16 @@ export function ChatPageContent() {
                                                                     >
                                                                         <span
                                                                             data-testid="mention"
-                                                                            className="text-primary font-medium bg-primary/10 px-1 rounded cursor-pointer hover:bg-primary/20"
+                                                                            className="mention text-primary font-medium bg-primary/10 px-1 rounded cursor-pointer hover:bg-primary/20"
                                                                         >
-                                                                            @{mentionedName}
+                                                                            @{mentionedPerson.name}
                                                                         </span>
                                                                     </PersonnelPopover>
                                                                 ) : (
                                                                     <span
                                                                         key={`mention-${msg.id}-${keyIndex++}`}
                                                                         data-testid="mention"
-                                                                        className="text-primary font-medium bg-primary/10 px-1 rounded"
+                                                                        className="mention text-primary font-medium bg-primary/10 px-1 rounded"
                                                                     >
                                                                         @{mentionedName}
                                                                     </span>
