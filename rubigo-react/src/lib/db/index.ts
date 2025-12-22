@@ -5,7 +5,7 @@ import { join } from "path";
 type SQLParams = SQLQueryBindings[];
 
 // Database file path - stored in project root
-const DB_PATH = join(process.cwd(), "rubigo.sqlite");
+const DB_PATH = join(process.cwd(), "rubigo.db");
 
 // Singleton database instance
 let db: Database | null = null;

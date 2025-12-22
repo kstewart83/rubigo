@@ -105,6 +105,7 @@ const sidebarModules: SidebarModule[] = [
             { id: "calendar", label: "Calendar", href: "/calendar", icon: Calendar },
             { id: "email", label: "Email", href: "/email", icon: Mail },
             { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
+            { id: "files", label: "Files", href: "/files", icon: FolderOpen },
             { id: "screen-share", label: "Screen Share", href: "/screen-share", icon: MonitorPlay },
         ],
     },
@@ -140,6 +141,17 @@ const sidebarModules: SidebarModule[] = [
         icon: FileText,
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
+        ],
+    },
+    {
+        id: "analytics",
+        label: "Analytics",
+        href: "/analytics",
+        icon: BarChart3,
+        subPages: [
+            { id: "overview", label: "Overview", href: "/analytics/overview", icon: BarChart3 },
+            { id: "performance", label: "Performance", href: "/analytics/performance", icon: Gauge },
+            { id: "usage", label: "Usage", href: "/analytics/usage", icon: PieChart },
         ],
     },
 ];
