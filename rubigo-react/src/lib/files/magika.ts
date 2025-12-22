@@ -5,7 +5,7 @@
  * Provides accurate content-based detection vs just mime-type/extension
  */
 
-import { Magika, type MagikaResult } from "magika";
+import { Magika } from "magika";
 
 // Singleton instance
 let magikaInstance: Magika | null = null;
@@ -98,18 +98,18 @@ export async function detectFileType(
                 "pptx": ["pptx"],
             };
 
-            const expectedExtensions = labelToExtensions[result.label] || [];
+            const expectedExtensions = labelToExtensions[result.prediction.output.label] || [];
             extensionMatch = expectedExtensions.includes(ext) ||
-                result.label.toLowerCase() === ext;
+                result.prediction.output.label.toLowerCase() === ext;
         }
     }
 
     return {
-        label: result.label,
-        description: result.description || result.label,
-        confidence: result.score,
-        mimeType: result.mimeType || "application/octet-stream",
-        isText: isTextLabel(result.label),
+        label: result.prediction.output.label,
+        description: result.prediction.output.label, // v2 API doesn't have separate description
+        confidence: result.prediction.score,
+        mimeType: getMimeType(result.prediction.output.label),
+        isText: result.prediction.output.is_text,
         extensionMatch,
     };
 }
@@ -125,6 +125,44 @@ function isTextLabel(label: string): boolean {
         "makefile", "gitignore", "editorconfig",
     ]);
     return textLabels.has(label.toLowerCase());
+}
+
+/**
+ * Map Magika labels to MIME types
+ */
+function getMimeType(label: string): string {
+    const mimeTypes: Record<string, string> = {
+        "pdf": "application/pdf",
+        "html": "text/html",
+        "css": "text/css",
+        "javascript": "text/javascript",
+        "typescript": "text/typescript",
+        "json": "application/json",
+        "xml": "application/xml",
+        "yaml": "text/yaml",
+        "markdown": "text/markdown",
+        "txt": "text/plain",
+        "python": "text/x-python",
+        "java": "text/x-java-source",
+        "c": "text/x-c",
+        "cpp": "text/x-c++src",
+        "rust": "text/x-rust",
+        "go": "text/x-go",
+        "png": "image/png",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "svg": "image/svg+xml",
+        "mp3": "audio/mpeg",
+        "mp4": "video/mp4",
+        "wav": "audio/wav",
+        "zip": "application/zip",
+        "gzip": "application/gzip",
+        "tar": "application/x-tar",
+        "rar": "application/x-rar-compressed",
+        "7z": "application/x-7z-compressed",
+    };
+    return mimeTypes[label.toLowerCase()] || "application/octet-stream";
 }
 
 /**

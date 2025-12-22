@@ -72,6 +72,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const ownerIdNum = parseInt(ownerId, 10);
+        if (isNaN(ownerIdNum)) {
+            return NextResponse.json(
+                { success: false, error: "ownerId must be a valid number" },
+                { status: 400 }
+            );
+        }
+
         // Read file contents
         const arrayBuffer = await file.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
@@ -113,7 +121,7 @@ export async function POST(request: NextRequest) {
             mimeType: file.type || undefined,
             detectedType: detectedType || undefined,
             typeMismatch,
-            ownerId,
+            ownerId: ownerIdNum,
             existingFileId: existingFileId || undefined,
         });
 

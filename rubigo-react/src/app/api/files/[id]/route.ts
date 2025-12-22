@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // Return file with appropriate headers
-        const response = new NextResponse(data);
+        const response = new NextResponse(Buffer.from(data));
         response.headers.set("Content-Type", file.mimeType || "application/octet-stream");
 
         // Use inline for previews, attachment for explicit downloads

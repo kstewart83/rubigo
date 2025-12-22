@@ -5,7 +5,7 @@
  * Coordinates chunking, storage, tree building, and versioning.
  */
 
-import type { Database } from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import { AEChunker, type ChunkingOptions, type Chunk } from "./ae-chunker";
 import { ChunkStore, hashChunk } from "./chunk-store";
 import { NodeStore, TreeBuilder, TreeTraverser, type ChunkRef } from "./file-tree";
