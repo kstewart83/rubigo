@@ -688,7 +688,8 @@ export function FilesPageContent() {
                                     <tr
                                         key={file.id}
                                         data-testid="file-row"
-                                        className="border-b hover:bg-accent group"
+                                        className="border-b hover:bg-accent group cursor-pointer"
+                                        onClick={() => handleFileClick(file)}
                                     >
                                         <td className="py-2">
                                             <div className="flex items-center gap-2">
