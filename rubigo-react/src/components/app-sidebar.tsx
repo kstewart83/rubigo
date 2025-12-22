@@ -30,6 +30,10 @@ import {
     MessageCircle,
     MonitorPlay,
     Bot,
+    FolderOpen,
+    BarChart3,
+    Gauge,
+    PieChart,
 } from "lucide-react";
 
 import {
