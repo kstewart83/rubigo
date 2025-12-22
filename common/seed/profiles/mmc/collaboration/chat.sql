@@ -18,6 +18,8 @@ INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mm
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-009', 'general', 'test03');
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-010', 'general', 'test04');
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-011', 'general', 'test05');
+INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-037', 'general', '7aa0d4');  -- Sarah Kim (Agent)
+INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-038', 'general', 'f73c1c');  -- James Wilson (Agent)
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-012', 'engineering', '714fd4');
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-013', 'engineering', 'd827cb');
 INSERT INTO chat_memberships (profile_id, id, channel_id, person_id) VALUES ('mmc', 'mem-014', 'engineering', 'f9c8d7');

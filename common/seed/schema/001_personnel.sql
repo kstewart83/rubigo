@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS personnel (
     desk_phone TEXT,
     cell_phone TEXT,
     bio TEXT,
+    is_agent INTEGER DEFAULT 0,
     PRIMARY KEY (id, profile_id)
 );
 
