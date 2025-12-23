@@ -4,7 +4,7 @@
  * Provides functions for agents to interact with the email system.
  */
 
-import { getOllamaClient } from "./ollama-client";
+import { generateText, getOllamaModel, checkOllamaHealth } from "./ai-sdk";
 import { buildEmailResponsePrompt } from "./agent-persona";
 import type { AgentAction, ActionResult } from "./agent-types";
 
@@ -58,10 +58,9 @@ export async function generateEmailResponse(
     context: AgentEmailContext
 ): Promise<ActionResult> {
     const startTime = Date.now();
-    const client = getOllamaClient();
 
     // Check Ollama availability
-    const health = await client.isAvailable();
+    const health = await checkOllamaHealth();
     if (!health.available) {
         return {
             success: false,
@@ -79,42 +78,45 @@ export async function generateEmailResponse(
         observation.fromName
     );
 
-    // Generate response
-    const result = await client.generate(prompt, {
-        temperature: 0.6, // More formal for email
-        maxTokens: 400, // Emails can be longer
-    });
+    try {
+        // Generate response using AI SDK
+        const { text } = await generateText({
+            model: getOllamaModel(),
+            prompt,
+            temperature: 0.6, // More formal for email
+            maxOutputTokens: 400, // Emails can be longer
+        });
 
-    if (!result.success) {
+        const action: AgentAction = {
+            type: "send_email",
+            targetEntity: `email:${observation.emailId}`,
+            content: text?.trim() || "",
+            metadata: {
+                replyToEmailId: observation.emailId,
+                threadId: observation.threadId,
+                subject: observation.subject.startsWith("Re:")
+                    ? observation.subject
+                    : `Re: ${observation.subject}`,
+                toId: observation.fromId,
+            },
+        };
+
+        return {
+            success: true,
+            action,
+            thought: `Replying to email from ${observation.fromName}: "${observation.subject}"`,
+            response: text,
+            durationMs: Date.now() - startTime,
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return {
             success: false,
             action: { type: "wait" },
-            error: result.error,
+            error: errorMessage,
             durationMs: Date.now() - startTime,
         };
     }
-
-    const action: AgentAction = {
-        type: "send_email",
-        targetEntity: `email:${observation.emailId}`,
-        content: result.response?.trim() || "",
-        metadata: {
-            replyToEmailId: observation.emailId,
-            threadId: observation.threadId,
-            subject: observation.subject.startsWith("Re:")
-                ? observation.subject
-                : `Re: ${observation.subject}`,
-            toId: observation.fromId,
-        },
-    };
-
-    return {
-        success: true,
-        action,
-        thought: `Replying to email from ${observation.fromName}: "${observation.subject}"`,
-        response: result.response,
-        durationMs: Date.now() - startTime,
-    };
 }
 
 /**
@@ -153,9 +155,8 @@ export async function generateDraftEmail(
     topic: string
 ): Promise<ActionResult> {
     const startTime = Date.now();
-    const client = getOllamaClient();
 
-    const health = await client.isAvailable();
+    const health = await checkOllamaHealth();
     if (!health.available) {
         return {
             success: false,
@@ -177,39 +178,42 @@ Subject: [Your subject line]
 
 [Email body with greeting and sign-off]`;
 
-    const result = await client.generate(prompt, {
-        temperature: 0.6,
-        maxTokens: 400,
-    });
+    try {
+        const { text } = await generateText({
+            model: getOllamaModel(),
+            prompt,
+            temperature: 0.6,
+            maxOutputTokens: 400,
+        });
 
-    if (!result.success) {
+        // Parse subject from response
+        const subjectMatch = text?.match(/Subject:\s*(.+?)(?:\n|$)/i);
+        const subject = subjectMatch ? subjectMatch[1].trim() : topic;
+        const body = text?.replace(/Subject:\s*.+?\n/i, "").trim() || "";
+
+        const action: AgentAction = {
+            type: "send_email",
+            content: body,
+            metadata: {
+                subject,
+                isDraft: true,
+            },
+        };
+
+        return {
+            success: true,
+            action,
+            thought: `Drafting email to ${recipientName} about: ${topic}`,
+            response: text,
+            durationMs: Date.now() - startTime,
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return {
             success: false,
             action: { type: "wait" },
-            error: result.error,
+            error: errorMessage,
             durationMs: Date.now() - startTime,
         };
     }
-
-    // Parse subject from response
-    const subjectMatch = result.response?.match(/Subject:\s*(.+?)(?:\n|$)/i);
-    const subject = subjectMatch ? subjectMatch[1].trim() : topic;
-    const body = result.response?.replace(/Subject:\s*.+?\n/i, "").trim() || "";
-
-    const action: AgentAction = {
-        type: "send_email",
-        content: body,
-        metadata: {
-            subject,
-            isDraft: true,
-        },
-    };
-
-    return {
-        success: true,
-        action,
-        thought: `Drafting email to ${recipientName} about: ${topic}`,
-        response: result.response,
-        durationMs: Date.now() - startTime,
-    };
 }

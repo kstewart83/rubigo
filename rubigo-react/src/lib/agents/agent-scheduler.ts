@@ -16,7 +16,7 @@ import {
     type AgentStatus,
     type ReactionTier,
 } from "./agent-types";
-import { OllamaClient, getOllamaClient } from "./ollama-client";
+import { generateText, getOllamaModel, checkOllamaHealth } from "./ai-sdk";
 import { buildPersonaPrompt, buildReActPrompt, parseReActResponse } from "./agent-persona";
 
 /**
@@ -107,7 +107,6 @@ export interface SchedulerCallbacks {
 export class AgentScheduler {
     private eventQueue: PriorityQueue<ScheduledEvent>;
     private agentStates: Map<string, AgentRuntimeState>;
-    private ollamaClient: OllamaClient;
     private personaCache: Map<string, string>; // Cached persona prompts
     private running: boolean = false;
     private tickInterval: ReturnType<typeof setInterval> | null = null;
@@ -118,7 +117,6 @@ export class AgentScheduler {
             (a, b) => calculateEventPriority(a) - calculateEventPriority(b)
         );
         this.agentStates = new Map();
-        this.ollamaClient = getOllamaClient();
         this.personaCache = new Map();
         this.callbacks = callbacks;
     }
@@ -226,8 +224,8 @@ export class AgentScheduler {
     private async processEvent(event: ScheduledEvent, state: AgentRuntimeState): Promise<ActionResult> {
         const startTime = Date.now();
 
-        // Check Ollama availability
-        const health = await this.ollamaClient.isAvailable();
+        // Check Ollama availability using AI SDK
+        const health = await checkOllamaHealth();
         if (!health.available) {
             // Set agent to dormant
             state.status = "dormant";
@@ -258,38 +256,41 @@ export class AgentScheduler {
         // Build observation from event
         const observation = this.buildObservation(event);
 
-        // Generate ReAct response
+        // Generate ReAct response using AI SDK
         const prompt = buildReActPrompt(persona, observation, {
             currentTime: new Date().toISOString(),
         });
 
-        const generateResult = await this.ollamaClient.generate(prompt, {
-            temperature: 0.7,
-            maxTokens: 256,
-        });
+        try {
+            const { text } = await generateText({
+                model: getOllamaModel(),
+                prompt,
+                temperature: 0.7,
+                maxOutputTokens: 256,
+            });
 
-        if (!generateResult.success) {
+            // Parse the response
+            const parsed = parseReActResponse(text || "");
+
+            // Determine action from parsed response
+            const action = this.parseAction(parsed.action, parsed.response);
+
+            return {
+                success: true,
+                action,
+                thought: parsed.thought,
+                response: parsed.response,
+                durationMs: Date.now() - startTime,
+            };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
             return {
                 success: false,
                 action: { type: "wait" },
-                error: generateResult.error,
+                error: errorMessage,
                 durationMs: Date.now() - startTime,
             };
         }
-
-        // Parse the response
-        const parsed = parseReActResponse(generateResult.response || "");
-
-        // Determine action from parsed response
-        const action = this.parseAction(parsed.action, parsed.response);
-
-        return {
-            success: true,
-            action,
-            thought: parsed.thought,
-            response: parsed.response,
-            durationMs: Date.now() - startTime,
-        };
     }
 
     /**
@@ -345,8 +346,8 @@ export class AgentScheduler {
 
         this.running = true;
 
-        // Check Ollama and update agent states accordingly
-        const health = await this.ollamaClient.isAvailable();
+        // Check Ollama and update agent states accordingly using AI SDK
+        const health = await checkOllamaHealth();
         const newStatus: AgentStatus = health.available ? "active" : "dormant";
 
         for (const [agentId, state] of this.agentStates) {
