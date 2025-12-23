@@ -76,6 +76,7 @@ export class OllamaClient {
 
             const response = await fetch(`${this.config.baseUrl}/api/version`, {
                 signal: controller.signal,
+                cache: 'no-store',
             });
             clearTimeout(timeoutId);
 
@@ -86,7 +87,9 @@ export class OllamaClient {
             const versionData = await response.json();
 
             // Check if our model is available
-            const modelsResponse = await fetch(`${this.config.baseUrl}/api/tags`);
+            const modelsResponse = await fetch(`${this.config.baseUrl}/api/tags`, {
+                cache: 'no-store',
+            });
             if (modelsResponse.ok) {
                 const modelsData = await modelsResponse.json();
                 const modelFound = modelsData.models?.some(
