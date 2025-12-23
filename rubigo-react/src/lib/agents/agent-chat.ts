@@ -4,8 +4,8 @@
  * Provides functions for agents to interact with the chat system.
  */
 
-import { getOllamaClient } from "./ollama-client";
-import { buildPersonaPrompt, buildChatResponsePrompt } from "./agent-persona";
+import { generateText, getOllamaModel, checkOllamaHealth } from "./ai-sdk";
+import { buildChatResponsePrompt } from "./agent-persona";
 import type { AgentAction, ActionResult } from "./agent-types";
 
 export interface ChatObservation {
@@ -55,17 +55,16 @@ export function shouldRespondToChat(observation: ChatObservation, context: Agent
 }
 
 /**
- * Generate a chat response using the LLM
+ * Generate a chat response using the AI SDK
  */
 export async function generateChatResponse(
     observation: ChatObservation,
     context: AgentChatContext
 ): Promise<ActionResult> {
     const startTime = Date.now();
-    const client = getOllamaClient();
 
     // Check Ollama availability
-    const health = await client.isAvailable();
+    const health = await checkOllamaHealth();
     if (!health.available) {
         return {
             success: false,
@@ -84,38 +83,41 @@ export async function generateChatResponse(
         observation.recentMessages
     );
 
-    // Generate response
-    const result = await client.generate(prompt, {
-        temperature: 0.8, // Slightly more creative for chat
-        maxTokens: 150, // Keep chat responses short
-    });
+    try {
+        // Generate response using AI SDK
+        const { text } = await generateText({
+            model: getOllamaModel(),
+            prompt,
+            temperature: 0.8, // Slightly more creative for chat
+            maxOutputTokens: 150, // Keep chat responses short
+        });
 
-    if (!result.success) {
+        const action: AgentAction = {
+            type: "send_chat_message",
+            targetEntity: `channel:${observation.channelId}`,
+            content: text?.trim() || "",
+            metadata: {
+                replyToMessageId: observation.messageId,
+                channelName: observation.channelName,
+            },
+        };
+
+        return {
+            success: true,
+            action,
+            thought: `Responding to ${observation.senderName} in #${observation.channelName}`,
+            response: text,
+            durationMs: Date.now() - startTime,
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return {
             success: false,
             action: { type: "wait" },
-            error: result.error,
+            error: errorMessage,
             durationMs: Date.now() - startTime,
         };
     }
-
-    const action: AgentAction = {
-        type: "send_chat_message",
-        targetEntity: `channel:${observation.channelId}`,
-        content: result.response?.trim() || "",
-        metadata: {
-            replyToMessageId: observation.messageId,
-            channelName: observation.channelName,
-        },
-    };
-
-    return {
-        success: true,
-        action,
-        thought: `Responding to ${observation.senderName} in #${observation.channelName}`,
-        response: result.response,
-        durationMs: Date.now() - startTime,
-    };
 }
 
 /**
