@@ -4,11 +4,12 @@
  */
 
 import { NextResponse } from "next/server";
-import { getOllamaClient } from "@/lib/agents";
+import { OllamaClient } from "@/lib/agents";
 
 export async function GET() {
     try {
-        const client = getOllamaClient();
+        // Use fresh client instance per request to avoid ReadableStream locked errors
+        const client = new OllamaClient();
         const health = await client.isAvailable();
 
         return NextResponse.json({
