@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, NUC]
     env:
       BASE: ${{ github.workspace }}/production/rubigo-react
       DATABASE_URL: ${{ github.workspace }}/production/rubigo-react/data/rubigo.db
@@ -41,17 +41,12 @@ jobs:
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
           
-          # Rebuild native modules for current Node.js version
-          # Required because drizzle-kit uses #!/usr/bin/env node shebang and
-          # better-sqlite3 needs to match the runner's Node.js version
-          npm rebuild better-sqlite3
-          
           echo "Dependencies installed in $BUILD_DIR"
 
       - name: Stop current service
         run: |
-          PLIST="$HOME/Library/LaunchAgents/net.kwip.rubigo-react.plist"
-          launchctl unload "$PLIST" 2>/dev/null || true
+          # Stop systemd service (Linux/Ubuntu)
+          systemctl --user stop rubigo-react.service 2>/dev/null || true
           pkill -f "bun.*4430" 2>/dev/null || true
           sleep 2
           echo "Service stopped for build"
@@ -76,16 +71,11 @@ jobs:
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Apply committed migration files (safe, deterministic)
-          # Use bunx per drizzle-kit docs: https://orm.drizzle.team/docs/kit-overview
-          DATABASE_URL="$DATABASE_URL" bunx drizzle-kit migrate
+          # Apply committed migration files using Bun-native migrator
+          # Uses drizzle-orm/bun-sqlite/migrator instead of drizzle-kit CLI
+          # to avoid Node.js/better-sqlite3 dependency
+          DATABASE_URL="$DATABASE_URL" bun run db:migrate:bun
           
-          # Checkpoint WAL and fully release locks before build
-          # Multiple operations to ensure all connections are closed
-          sqlite3 "$DATABASE_URL" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
-          sqlite3 "$DATABASE_URL" "PRAGMA journal_mode=DELETE;" 2>/dev/null || true
-          # Wait for any background processes to release file handles
-          sleep 5
           echo "✅ Migrations applied"
 
       - name: Build application
@@ -109,13 +99,12 @@ jobs:
       - name: Deploy (swap symlink and start)
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          PLIST="$HOME/Library/LaunchAgents/net.kwip.rubigo-react.plist"
           
           # Swap symlink to new build
           ln -sfn "$BUILD_DIR" "$BASE/current"
           
-          # Start service via launchctl (persists after workflow)
-          launchctl load "$PLIST"
+          # Start service via systemd (Linux/Ubuntu)
+          systemctl --user start rubigo-react.service
           sleep 3
           
           echo "Deployed: $(readlink $BASE/current)"
