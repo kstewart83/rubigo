@@ -39,20 +39,22 @@ const COLOR_HUES = [
  * Generate a subtle, consistent background color for a user
  * 
  * @param userId - The user's ID (typically personnel ID)
+ * @param isDarkMode - Whether dark mode is active (affects lightness)
  * @returns HSL color string suitable for backgrounds, e.g., "hsl(210, 35%, 95%)"
  */
-export function getUserColor(userId: string): string {
+export function getUserColor(userId: string, isDarkMode: boolean = false): string {
     const hash = hashString(userId);
     const hueIndex = hash % COLOR_HUES.length;
     const hue = COLOR_HUES[hueIndex];
 
-    // Fixed saturation and lightness for subtle, professional look
-    // Saturation: 30-40% for muted colors
-    // Lightness: 93-96% for subtle backgrounds
-    const saturation = 35;
-    const lightness = 94;
+    // Subtle glassmorphism: very transparent backgrounds
+    // Light mode: high lightness, very transparent
+    // Dark mode: low lightness, transparent for glass effect
+    const saturation = isDarkMode ? 20 : 30;
+    const lightness = isDarkMode ? 20 : 95;
+    const alpha = isDarkMode ? 0.4 : 0.5;
 
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
 }
 
 /**

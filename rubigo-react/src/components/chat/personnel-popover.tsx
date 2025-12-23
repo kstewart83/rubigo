@@ -14,13 +14,16 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Mail, Phone, Smartphone } from "lucide-react";
 
 interface PersonnelPopoverProps {
     personnelId: string;
     personnelName: string;
     personnelTitle?: string;
     personnelDepartment?: string;
+    personnelEmail?: string;
+    personnelDeskPhone?: string;
+    personnelCellPhone?: string;
     children: React.ReactNode;
     onStartDM?: (personnelId: string) => void;
     currentUserId?: string;
@@ -31,6 +34,9 @@ export function PersonnelPopover({
     personnelName,
     personnelTitle,
     personnelDepartment,
+    personnelEmail,
+    personnelDeskPhone,
+    personnelCellPhone,
     children,
     onStartDM,
     currentUserId,
@@ -45,6 +51,7 @@ export function PersonnelPopover({
     };
 
     const isOwnProfile = currentUserId === personnelId;
+    const hasContactInfo = personnelEmail || personnelDeskPhone || personnelCellPhone;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -53,7 +60,7 @@ export function PersonnelPopover({
             </PopoverTrigger>
             <PopoverContent
                 data-testid="personnel-popup"
-                className="w-72 p-4"
+                className="w-80 p-4"
                 align="start"
             >
                 <div className="space-y-3">
@@ -63,7 +70,7 @@ export function PersonnelPopover({
                             data-testid="popup-avatar"
                             className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-medium overflow-hidden"
                         >
-                            {personnelName.charAt(0).toUpperCase()}
+                            {personnelName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                             <div
@@ -93,6 +100,41 @@ export function PersonnelPopover({
                         </div>
                     )}
 
+                    {/* Contact Info */}
+                    {hasContactInfo && (
+                        <div className="border-t pt-2 space-y-1.5">
+                            {personnelEmail && (
+                                <div
+                                    data-testid="popup-email"
+                                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                                >
+                                    <Mail className="h-3 w-3" />
+                                    {personnelEmail}
+                                </div>
+                            )}
+                            {personnelDeskPhone && (
+                                <a
+                                    href={`tel:${personnelDeskPhone}`}
+                                    data-testid="popup-desk-phone"
+                                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                    <Phone className="h-3 w-3" />
+                                    {personnelDeskPhone}
+                                </a>
+                            )}
+                            {personnelCellPhone && (
+                                <a
+                                    href={`tel:${personnelCellPhone}`}
+                                    data-testid="popup-cell-phone"
+                                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                    <Smartphone className="h-3 w-3" />
+                                    {personnelCellPhone}
+                                </a>
+                            )}
+                        </div>
+                    )}
+
                     {/* Actions */}
                     {!isOwnProfile && onStartDM && (
                         <div className="border-t pt-3">
@@ -113,4 +155,3 @@ export function PersonnelPopover({
         </Popover>
     );
 }
-

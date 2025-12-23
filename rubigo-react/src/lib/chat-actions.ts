@@ -30,6 +30,11 @@ export interface ChatChannelWithMembers extends ChatChannel {
 
 export interface ChatMessageWithSender extends ChatMessage {
     senderName: string;
+    senderEmail?: string | null;
+    senderTitle?: string | null;
+    senderDepartment?: string | null;
+    senderDeskPhone?: string | null;
+    senderCellPhone?: string | null;
 }
 
 // ============================================================================
@@ -84,7 +89,7 @@ export async function getChannels(): Promise<ChatChannel[]> {
 }
 
 /**
- * Get channels that a user is a member of
+ * Get channels that a user is a member of (excludes DMs)
  */
 export async function getUserChannels(userId: string): Promise<ChatChannel[]> {
     const memberChannels = await db
@@ -93,7 +98,10 @@ export async function getUserChannels(userId: string): Promise<ChatChannel[]> {
         })
         .from(chatMembers)
         .innerJoin(chatChannels, eq(chatMembers.channelId, chatChannels.id))
-        .where(eq(chatMembers.personnelId, userId));
+        .where(and(
+            eq(chatMembers.personnelId, userId),
+            eq(chatChannels.type, "channel") // Exclude DMs
+        ));
 
     return memberChannels.map((m) => m.channel);
 }
@@ -346,6 +354,11 @@ export async function getMessages(
         .select({
             message: chatMessages,
             senderName: personnel.name,
+            senderEmail: personnel.email,
+            senderTitle: personnel.title,
+            senderDepartment: personnel.department,
+            senderDeskPhone: personnel.deskPhone,
+            senderCellPhone: personnel.cellPhone,
         })
         .from(chatMessages)
         .innerJoin(personnel, eq(chatMessages.senderId, personnel.id))
@@ -359,9 +372,14 @@ export async function getMessages(
         .limit(limit);
 
     // Reverse to get chronological order (oldest first)
-    return messages.reverse().map(({ message, senderName }) => ({
+    return messages.reverse().map(({ message, senderName, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone }) => ({
         ...message,
         senderName,
+        senderEmail,
+        senderTitle,
+        senderDepartment,
+        senderDeskPhone,
+        senderCellPhone,
     }));
 }
 
