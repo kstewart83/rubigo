@@ -423,6 +423,87 @@ async function main() {
         protectedKeys: PROTECTED_PERSONNEL_KEYS,
     });
 
+    // 1b. Headshots - upload photos and update personnel records
+    console.log(`\n📷 Syncing headshots...`);
+    let headshotUploaded = 0, headshotSkipped = 0, headshotFailed = 0;
+
+    // Find personnel with photo paths (relative paths like "headshots/name.png")
+    const personnelWithPhotos = data.personnel.filter(p => p.photo && p.photo.startsWith("headshots/"));
+    const profileDir = join(args.scenario, "profiles", args.profile);
+
+    for (const person of personnelWithPhotos) {
+        const remotePersonId = resolveId(idMaps, "personnel", person.id);
+        if (!remotePersonId) {
+            console.log(`   ⚠️  Skipping headshot for ${person.name}: personnel not synced`);
+            headshotSkipped++;
+            continue;
+        }
+
+        // Check if this personnel already has a /api/photos path (already synced)
+        const existingPersonResult = await client.getPersonnel(remotePersonId) as { success: boolean; data?: { photo?: string } };
+        if (existingPersonResult.success && existingPersonResult.data?.photo?.startsWith("/api/photos/")) {
+            headshotSkipped++;
+            continue;
+        }
+
+        const headshotPath = join(profileDir, person.photo!);
+        if (!existsSync(headshotPath)) {
+            console.log(`   ⚠️  Headshot file not found: ${person.photo}`);
+            headshotFailed++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   📷 [DRY-RUN] Would upload headshot for ${person.name}`);
+            headshotUploaded++;
+            continue;
+        }
+
+        // Read the file and upload via /api/photos
+        try {
+            const fileBuffer = await Bun.file(headshotPath).arrayBuffer();
+            const fileName = person.photo!.split("/").pop() || "headshot.png";
+
+            // Generate a deterministic photo ID from personnel ID
+            const photoId = `headshot_${person.id}`;
+
+            const formData = new FormData();
+            formData.append("file", new Blob([fileBuffer], { type: "image/png" }), fileName);
+            formData.append("id", photoId);
+
+            const uploadResponse = await fetch(`${args.url}/api/photos`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${args.token}`,
+                },
+                body: formData,
+            });
+
+            const uploadResult = await uploadResponse.json() as { success?: boolean; path?: string; error?: string };
+
+            if (uploadResult.success && uploadResult.path) {
+                // Update personnel with the photo URL
+                const updateResult = await client.updatePersonnel(remotePersonId, {
+                    photo: uploadResult.path,
+                });
+
+                if (updateResult.success) {
+                    headshotUploaded++;
+                } else {
+                    console.log(`   ❌ Failed to update personnel with photo: ${updateResult.error}`);
+                    headshotFailed++;
+                }
+            } else {
+                console.log(`   ❌ Failed to upload headshot for ${person.name}: ${uploadResult.error}`);
+                headshotFailed++;
+            }
+        } catch (error) {
+            console.log(`   ❌ Error uploading headshot for ${person.name}: ${error}`);
+            headshotFailed++;
+        }
+    }
+    allStats.headshots = { created: headshotUploaded, skipped: headshotSkipped, failed: headshotFailed, updated: 0, deleted: 0 };
+
     // 2. Solutions - business key: name
     allStats.solutions = await syncEntityWithMapping<typeof data.solutions[0], RemoteSolution>({
         entityName: "solutions",
