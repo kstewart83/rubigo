@@ -1,6 +1,6 @@
 {
   "name": "rubigo-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "RUBIGO_AUTO_INIT=true RUBIGO_SHOW_COMMIT=true bun --bun next dev --turbopack",
