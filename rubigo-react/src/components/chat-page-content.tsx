@@ -27,6 +27,8 @@ import {
     Send,
     Users,
     Smile,
+    Reply,
+    X,
 } from "lucide-react";
 import {
     createChannel,
@@ -39,11 +41,15 @@ import {
     getMessages,
     toggleReaction,
     getMessageReactions,
+    getAllPersonnel,
     type ChatChannelWithMembers,
     type ChatMessageWithSender,
     type ReactionGroup,
 } from "@/lib/chat-actions";
 import type { ChatChannel } from "@/db/schema";
+import { getUserColor } from "@/lib/user-color";
+import { PersonnelPopover } from "@/components/chat/personnel-popover";
+import { useTheme } from "@/components/theme-provider";
 
 // Common emoji set for reactions (simple inline grid - no external deps)
 const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀"];
@@ -65,6 +71,8 @@ interface ChannelListItem {
 
 export function ChatPageContent() {
     const { currentPersona } = usePersona();
+    const { resolvedTheme } = useTheme();
+    const isDarkMode = resolvedTheme === "dark";
 
     // State
     const [channels, setChannels] = useState<ChannelListItem[]>([]);
@@ -73,6 +81,7 @@ export function ChatPageContent() {
     const [messages, setMessages] = useState<ChatMessageWithSender[]>([]);
     const [messageInput, setMessageInput] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Modal state
     const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -86,7 +95,16 @@ export function ChatPageContent() {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [emojiPickerForMessage, setEmojiPickerForMessage] = useState<string | null>(null);
     const [messageReactions, setMessageReactions] = useState<Record<string, ReactionGroup[]>>({});
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Threading state
+    const [activeThread, setActiveThread] = useState<{ messageId: string; senderName: string; content: string } | null>(null);
+
+    // Mention autocomplete state
+    const [showMentionAutocomplete, setShowMentionAutocomplete] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState("");
+    const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+    const [mentionPersonnel, setMentionPersonnel] = useState<Array<{ id: string; name: string }>>([]);
+    const [allPersonnel, setAllPersonnel] = useState<Array<{ id: string; name: string }>>([]);
 
     // Load channels on mount
     const loadChannels = useCallback(async () => {
@@ -131,6 +149,20 @@ export function ChatPageContent() {
     useEffect(() => {
         loadChannels();
     }, [loadChannels]);
+
+    // Load personnel for mention autocomplete
+    useEffect(() => {
+        const loadPersonnelForMentions = async () => {
+            try {
+                const personnelList = await getAllPersonnel();
+                setAllPersonnel(personnelList);
+                setMentionPersonnel(personnelList);
+            } catch (error) {
+                console.error("Failed to load personnel for mentions:", error);
+            }
+        };
+        loadPersonnelForMentions();
+    }, []);
 
     // Load messages when channel selected
     useEffect(() => {
@@ -258,18 +290,63 @@ export function ChatPageContent() {
         const result = await sendMessage(
             selectedChannel,
             currentPersona.id,
-            messageInput.trim()
+            messageInput.trim(),
+            activeThread?.messageId
         );
 
         if (result.success) {
             setMessageInput("");
+            setActiveThread(null); // Clear thread after sending
             // Reload messages
             const msgs = await getMessages(selectedChannel);
             setMessages(msgs);
+            // Auto-scroll to bottom after sending
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 100);
         }
     };
 
+    const handleMentionSelect = (name: string) => {
+        const lastAtIndex = messageInput.lastIndexOf('@');
+        const beforeAt = messageInput.slice(0, lastAtIndex);
+        setMessageInput(`${beforeAt}@${name} `);
+        setShowMentionAutocomplete(false);
+    };
+
     const handleKeyPress = (e: React.KeyboardEvent) => {
+        // Handle arrow keys for mention navigation
+        if (showMentionAutocomplete) {
+            const filteredMatches = mentionPersonnel.filter(p =>
+                p.name.toLowerCase().includes(mentionQuery)
+            ).slice(0, 5);
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setMentionSelectedIndex(prev =>
+                    prev < filteredMatches.length - 1 ? prev + 1 : prev
+                );
+                return;
+            }
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setMentionSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
+                return;
+            }
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (filteredMatches.length > 0) {
+                    handleMentionSelect(filteredMatches[mentionSelectedIndex]?.name || filteredMatches[0].name);
+                }
+                return;
+            }
+            if (e.key === "Escape") {
+                e.preventDefault();
+                setShowMentionAutocomplete(false);
+                return;
+            }
+        }
+
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
@@ -287,7 +364,7 @@ export function ChatPageContent() {
     const selectedChannelInfo = channels.find((c) => c.id === selectedChannel);
 
     return (
-        <div className="flex h-full" data-testid="chat-container">
+        <div className="flex h-[calc(100vh-3rem)] overflow-hidden" data-testid="chat-container">
             {/* Sidebar */}
             <div className="w-64 border-r bg-muted/30 flex flex-col">
                 <div className="p-4 border-b">
@@ -382,7 +459,7 @@ export function ChatPageContent() {
             </div>
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {selectedChannel ? (
                     <>
                         {/* Channel Header */}
@@ -398,100 +475,343 @@ export function ChatPageContent() {
                         </div>
 
                         {/* Messages */}
-                        <ScrollArea className="flex-1 p-4">
+                        <ScrollArea className="flex-1 min-h-0">
                             <div
                                 data-testid="message-list"
-                                className="space-y-4 message-list"
+                                className="space-y-2 message-list p-4"
                             >
-                                {messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        data-testid="message-bubble"
-                                        className="flex gap-3 group"
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                            {msg.senderName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-baseline gap-2">
-                                                <span
-                                                    data-testid="message-sender"
-                                                    className="font-medium text-sm message-sender"
-                                                >
-                                                    {msg.senderName}
-                                                </span>
-                                                <span
-                                                    data-testid="message-timestamp"
-                                                    className="text-xs text-muted-foreground message-timestamp"
-                                                >
-                                                    {new Date(msg.sentAt).toLocaleTimeString(
-                                                        [],
-                                                        {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        }
-                                                    )}
-                                                </span>
-                                                {/* Add reaction button - shows on hover */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => setEmojiPickerForMessage(
-                                                        emojiPickerForMessage === msg.id ? null : msg.id
-                                                    )}
-                                                    data-testid="add-reaction-button"
-                                                >
-                                                    <Smile className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                            <p className="text-sm mt-0.5">{msg.content}</p>
+                                {/* Only render top-level messages, replies will be shown inline */}
+                                {messages
+                                    .filter(msg => !msg.threadId)
+                                    .map((msg) => {
+                                        const isOwnMessage = msg.senderId === currentPersona?.id;
+                                        const userColor = getUserColor(msg.senderId, isDarkMode);
+                                        const replies = messages.filter(m => m.threadId === msg.id);
 
-                                            {/* Reactions display */}
-                                            {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
-                                                <div className="flex gap-1 mt-1 flex-wrap" data-testid="reactions-container">
-                                                    {messageReactions[msg.id].map((reaction) => (
-                                                        <button
-                                                            key={reaction.emoji}
-                                                            data-testid="reaction-pill"
-                                                            title={reaction.users.map(u => u.name).join(", ")}
-                                                            onClick={() => handleReactionToggle(msg.id, reaction.emoji)}
-                                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${reaction.hasReacted
-                                                                ? "bg-primary/10 border-primary/30"
-                                                                : "bg-muted/50 border-transparent hover:border-border"
-                                                                }`}
-                                                        >
-                                                            <span>{reaction.emoji}</span>
-                                                            <span className="text-muted-foreground">{reaction.count}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Emoji picker dropdown */}
-                                            {emojiPickerForMessage === msg.id && (
+                                        return (
+                                            <div
+                                                key={msg.id}
+                                                data-testid="message-bubble"
+                                                data-own-message={isOwnMessage ? "true" : "false"}
+                                                data-user-color={userColor}
+                                                className={`flex gap-3 group ${isOwnMessage ? "ml-4 pl-3 border-l-2 border-primary/40" : ""}`}
+                                            >
+                                                <PersonnelPopover
+                                                    personnelId={msg.senderId}
+                                                    personnelName={msg.senderName}
+                                                    personnelTitle={msg.senderTitle ?? undefined}
+                                                    personnelDepartment={msg.senderDepartment ?? undefined}
+                                                    personnelEmail={msg.senderEmail ?? undefined}
+                                                    personnelDeskPhone={msg.senderDeskPhone ?? undefined}
+                                                    personnelCellPhone={msg.senderCellPhone ?? undefined}
+                                                    currentUserId={currentPersona?.id}
+                                                    onStartDM={handleStartDM}
+                                                >
+                                                    <div
+                                                        data-testid="message-avatar"
+                                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm flex items-center justify-center text-xs font-semibold cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all border border-primary/10 shadow-sm"
+                                                    >
+                                                        {msg.senderName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                                                    </div>
+                                                </PersonnelPopover>
                                                 <div
-                                                    className="absolute mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
-                                                    data-testid="emoji-picker"
+                                                    className="w-fit max-w-[75%] rounded-2xl px-3 py-2 backdrop-blur-md border shadow-sm transition-all"
+                                                    style={{
+                                                        backgroundColor: userColor,
+                                                        borderColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
+                                                    }}
                                                 >
-                                                    {COMMON_EMOJIS.map((emoji) => (
-                                                        <button
-                                                            key={emoji}
-                                                            data-testid="emoji-option"
-                                                            onClick={() => handleReactionToggle(msg.id, emoji)}
-                                                            className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
+                                                    <div className="flex items-baseline gap-2">
+                                                        <PersonnelPopover
+                                                            personnelId={msg.senderId}
+                                                            personnelName={msg.senderName}
+                                                            personnelTitle={msg.senderTitle ?? undefined}
+                                                            personnelDepartment={msg.senderDepartment ?? undefined}
+                                                            personnelEmail={msg.senderEmail ?? undefined}
+                                                            personnelDeskPhone={msg.senderDeskPhone ?? undefined}
+                                                            personnelCellPhone={msg.senderCellPhone ?? undefined}
+                                                            currentUserId={currentPersona?.id}
+                                                            onStartDM={handleStartDM}
                                                         >
-                                                            {emoji}
-                                                        </button>
-                                                    ))}
+                                                            <span
+                                                                data-testid="message-sender"
+                                                                className="font-medium text-sm message-sender cursor-pointer hover:underline"
+                                                            >
+                                                                {msg.senderName}
+                                                            </span>
+                                                        </PersonnelPopover>
+                                                        <span
+                                                            data-testid="message-timestamp"
+                                                            className="text-xs text-muted-foreground message-timestamp"
+                                                        >
+                                                            {new Date(msg.sentAt).toLocaleTimeString(
+                                                                [],
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                }
+                                                            )}
+                                                        </span>
+                                                        {/* Add reaction button - shows on hover */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => setEmojiPickerForMessage(
+                                                                emojiPickerForMessage === msg.id ? null : msg.id
+                                                            )}
+                                                            data-testid="add-reaction-button"
+                                                        >
+                                                            <Smile className="h-3 w-3" />
+                                                        </Button>
+                                                        {/* Reply button - shows on hover */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            data-testid="reply-button"
+                                                            title="Reply in thread"
+                                                            onClick={() => setActiveThread({
+                                                                messageId: msg.id,
+                                                                senderName: msg.senderName,
+                                                                content: msg.content
+                                                            })}
+                                                        >
+                                                            <Reply className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-sm mt-0.5">
+                                                        {(() => {
+                                                            // Parse @mentions by looking for exact personnel names
+                                                            if (allPersonnel.length === 0) return msg.content;
+
+                                                            // Build regex from personnel names (sorted longest first for greedy match)
+                                                            const sortedNames = [...allPersonnel]
+                                                                .map(p => p.name)
+                                                                .sort((a, b) => b.length - a.length);
+
+                                                            const namesPattern = sortedNames
+                                                                .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                                                                .join('|');
+                                                            const mentionRegex = new RegExp(`@(${namesPattern})`, 'gi');
+
+                                                            const parts: React.ReactNode[] = [];
+                                                            let lastIndex = 0;
+                                                            let match;
+                                                            let keyIndex = 0;
+
+                                                            while ((match = mentionRegex.exec(msg.content)) !== null) {
+                                                                // Add text before the mention
+                                                                if (match.index > lastIndex) {
+                                                                    parts.push(msg.content.slice(lastIndex, match.index));
+                                                                }
+
+                                                                // Find personnel by name (case-insensitive)
+                                                                const mentionedName = match[1];
+                                                                const mentionedPerson = allPersonnel.find(
+                                                                    p => p.name.toLowerCase() === mentionedName.toLowerCase()
+                                                                );
+
+                                                                // Add the mention as a styled span
+                                                                parts.push(
+                                                                    mentionedPerson ? (
+                                                                        <PersonnelPopover
+                                                                            key={`mention-${msg.id}-${keyIndex++}`}
+                                                                            personnelId={mentionedPerson.id}
+                                                                            personnelName={mentionedPerson.name}
+                                                                            currentUserId={currentPersona?.id}
+                                                                            onStartDM={handleStartDM}
+                                                                        >
+                                                                            <span
+                                                                                data-testid="mention"
+                                                                                className="mention text-primary font-medium bg-primary/10 px-1 rounded cursor-pointer hover:bg-primary/20"
+                                                                            >
+                                                                                @{mentionedPerson.name}
+                                                                            </span>
+                                                                        </PersonnelPopover>
+                                                                    ) : (
+                                                                        <span
+                                                                            key={`mention-${msg.id}-${keyIndex++}`}
+                                                                            data-testid="mention"
+                                                                            className="mention text-primary font-medium bg-primary/10 px-1 rounded"
+                                                                        >
+                                                                            @{mentionedName}
+                                                                        </span>
+                                                                    )
+                                                                );
+
+                                                                lastIndex = match.index + match[0].length;
+                                                            }
+
+                                                            // Add remaining text
+                                                            if (lastIndex < msg.content.length) {
+                                                                parts.push(msg.content.slice(lastIndex));
+                                                            }
+
+                                                            return parts.length > 0 ? parts : msg.content;
+                                                        })()}
+                                                    </p>
+
+                                                    {/* Inline thread replies */}
+                                                    {replies.length > 0 && (
+                                                        <div className="mt-2 pl-3 border-l-2 border-primary/20 space-y-2">
+                                                            {replies.map((reply) => {
+                                                                const replyColor = getUserColor(reply.senderId, isDarkMode);
+                                                                return (
+                                                                    <div
+                                                                        key={reply.id}
+                                                                        data-testid="thread-reply"
+                                                                        className="flex items-start gap-2 text-sm group/reply"
+                                                                    >
+                                                                        <div
+                                                                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
+                                                                            style={{ backgroundColor: replyColor }}
+                                                                        >
+                                                                            {reply.senderName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                                                                        </div>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="font-medium text-xs">{reply.senderName}</span>
+                                                                                <span className="text-muted-foreground text-xs">
+                                                                                    {new Date(reply.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                </span>
+                                                                                {/* Reaction button for reply */}
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-5 w-5 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                                    onClick={() => setEmojiPickerForMessage(emojiPickerForMessage === reply.id ? null : reply.id)}
+                                                                                >
+                                                                                    <Smile className="h-3 w-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                            <p className="text-sm mt-0.5">{reply.content}</p>
+
+                                                                            {/* Reply reactions display */}
+                                                                            {messageReactions[reply.id] && messageReactions[reply.id].length > 0 && (
+                                                                                <div className="flex gap-1 mt-1 flex-wrap">
+                                                                                    {messageReactions[reply.id].map((reaction) => (
+                                                                                        <button
+                                                                                            key={reaction.emoji}
+                                                                                            title={reaction.users.map(u => u.name).join(", ")}
+                                                                                            onClick={() => handleReactionToggle(reply.id, reaction.emoji)}
+                                                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border ${reaction.hasReacted
+                                                                                                ? "bg-primary/10 border-primary/30"
+                                                                                                : "bg-muted/50 border-transparent hover:border-border"
+                                                                                                }`}
+                                                                                        >
+                                                                                            <span>{reaction.emoji}</span>
+                                                                                            <span className="text-muted-foreground">{reaction.count}</span>
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Emoji picker for reply */}
+                                                                            {emojiPickerForMessage === reply.id && (
+                                                                                <div className="mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 w-fit">
+                                                                                    {COMMON_EMOJIS.map((emoji) => (
+                                                                                        <button
+                                                                                            key={emoji}
+                                                                                            onClick={() => handleReactionToggle(reply.id, emoji)}
+                                                                                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-sm"
+                                                                                        >
+                                                                                            {emoji}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            <button
+                                                                data-testid="reply-count"
+                                                                className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                                                                onClick={() => setActiveThread({
+                                                                    messageId: msg.id,
+                                                                    senderName: msg.senderName,
+                                                                    content: msg.content
+                                                                })}
+                                                            >
+                                                                <Reply className="h-3 w-3" />
+                                                                Reply to thread
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Reactions display */}
+                                                    {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
+                                                        <div className="flex gap-1 mt-1 flex-wrap" data-testid="reactions-container">
+                                                            {messageReactions[msg.id].map((reaction) => (
+                                                                <button
+                                                                    key={reaction.emoji}
+                                                                    data-testid="reaction-pill"
+                                                                    title={reaction.users.map(u => u.name).join(", ")}
+                                                                    onClick={() => handleReactionToggle(msg.id, reaction.emoji)}
+                                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${reaction.hasReacted
+                                                                        ? "bg-primary/10 border-primary/30"
+                                                                        : "bg-muted/50 border-transparent hover:border-border"
+                                                                        }`}
+                                                                >
+                                                                    <span>{reaction.emoji}</span>
+                                                                    <span className="text-muted-foreground">{reaction.count}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Emoji picker dropdown */}
+                                                    {emojiPickerForMessage === msg.id && (
+                                                        <div
+                                                            className="absolute mt-1 p-2 bg-popover border rounded-lg shadow-lg flex gap-1 z-50"
+                                                            data-testid="emoji-picker"
+                                                        >
+                                                            {COMMON_EMOJIS.map((emoji) => (
+                                                                <button
+                                                                    key={emoji}
+                                                                    data-testid="emoji-option"
+                                                                    onClick={() => handleReactionToggle(msg.id, emoji)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-lg"
+                                                                >
+                                                                    {emoji}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                            </div>
+                                        );
+                                    })}
                                 <div ref={messagesEndRef} />
                             </div>
                         </ScrollArea>
+
+                        {/* Thread Reply Indicator */}
+                        {activeThread && (
+                            <div
+                                data-testid="thread-reply-bar"
+                                className="px-4 py-2 bg-muted/50 border-t flex items-center justify-between"
+                            >
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Reply className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Replying to</span>
+                                    <span className="font-medium">{activeThread.senderName}</span>
+                                    <span className="text-muted-foreground truncate max-w-[200px]">
+                                        &quot;{activeThread.content}&quot;
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => setActiveThread(null)}
+                                    data-testid="cancel-reply-button"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
 
                         {/* Message Input */}
                         <div className="p-4 border-t">
@@ -526,14 +846,91 @@ export function ChatPageContent() {
                                         </div>
                                     )}
                                 </div>
-                                <Input
-                                    data-testid="message-input"
-                                    placeholder={`Message ${selectedChannelInfo?.name ?? ""}...`}
-                                    value={messageInput}
-                                    onChange={(e) => setMessageInput(e.target.value)}
-                                    onKeyDown={handleKeyPress}
-                                    className="flex-1"
-                                />
+                                <div className="flex-1 relative">
+                                    {/* Styled mention overlay */}
+                                    <div
+                                        className="absolute inset-0 pointer-events-none px-3 py-2 text-sm overflow-hidden whitespace-pre-wrap break-words"
+                                        style={{ color: 'transparent' }}
+                                        aria-hidden="true"
+                                    >
+                                        {messageInput.split(/(@\w+(?:\s+\w+)?)/g).map((part, i) => {
+                                            // Check if this is a valid mention
+                                            if (part.startsWith('@')) {
+                                                const mentionName = part.slice(1);
+                                                const isValidMention = allPersonnel.some(p =>
+                                                    p.name.toLowerCase() === mentionName.toLowerCase() ||
+                                                    p.name.toLowerCase().startsWith(mentionName.toLowerCase())
+                                                );
+                                                if (isValidMention) {
+                                                    return (
+                                                        <span
+                                                            key={i}
+                                                            className="bg-primary/20 rounded-sm"
+                                                        >
+                                                            {part}
+                                                        </span>
+                                                    );
+                                                }
+                                            }
+                                            return <span key={i}>{part}</span>;
+                                        })}
+                                    </div>
+                                    <Input
+                                        data-testid="message-input"
+                                        placeholder={`Message ${selectedChannelInfo?.name ?? ""}...`}
+                                        value={messageInput}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setMessageInput(value);
+
+                                            // Check for @ mention trigger
+                                            const lastAtIndex = value.lastIndexOf('@');
+                                            if (lastAtIndex >= 0) {
+                                                const afterAt = value.slice(lastAtIndex + 1);
+                                                // Only show if no space after @ (still typing the mention)
+                                                if (!afterAt.includes(' ')) {
+                                                    setMentionQuery(afterAt.toLowerCase());
+                                                    setMentionSelectedIndex(0); // Reset selection on query change
+                                                    setShowMentionAutocomplete(true);
+                                                } else {
+                                                    setShowMentionAutocomplete(false);
+                                                }
+                                            } else {
+                                                setShowMentionAutocomplete(false);
+                                            }
+                                        }}
+                                        onKeyDown={handleKeyPress}
+                                        className="flex-1 bg-transparent"
+                                    />
+                                    {/* Mention Autocomplete */}
+                                    {showMentionAutocomplete && (
+                                        <div
+                                            data-testid="mention-autocomplete"
+                                            className="absolute bottom-full mb-2 left-0 w-full max-h-48 overflow-y-auto bg-popover border rounded-lg shadow-lg z-50"
+                                        >
+                                            {mentionPersonnel
+                                                .filter(p => p.name.toLowerCase().includes(mentionQuery))
+                                                .slice(0, 5)
+                                                .map((person, index) => (
+                                                    <button
+                                                        key={person.id}
+                                                        data-testid="mention-option"
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm ${index === mentionSelectedIndex ? 'bg-accent' : 'hover:bg-accent/50'
+                                                            }`}
+                                                        onClick={() => handleMentionSelect(person.name)}
+                                                    >
+                                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                                            {person.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span>{person.name}</span>
+                                                    </button>
+                                                ))}
+                                            {mentionPersonnel.filter(p => p.name.toLowerCase().includes(mentionQuery)).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <Button
                                     data-testid="send-button"
                                     onClick={handleSendMessage}
@@ -696,8 +1093,6 @@ export function ChatPageContent() {
 // ============================================================================
 // Person Search Component  
 // ============================================================================
-
-import { getAllPersonnel } from "@/lib/personnel";
 
 function PersonSearch({
     query,
