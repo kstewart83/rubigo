@@ -42,6 +42,12 @@ INSERT INTO features (profile_id, id, name, description, objective_id, status) V
 
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-mcp-action-source', 'MCP Action Source Identification', 'Action logs distinguish MCP-originated operations from UI and API calls', 'obj-rubigo-audit', 'planned');
 
+-- Chat UX Enhancement Features
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-chat-mentions', '@Mentions', 'Mention users with @ symbol for targeted notifications and quick linking', 'obj-chat-engagement', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-chat-alignment', 'Message Alignment', 'Visually distinguish own messages from others via right-alignment', 'obj-chat-core', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-chat-user-colors', 'User Color Coding', 'Assign consistent subtle background colors to users for visual identification', 'obj-chat-core', 'planned');
+INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-chat-profile-popup', 'Personnel Mini-Card', 'Click on avatar or name to view personnel details and initiate DM', 'obj-chat-core', 'planned');
+
 -- Agent Simulation Features
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-event-loop', 'Agent Event Loop', 'Discrete event simulation scheduler that manages agent lifecycle (dormant, sleeping, idle, working) with priority-based event processing', 'obj-rubigo-agent-sim', 'planned');
 INSERT INTO features (profile_id, id, name, description, objective_id, status) VALUES ('mmc', 'feat-agent-ollama', 'Local LLM Integration', 'Integration with Ollama for airgapped LLM inference to generate agent thoughts, decisions, and actions using persona-specific prompts', 'obj-rubigo-agent-sim', 'planned');
