@@ -15,6 +15,7 @@
     "generate:api": "openapi-typescript ../common/schemas/project.openapi.yaml -o src/types/api.generated.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:bun": "bun src/scripts/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:clean": "bun src/db/clean.ts",
     "db:studio": "drizzle-kit studio",
