@@ -16,6 +16,18 @@ import { Users } from "lucide-react";
 function ScreenShareUI() {
     const { isSharing, isViewing, roomId, error } = useScreenShare();
     const [joinRoomId, setJoinRoomId] = useState("");
+    const [activeViewRoomId, setActiveViewRoomId] = useState<string | null>(null);
+
+    const handleJoin = () => {
+        if (joinRoomId) {
+            setActiveViewRoomId(joinRoomId);
+        }
+    };
+
+    const handleDisconnect = () => {
+        setActiveViewRoomId(null);
+        setJoinRoomId("");
+    };
 
     return (
         <div className="container mx-auto py-8 space-y-6">
@@ -68,7 +80,7 @@ function ScreenShareUI() {
                             Watch a Screen Share
                         </CardTitle>
                         <CardDescription>
-                            Enter a room ID to view someone's shared screen
+                            Enter a room ID to view someone&apos;s shared screen
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -77,20 +89,21 @@ function ScreenShareUI() {
                                 placeholder="Enter room ID..."
                                 value={joinRoomId}
                                 onChange={e => setJoinRoomId(e.target.value)}
-                                disabled={isViewing}
+                                disabled={!!activeViewRoomId}
+                                onKeyDown={e => e.key === "Enter" && handleJoin()}
                             />
                             <Button
                                 variant="secondary"
-                                disabled={!joinRoomId || isViewing}
-                                onClick={() => {/* Join handled by viewer component */ }}
+                                disabled={!joinRoomId || !!activeViewRoomId}
+                                onClick={handleJoin}
                             >
                                 Join
                             </Button>
                         </div>
 
-                        {isViewing && roomId && (
+                        {activeViewRoomId && (
                             <p className="text-sm text-muted-foreground">
-                                Connected to room: <code className="font-mono">{roomId}</code>
+                                Connected to room: <code className="font-mono">{activeViewRoomId}</code>
                             </p>
                         )}
                     </CardContent>
@@ -98,12 +111,13 @@ function ScreenShareUI() {
             </div>
 
             {/* Viewer Area */}
-            {(isViewing || joinRoomId) && joinRoomId && (
+            {activeViewRoomId && (
                 <Card>
                     <CardContent className="p-0">
                         <ScreenShareViewer
-                            roomId={joinRoomId}
+                            roomId={activeViewRoomId}
                             className="aspect-video w-full"
+                            onDisconnect={handleDisconnect}
                         />
                     </CardContent>
                 </Card>

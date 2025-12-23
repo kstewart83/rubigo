@@ -6,6 +6,7 @@
  */
 
 import { Page, expect } from "@playwright/test";
+import { getWebRTCMockScript, setupScreenShareAPIMocks } from "./mocks";
 
 // ============================================================================
 // PERSONA HELPERS
@@ -120,3 +121,37 @@ export async function cancelDialog(page: Page): Promise<void> {
     await page.getByRole("button", { name: /cancel/i }).click();
     await expect(dialog).not.toBeVisible({ timeout: 3000 });
 }
+
+// ============================================================================
+// WEBRTC MOCK HELPERS
+// ============================================================================
+
+/**
+ * Setup WebRTC mocks for Screen Share E2E tests
+ * 
+ * This injects mock implementations of RTCPeerConnection, MediaStream, and
+ * navigator.mediaDevices.getDisplayMedia into the browser context, along with
+ * API route mocks for the SFU endpoints.
+ * 
+ * @param page - Playwright page instance
+ */
+export async function setupWebRTCMocks(page: Page): Promise<void> {
+    // Inject WebRTC API mocks into browser context
+    await page.addInitScript(getWebRTCMockScript());
+
+    // Setup API route mocks
+    await setupScreenShareAPIMocks(page);
+}
+
+/**
+ * Verify that WebRTC mocks are installed in the browser
+ * 
+ * @param page - Playwright page instance
+ * @returns true if mocks are installed
+ */
+export async function verifyWebRTCMocksInstalled(page: Page): Promise<boolean> {
+    return await page.evaluate(() => {
+        return (window as unknown as { __WEBRTC_MOCKS_INSTALLED__?: boolean }).__WEBRTC_MOCKS_INSTALLED__ === true;
+    });
+}
+
