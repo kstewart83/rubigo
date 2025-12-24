@@ -174,24 +174,22 @@ export function SecurityLabelPicker({
                         Tenant Compartments
                     </div>
                     <div className="flex flex-wrap gap-1 px-2 py-1">
-                        {TENANT_OPTIONS.map((tenant) => {
+                        {/* Only show tenants the user has access to */}
+                        {TENANT_OPTIONS.filter(tenant => userTenants.includes(tenant)).map((tenant) => {
                             const isSelected = selectedTenants.includes(tenant);
-                            const hasAccess = userTenants.includes(tenant);
 
                             return (
                                 <button
                                     key={tenant}
                                     type="button"
-                                    disabled={!hasAccess}
                                     onClick={() => handleTenantToggle(tenant)}
                                     className={cn(
                                         "size-8 rounded flex items-center justify-center text-lg transition-colors border",
                                         isSelected
                                             ? "bg-zinc-700 border-zinc-600"
-                                            : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800",
-                                        !hasAccess && "opacity-30 cursor-not-allowed"
+                                            : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
                                     )}
-                                    title={hasAccess ? tenant : `No access to ${tenant}`}
+                                    title={tenant}
                                 >
                                     {tenant}
                                 </button>

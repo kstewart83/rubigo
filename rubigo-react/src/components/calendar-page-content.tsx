@@ -75,6 +75,7 @@ import { OrphanedDeviationsPanel } from "@/components/orphaned-deviations-panel"
 import { useAnalytics } from "@/hooks/use-analytics";
 import { SecurePanelWrapper } from "@/components/ui/secure-panel-wrapper";
 import { SecurityBadge } from "@/components/ui/security-badge";
+import { SecurityLabelPicker } from "@/components/ui/security-label-picker";
 
 // ============================================================================
 // Timezone Constants
@@ -578,122 +579,125 @@ export function CalendarPageContent() {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold min-w-48">
-                        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                    </h1>
-                    <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" onClick={goToPrevious} data-testid="nav-prev">
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={goToToday}>
-                            Today
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={goToNext} data-testid="nav-next">
-                            <ChevronRight className="h-4 w-4" />
+            {/* Main calendar area - shrinks when edit panel is open */}
+            <div className={`flex flex-col overflow-hidden transition-all duration-300 ${showEventModal ? "flex-1 min-h-0" : "flex-1"}`}>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-2xl font-bold min-w-48">
+                            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        </h1>
+                        <div className="flex items-center gap-1">
+                            <Button variant="outline" size="icon" onClick={goToPrevious} data-testid="nav-prev">
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={goToToday}>
+                                Today
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={goToNext} data-testid="nav-next">
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                            <Button
+                                variant={view === "month" ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => handleViewChange("month")}
+                            >
+                                Month
+                            </Button>
+                            <Button
+                                variant={view === "week" ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => handleViewChange("week")}
+                                data-testid="week-view-toggle"
+                            >
+                                Week
+                            </Button>
+                            <Button
+                                variant={view === "day" ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => handleViewChange("day")}
+                                data-testid="day-view-toggle"
+                            >
+                                Day
+                            </Button>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                checked={workWeekOnly}
+                                onChange={(e) => setWorkWeekOnly(e.target.checked)}
+                                data-testid="work-week-toggle"
+                                className="rounded"
+                            />
+                            Work week
+                        </label>
+                        <Button onClick={() => setShowEventModal(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Event
                         </Button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-                        <Button
-                            variant={view === "month" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => handleViewChange("month")}
-                        >
-                            Month
-                        </Button>
-                        <Button
-                            variant={view === "week" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => handleViewChange("week")}
-                            data-testid="week-view-toggle"
-                        >
-                            Week
-                        </Button>
-                        <Button
-                            variant={view === "day" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => handleViewChange("day")}
-                            data-testid="day-view-toggle"
-                        >
-                            Day
-                        </Button>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            checked={workWeekOnly}
-                            onChange={(e) => setWorkWeekOnly(e.target.checked)}
-                            data-testid="work-week-toggle"
-                            className="rounded"
+
+                {/* Calendar Grid with Security Header/Footer */}
+                <SecurePanelWrapper
+                    level={getMaxSensitivity(visibleEvents)}
+                    tenants={getAllTenants(visibleEvents)}
+                    className="flex-1 flex flex-col border rounded-lg overflow-hidden"
+                >
+                    {loading ? (
+                        <div className="flex-1 flex items-center justify-center">
+                            <p className="text-muted-foreground">Loading...</p>
+                        </div>
+                    ) : view === "month" ? (
+                        <MonthGrid
+                            currentDate={currentDate}
+                            events={events}
+                            workWeekOnly={workWeekOnly}
+                            onEventClick={(event) => {
+                                setSelectedEvent(event);
+                                setShowDetailsPanel(true);
+                            }}
+                            onNavigateToDay={(date) => {
+                                setCurrentDate(date);
+                                setView("day");
+                            }}
+                            onNavigateToWeek={(date) => {
+                                setCurrentDate(date);
+                                setView("week");
+                            }}
                         />
-                        Work week
-                    </label>
-                    <Button onClick={() => setShowEventModal(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Event
-                    </Button>
-                </div>
+                    ) : view === "week" ? (
+                        <WeekView
+                            currentDate={currentDate}
+                            events={events}
+                            workWeekOnly={workWeekOnly}
+                            onEventClick={(event) => {
+                                setSelectedEvent(event);
+                                setShowDetailsPanel(true);
+                            }}
+                            onNavigateToDay={(date) => {
+                                setCurrentDate(date);
+                                setView("day");
+                            }}
+                        />
+                    ) : (
+                        <DayView
+                            currentDate={currentDate}
+                            events={events}
+                            onEventClick={(event) => {
+                                setSelectedEvent(event);
+                                setShowDetailsPanel(true);
+                            }}
+                        />
+                    )}
+                </SecurePanelWrapper>
             </div>
 
-            {/* Calendar Grid with Security Header/Footer */}
-            <SecurePanelWrapper
-                level={getMaxSensitivity(visibleEvents)}
-                tenants={getAllTenants(visibleEvents)}
-                className="flex-1 flex flex-col border rounded-lg overflow-hidden"
-            >
-                {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <p className="text-muted-foreground">Loading...</p>
-                    </div>
-                ) : view === "month" ? (
-                    <MonthGrid
-                        currentDate={currentDate}
-                        events={events}
-                        workWeekOnly={workWeekOnly}
-                        onEventClick={(event) => {
-                            setSelectedEvent(event);
-                            setShowDetailsPanel(true);
-                        }}
-                        onNavigateToDay={(date) => {
-                            setCurrentDate(date);
-                            setView("day");
-                        }}
-                        onNavigateToWeek={(date) => {
-                            setCurrentDate(date);
-                            setView("week");
-                        }}
-                    />
-                ) : view === "week" ? (
-                    <WeekView
-                        currentDate={currentDate}
-                        events={events}
-                        workWeekOnly={workWeekOnly}
-                        onEventClick={(event) => {
-                            setSelectedEvent(event);
-                            setShowDetailsPanel(true);
-                        }}
-                        onNavigateToDay={(date) => {
-                            setCurrentDate(date);
-                            setView("day");
-                        }}
-                    />
-                ) : (
-                    <DayView
-                        currentDate={currentDate}
-                        events={events}
-                        onEventClick={(event) => {
-                            setSelectedEvent(event);
-                            setShowDetailsPanel(true);
-                        }}
-                    />
-                )}
-            </SecurePanelWrapper>
-
-            {/* Event Modal */}
+            {/* Event Edit Panel - slides up from bottom */}
             <EventModal
                 open={showEventModal}
                 onClose={() => {
@@ -1802,6 +1806,11 @@ function EventModal({
     const [allDay, setAllDay] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    // Tab and ACO state for Create Event
+    const [activeTab, setActiveTab] = useState<"basic" | "series" | "description" | "participants">("basic");
+    const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
+    const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
+
     // Check if we're editing just one instance of a recurring event
     const isEditingInstanceOnly = (editingEvent as CalendarEvent & { _editingInstanceOnly?: boolean })?._editingInstanceOnly === true;
 
@@ -1815,12 +1824,14 @@ function EventModal({
                 // Pre-fill form with existing event data
                 setTitle(editingEvent.title);
                 setDescription(editingEvent.description || "");
-                // For recurring events, use instanceDate to show the specific instance's date
-                // For non-recurring events or when editing the series, use startTime
-                if (editingEvent.instanceDate && editingEvent.isRecurring) {
+                // For recurring events, use instanceDate ONLY when editing a single instance
+                // When editing the entire series, use the original startTime
+                const isEditingInstance = (editingEvent as CalendarEvent & { _editingInstanceOnly?: boolean })?._editingInstanceOnly === true;
+                if (isEditingInstance && editingEvent.instanceDate) {
                     // Use the instance date that was clicked on
                     setSelectedDate(new Date(editingEvent.instanceDate + "T00:00:00"));
                 } else {
+                    // Use the original series start date
                     setSelectedDate(new Date(editingEvent.startTime));
                 }
                 setDatePickerOpen(false);
@@ -1851,6 +1862,11 @@ function EventModal({
                     setRecurrenceUntil(undefined);
                 }
                 setTimezone(editingEvent.timezone || getBrowserTimezone());
+                // Set ACO state from existing event
+                const parsedAco = parseAco(editingEvent.aco);
+                setBasicInfoAco({ sensitivity: parsedAco.sensitivity, tenants: parsedAco.tenants.length > 0 ? parsedAco.tenants : undefined });
+                const parsedDescAco = parseAco(editingEvent.descriptionAco || editingEvent.aco);
+                setDescriptionAco({ sensitivity: parsedDescAco.sensitivity, tenants: parsedDescAco.tenants.length > 0 ? parsedDescAco.tenants : undefined });
             } else {
                 // Reset form for new event
                 setTitle("");
@@ -1865,6 +1881,9 @@ function EventModal({
                 setRecurrence("weekly");
                 setRecurrenceDays([]);
                 setTimezone(getBrowserTimezone());
+                // Reset ACO to null for new events
+                setBasicInfoAco({ sensitivity: null });
+                setDescriptionAco({ sensitivity: null });
             }
         }
     }, [open, editingEvent]);
@@ -1874,6 +1893,16 @@ function EventModal({
 
         const dateStr = format(selectedDate, "yyyy-MM-dd");
         setSaving(true);
+
+        // Format ACO for saving - JSON format matching database schema
+        const formatAcoForSave = (aco: { sensitivity: SensitivityLevel | null; tenants?: string[] }): string | undefined => {
+            if (!aco.sensitivity) return undefined;
+            return JSON.stringify({
+                sensitivity: aco.sensitivity,
+                tenants: aco.tenants || [],
+            });
+        };
+
         try {
             await onSave({
                 title,
@@ -1887,6 +1916,8 @@ function EventModal({
                 recurrenceUntil: isRecurring && recurrenceUntil ? format(recurrenceUntil, "yyyy-MM-dd") : undefined,
                 timezone,
                 allDay,
+                aco: formatAcoForSave(basicInfoAco),
+                descriptionAco: formatAcoForSave(descriptionAco),
             }, editingEvent?.id);
             onClose(); // Close modal after successful save
         } finally {
@@ -1902,256 +1933,380 @@ function EventModal({
 
     const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+    if (!open) return null;
+
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>{editingEvent ? "Edit Event" : "New Event"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="title">Title</Label>
-                        <Input
-                            id="title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Event title"
-                        />
-                    </div>
-                    <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Event description"
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label>Date</Label>
-                            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        id="date"
-                                        data-testid="event-date"
-                                        className="w-full justify-start text-left font-normal"
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={(date) => {
-                                            setSelectedDate(date);
-                                            setDatePickerOpen(false);
-                                        }}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div>
-                            <Label htmlFor="eventType">Type</Label>
-                            <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(eventTypeInfo).map(([key, info]) => (
-                                        <SelectItem key={key} value={key}>
-                                            {info.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    {/* All Day Toggle */}
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="all-day-toggle"
-                            data-testid="all-day-toggle"
-                            checked={allDay}
-                            onChange={(e) => setAllDay(e.target.checked)}
-                            className="rounded"
-                        />
-                        <Label htmlFor="all-day-toggle">All Day</Label>
-                    </div>
-                    {/* Time inputs - hidden when All Day is checked */}
-                    {!allDay && (
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="startTime">Start Time</Label>
-                                <Input
-                                    id="startTime"
-                                    type="time"
-                                    value={startTime}
-                                    onChange={(e) => setStartTime(e.target.value)}
-                                    data-testid="start-time"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="endTime">End Time</Label>
-                                <Input
-                                    id="endTime"
-                                    type="time"
-                                    value={endTime}
-                                    onChange={(e) => setEndTime(e.target.value)}
-                                    data-testid="end-time"
-                                />
-                            </div>
-                        </div>
-                    )}
-                    <div>
-                        <Label htmlFor="timezone">Timezone</Label>
-                        <Select value={timezone} onValueChange={setTimezone}>
-                            <SelectTrigger data-testid="timezone-select">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {TIMEZONES.map((tz) => (
-                                    <SelectItem key={tz.value} value={tz.value}>
-                                        {tz.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    {/* Local time preview - only show when event TZ differs from browser TZ */}
-                    {timezone !== browserTimezone && (() => {
-                        const [startHour, startMin] = startTime.split(":").map(Number);
-                        const [endHour, endMin] = endTime.split(":").map(Number);
-                        const localStart = convertTime(startHour, startMin, timezone, browserTimezone);
-                        const localEnd = convertTime(endHour, endMin, timezone, browserTimezone);
-                        return (
-                            <div
-                                className="rounded-md bg-muted/50 p-3 text-sm"
-                                data-testid="local-time-preview"
+        <div className="flex-1 border-t bg-background overflow-hidden flex flex-col">
+            <div className="p-4 overflow-y-auto flex-1">
+                {/* Header with Title and Tabs */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-lg font-semibold">
+                            {editingEvent ? (isEditingInstanceOnly ? "Edit This Instance" : "Edit Event") : "Create Event"}
+                        </h2>
+                        {/* Tab Headers */}
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                            <button
+                                onClick={() => setActiveTab("basic")}
+                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "basic" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                                    }`}
                             >
-                                <span className="font-medium text-muted-foreground">Your local time: </span>
-                                <span>
-                                    {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)} ({getTimezoneDisplayName(browserTimezone)})
-                                </span>
-                            </div>
-                        );
-                    })()}
-                    <div>
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                            id="location"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="Meeting location"
-                        />
+                                Basic Information
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("series")}
+                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "series" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                                    }`}
+                            >
+                                Series
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("description")}
+                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "description" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                                    }`}
+                            >
+                                Description
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("participants")}
+                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "participants" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                                    }`}
+                            >
+                                Participants
+                            </button>
+                        </div>
                     </div>
-                    {/* Recurrence section - hidden when editing single instance */}
-                    {!isEditingInstanceOnly && (
-                        <>
-                            <div className="flex items-center gap-2" data-testid="recurrence-section">
+                    <Button variant="ghost" size="icon" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                {/* Tab Content */}
+
+                {/* Basic Information Tab */}
+                {activeTab === "basic" && (
+                    <SecurePanelWrapper
+                        level={basicInfoAco.sensitivity}
+                        tenants={basicInfoAco.tenants || []}
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <div className="p-4 space-y-4">
+                            {/* Classification Picker */}
+                            <div className="flex items-center justify-between pb-3 border-b">
+                                <Label>Classification</Label>
+                                <SecurityLabelPicker
+                                    value={{ sensitivity: basicInfoAco.sensitivity || "low", tenants: basicInfoAco.tenants }}
+                                    onChange={(aco) => setBasicInfoAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="title">Title</Label>
+                                <Input
+                                    id="title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Event title"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Date</Label>
+                                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                id="date"
+                                                data-testid="event-date"
+                                                className="w-full justify-start text-left font-normal"
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={selectedDate}
+                                                onSelect={(date) => {
+                                                    setSelectedDate(date);
+                                                    setDatePickerOpen(false);
+                                                }}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div>
+                                    <Label htmlFor="eventType">Type</Label>
+                                    <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(eventTypeInfo).map(([key, info]) => (
+                                                <SelectItem key={key} value={key}>
+                                                    {info.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* All Day Toggle */}
+                            <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
-                                    id="recurrence-toggle"
-                                    checked={isRecurring}
-                                    onChange={(e) => setIsRecurring(e.target.checked)}
+                                    id="all-day-toggle"
+                                    data-testid="all-day-toggle"
+                                    checked={allDay}
+                                    onChange={(e) => setAllDay(e.target.checked)}
                                     className="rounded"
                                 />
-                                <Label htmlFor="recurrence-toggle">Repeat</Label>
+                                <Label htmlFor="all-day-toggle">All Day</Label>
                             </div>
-                            {isRecurring && (
-                                <div className="space-y-4 pl-6 border-l-2">
+
+                            {/* Time inputs - hidden when All Day is checked */}
+                            {!allDay && (
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label htmlFor="recurrence-frequency">Frequency</Label>
-                                        <Select value={recurrence} onValueChange={(v) => setRecurrence(v as typeof recurrence)}>
-                                            <SelectTrigger id="recurrence-frequency">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="daily">Daily</SelectItem>
-                                                <SelectItem value="weekly">Weekly</SelectItem>
-                                                <SelectItem value="monthly">Monthly</SelectItem>
-                                                <SelectItem value="yearly">Yearly</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Label htmlFor="startTime">Start Time</Label>
+                                        <Input
+                                            id="startTime"
+                                            type="time"
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            data-testid="start-time"
+                                        />
                                     </div>
-                                    {recurrence === "weekly" && (
-                                        <div>
-                                            <Label>Days</Label>
-                                            <div className="flex gap-1 mt-1">
-                                                {daysOfWeek.map((day) => (
-                                                    <button
-                                                        key={day}
-                                                        type="button"
-                                                        onClick={() => toggleDay(day)}
-                                                        className={`px-2 py-1 text-xs rounded border ${recurrenceDays.includes(day)
-                                                            ? "bg-primary text-primary-foreground"
-                                                            : "bg-muted"
-                                                            }`}
-                                                        data-day={day}
-                                                    >
-                                                        {day}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
                                     <div>
-                                        <Label htmlFor="recurrence-until">Until (optional)</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    id="recurrence-until"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal mt-1"
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {recurrenceUntil ? recurrenceUntil.toLocaleDateString() : "No end date"}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={recurrenceUntil}
-                                                    onSelect={(d) => {
-                                                        setRecurrenceUntil(d);
-                                                    }}
-                                                    initialFocus
-                                                />
-                                                {recurrenceUntil && (
-                                                    <div className="p-2 border-t">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setRecurrenceUntil(undefined)}
-                                                            className="w-full"
-                                                        >
-                                                            Clear end date
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </PopoverContent>
-                                        </Popover>
+                                        <Label htmlFor="endTime">End Time</Label>
+                                        <Input
+                                            id="endTime"
+                                            type="time"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            data-testid="end-time"
+                                        />
                                     </div>
                                 </div>
                             )}
-                        </>
-                    )}
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={onClose}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave} disabled={saving || !title}>
-                            {saving ? "Saving..." : "Save"}
-                        </Button>
-                    </div>
+
+                            <div>
+                                <Label htmlFor="timezone">Timezone</Label>
+                                <Select value={timezone} onValueChange={setTimezone}>
+                                    <SelectTrigger data-testid="timezone-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {TIMEZONES.map((tz) => (
+                                            <SelectItem key={tz.value} value={tz.value}>
+                                                {tz.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Local time preview */}
+                            {timezone !== browserTimezone && (() => {
+                                const [startHour, startMin] = startTime.split(":").map(Number);
+                                const [endHour, endMin] = endTime.split(":").map(Number);
+                                const localStart = convertTime(startHour, startMin, timezone, browserTimezone);
+                                const localEnd = convertTime(endHour, endMin, timezone, browserTimezone);
+                                return (
+                                    <div
+                                        className="rounded-md bg-muted/50 p-3 text-sm"
+                                        data-testid="local-time-preview"
+                                    >
+                                        <span className="font-medium text-muted-foreground">Your local time: </span>
+                                        <span>
+                                            {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)} ({getTimezoneDisplayName(browserTimezone)})
+                                        </span>
+                                    </div>
+                                );
+                            })()}
+
+                            <div>
+                                <Label htmlFor="location">Location</Label>
+                                <Input
+                                    id="location"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    placeholder="Meeting location"
+                                />
+                            </div>
+                        </div>
+                    </SecurePanelWrapper>
+                )}
+
+                {/* Series Tab */}
+                {activeTab === "series" && (
+                    <SecurePanelWrapper
+                        level={basicInfoAco.sensitivity}
+                        tenants={basicInfoAco.tenants || []}
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <div className="p-4 space-y-4">
+                            {isEditingInstanceOnly ? (
+                                <p className="text-muted-foreground text-sm">
+                                    Series settings are not available when editing a single instance.
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-2" data-testid="recurrence-section">
+                                        <input
+                                            type="checkbox"
+                                            id="recurrence-toggle"
+                                            checked={isRecurring}
+                                            onChange={(e) => setIsRecurring(e.target.checked)}
+                                            className="rounded"
+                                        />
+                                        <Label htmlFor="recurrence-toggle">Repeat</Label>
+                                    </div>
+                                    {isRecurring && (
+                                        <div className="space-y-4 pl-6 border-l-2">
+                                            <div>
+                                                <Label htmlFor="recurrence-frequency">Frequency</Label>
+                                                <Select value={recurrence} onValueChange={(v) => setRecurrence(v as typeof recurrence)}>
+                                                    <SelectTrigger id="recurrence-frequency">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="daily">Daily</SelectItem>
+                                                        <SelectItem value="weekly">Weekly</SelectItem>
+                                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                                        <SelectItem value="yearly">Yearly</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {recurrence === "weekly" && (
+                                                <div>
+                                                    <Label>Days</Label>
+                                                    <div className="flex gap-1 mt-1">
+                                                        {daysOfWeek.map((day) => (
+                                                            <button
+                                                                key={day}
+                                                                type="button"
+                                                                onClick={() => toggleDay(day)}
+                                                                className={`px-2 py-1 text-xs rounded border ${recurrenceDays.includes(day)
+                                                                    ? "bg-primary text-primary-foreground"
+                                                                    : "bg-muted"
+                                                                    }`}
+                                                                data-day={day}
+                                                            >
+                                                                {day}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <Label htmlFor="recurrence-until">Until (optional)</Label>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            id="recurrence-until"
+                                                            variant="outline"
+                                                            className="w-full justify-start text-left font-normal mt-1"
+                                                        >
+                                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                                            {recurrenceUntil ? recurrenceUntil.toLocaleDateString() : "No end date"}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={recurrenceUntil}
+                                                            onSelect={(d) => {
+                                                                setRecurrenceUntil(d);
+                                                            }}
+                                                            initialFocus
+                                                        />
+                                                        {recurrenceUntil && (
+                                                            <div className="p-2 border-t">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => setRecurrenceUntil(undefined)}
+                                                                    className="w-full"
+                                                                >
+                                                                    Clear end date
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </SecurePanelWrapper>
+                )}
+
+                {/* Description Tab */}
+                {activeTab === "description" && (
+                    <SecurePanelWrapper
+                        level={descriptionAco.sensitivity}
+                        tenants={descriptionAco.tenants || []}
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <div className="p-4 space-y-4">
+                            {/* Classification Picker */}
+                            <div className="flex items-center justify-between pb-3 border-b">
+                                <Label>Classification</Label>
+                                <SecurityLabelPicker
+                                    value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
+                                    onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Event description"
+                                    rows={6}
+                                />
+                            </div>
+                        </div>
+                    </SecurePanelWrapper>
+                )}
+
+                {/* Participants Tab */}
+                {activeTab === "participants" && (
+                    <SecurePanelWrapper
+                        level={basicInfoAco.sensitivity}
+                        tenants={basicInfoAco.tenants || []}
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <div className="p-4">
+                            <p className="text-muted-foreground text-sm">TBD - Participant management coming soon</p>
+                        </div>
+                    </SecurePanelWrapper>
+                )}
+
+                {/* Footer with Cancel/Save */}
+                <div className="flex justify-end gap-2 mt-4">
+                    <Button variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving || !title || (!editingEvent && basicInfoAco.sensitivity === null)}
+                        title={basicInfoAco.sensitivity === null ? "New events must be classified before saving" : undefined}
+                    >
+                        {saving ? "Saving..." : "Save"}
+                    </Button>
                 </div>
-            </DialogContent>
-        </Dialog>
+            </div>
+        </div>
     );
 }
 

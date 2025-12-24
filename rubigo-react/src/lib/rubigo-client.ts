@@ -212,6 +212,9 @@ export interface CalendarEventInput {
     allDay?: boolean;
     participantIds?: string[];
     organizerId?: string;
+    // Security/ABAC fields
+    aco?: string;  // Format: "sensitivity/tenant1/tenant2" e.g. "moderate/🏠"
+    descriptionAco?: string;  // Separate ACO for description field
 }
 
 export interface CalendarDeviationInput {

@@ -14,6 +14,14 @@ import type { SensitivityLevel } from "@/lib/access-control/types";
 // Color Configuration (matches SecurityBanner)
 // ============================================================================
 
+// Config for when level is null (unclassified)
+const NONE_CONFIG = {
+    label: "NONE",
+    bgClass: "bg-zinc-500/10 border-zinc-500/50",
+    textClass: "text-zinc-400",
+    icon: Shield,
+};
+
 const LEVEL_CONFIG: Record<SensitivityLevel, {
     label: string;
     bgClass: string;
@@ -51,13 +59,13 @@ const LEVEL_CONFIG: Record<SensitivityLevel, {
 // ============================================================================
 
 interface ClassificationBannerProps {
-    level: SensitivityLevel;
+    level: SensitivityLevel | null;
     tenants?: string[];
     position: "header" | "footer";
 }
 
 function ClassificationBanner({ level, tenants = [], position }: ClassificationBannerProps) {
-    const config = LEVEL_CONFIG[level];
+    const config = level === null ? NONE_CONFIG : LEVEL_CONFIG[level];
     const Icon = config.icon;
 
     return (
@@ -92,8 +100,8 @@ function ClassificationBanner({ level, tenants = [], position }: ClassificationB
 interface SecurePanelWrapperProps {
     /** The content to wrap */
     children: React.ReactNode;
-    /** The sensitivity level of the data in this panel */
-    level: SensitivityLevel;
+    /** The sensitivity level of the data in this panel (null = unclassified/NONE) */
+    level: SensitivityLevel | null;
     /** Optional tenants associated with this data */
     tenants?: string[];
     /** Additional className for the container */

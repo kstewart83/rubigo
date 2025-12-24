@@ -40,6 +40,9 @@ export interface CalendarEventInput {
     location?: string;
     participantIds?: string[];
     allDay?: boolean;
+    // Security/ABAC fields
+    aco?: string;
+    descriptionAco?: string;
 }
 
 // ============================================================================
@@ -216,6 +219,8 @@ export async function updateCalendarEvent(
                 }),
                 ...(input.recurrenceUntil !== undefined && { recurrenceUntil: input.recurrenceUntil }),
                 ...(input.location !== undefined && { location: input.location }),
+                ...(input.aco !== undefined && { aco: input.aco }),
+                ...(input.descriptionAco !== undefined && { descriptionAco: input.descriptionAco }),
                 updatedAt: now,
             })
             .where(eq(calendarEvents.id, id));
