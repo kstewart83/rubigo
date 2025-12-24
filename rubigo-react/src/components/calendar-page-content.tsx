@@ -39,6 +39,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -652,6 +658,14 @@ export function CalendarPageContent() {
                             setSelectedEvent(event);
                             setShowDetailsPanel(true);
                         }}
+                        onNavigateToDay={(date) => {
+                            setCurrentDate(date);
+                            setView("day");
+                        }}
+                        onNavigateToWeek={(date) => {
+                            setCurrentDate(date);
+                            setView("week");
+                        }}
                     />
                 ) : view === "week" ? (
                     <WeekView
@@ -661,6 +675,10 @@ export function CalendarPageContent() {
                         onEventClick={(event) => {
                             setSelectedEvent(event);
                             setShowDetailsPanel(true);
+                        }}
+                        onNavigateToDay={(date) => {
+                            setCurrentDate(date);
+                            setView("day");
                         }}
                     />
                 ) : (
@@ -955,11 +973,15 @@ function MonthGrid({
     events,
     workWeekOnly,
     onEventClick,
+    onNavigateToDay,
+    onNavigateToWeek,
 }: {
     currentDate: Date;
     events: CalendarEvent[];
     workWeekOnly: boolean;
     onEventClick: (event: CalendarEvent) => void;
+    onNavigateToDay: (date: Date) => void;
+    onNavigateToWeek: (date: Date) => void;
 }) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -1062,14 +1084,26 @@ function MonthGrid({
                                 } ${isTodayCell ? "ring-2 ring-primary ring-inset bg-primary/5" : ""}`}
                             data-testid={isTodayCell ? "today" : undefined}
                         >
-                            <div
-                                className={`text-sm mb-1 shrink-0 ${isTodayCell
-                                    ? "bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center"
-                                    : ""
-                                    } ${!isCurrentMonth ? "text-muted-foreground" : ""}`}
-                            >
-                                {date.getDate()}
-                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className={`text-sm mb-1 shrink-0 cursor-pointer hover:bg-primary/10 rounded transition-colors w-7 h-7 flex items-center justify-center ${isTodayCell
+                                            ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                                            : ""
+                                            } ${!isCurrentMonth ? "text-muted-foreground" : ""}`}
+                                    >
+                                        {date.getDate()}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-32">
+                                    <DropdownMenuItem onClick={() => onNavigateToDay(date)}>
+                                        View Day
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onNavigateToWeek(date)}>
+                                        View Week
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <div className="space-y-1 flex-1 overflow-auto">
                                 {dayEvents.slice(0, 3).map((event) => (
                                     <EventPill
@@ -1119,11 +1153,13 @@ function WeekView({
     events,
     workWeekOnly,
     onEventClick,
+    onNavigateToDay,
 }: {
     currentDate: Date;
     events: CalendarEvent[];
     workWeekOnly: boolean;
     onEventClick: (event: CalendarEvent) => void;
+    onNavigateToDay: (date: Date) => void;
 }) {
     // Get week start (Sunday)
     const weekStart = new Date(currentDate);
@@ -1179,9 +1215,12 @@ function WeekView({
                             <div className="text-sm text-muted-foreground">
                                 {dayNames[day.getDay()]}
                             </div>
-                            <div className={`text-lg font-semibold ${isToday ? "bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto" : ""}`}>
+                            <button
+                                onClick={() => onNavigateToDay(day)}
+                                className={`text-lg font-semibold cursor-pointer hover:bg-primary/10 rounded-full transition-colors ${isToday ? "bg-primary text-primary-foreground w-8 h-8 flex items-center justify-center mx-auto hover:bg-primary/80" : "w-8 h-8 flex items-center justify-center mx-auto"}`}
+                            >
                                 {day.getDate()}
-                            </div>
+                            </button>
                         </div>
                     );
                 })}
