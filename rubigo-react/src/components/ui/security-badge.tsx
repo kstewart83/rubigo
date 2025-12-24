@@ -7,7 +7,7 @@
  */
 
 import { cva, type VariantProps } from "class-variance-authority";
-import { Shield } from "lucide-react";
+import { Shield, Layers } from "lucide-react";
 import type { SensitivityLevel, AccessControlObject } from "@/lib/access-control/types";
 import { cn } from "@/lib/utils";
 import {
@@ -26,10 +26,10 @@ const badgeVariants = cva(
     {
         variants: {
             sensitivity: {
-                public: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
-                low: "bg-sky-500/10 border-sky-500/30 text-sky-400",
-                moderate: "bg-amber-500/10 border-amber-500/30 text-amber-400",
-                high: "bg-red-500/10 border-red-500/30 text-red-400",
+                public: "bg-emerald-900 border-emerald-500/50 text-emerald-300",
+                low: "bg-sky-900 border-sky-500/50 text-sky-300",
+                moderate: "bg-amber-900 border-amber-500/50 text-amber-300",
+                high: "bg-red-900 border-red-500/50 text-red-300",
             },
             size: {
                 sm: "text-[10px] px-1.5 py-0.5",
@@ -50,6 +50,8 @@ const LEVEL_LABELS: Record<SensitivityLevel, string> = {
     moderate: "MOD",
     high: "HIGH",
 };
+
+
 
 // ============================================================================
 // Component
@@ -80,20 +82,29 @@ export function SecurityBadge({
     const tenants = aco?.tenants ?? [];
     const roles = aco?.roles ?? [];
 
+
     const label = LEVEL_LABELS[sensitivity];
 
+    // Determine tenant indicator: single tenant emoji, or multi-tenant icon
+    let tenantIndicator: React.ReactNode = null;
+    if (tenants.length === 1) {
+        tenantIndicator = <span className="text-[10px] leading-none">{tenants[0]}</span>;
+    } else if (tenants.length > 1) {
+        tenantIndicator = <Layers className="size-3" />;
+    }
+
     const badge = (
-        <span className={cn(badgeVariants({ sensitivity, size }), className)}>
-            {showIcon && <Shield className="size-3" />}
-            <span>{label}</span>
-            {showTenants && tenants.length > 0 && (
-                <span className="ml-0.5">{tenants.join("")}</span>
-            )}
+        <span className={cn(badgeVariants({ sensitivity, size }), "flex-col", className)}>
+            <span className="flex items-center gap-1">
+                {showIcon && <Shield className="size-3" />}
+                <span>{label}</span>
+            </span>
+            {tenantIndicator}
         </span>
     );
 
-    // Only show tooltip if there are additional details
-    if (tenants.length === 0 && roles.length === 0) {
+    // Only show tooltip if there are MULTIPLE tenants (single tenant shown inline)
+    if (tenants.length <= 1 && roles.length === 0) {
         return badge;
     }
 

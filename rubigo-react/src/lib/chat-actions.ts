@@ -35,6 +35,7 @@ export interface ChatMessageWithSender extends ChatMessage {
     senderDepartment?: string | null;
     senderDeskPhone?: string | null;
     senderCellPhone?: string | null;
+    senderIsAgent?: boolean | null;
 }
 
 // ============================================================================
@@ -359,6 +360,7 @@ export async function getMessages(
             senderDepartment: personnel.department,
             senderDeskPhone: personnel.deskPhone,
             senderCellPhone: personnel.cellPhone,
+            senderIsAgent: personnel.isAgent,
         })
         .from(chatMessages)
         .innerJoin(personnel, eq(chatMessages.senderId, personnel.id))
@@ -372,7 +374,7 @@ export async function getMessages(
         .limit(limit);
 
     // Reverse to get chronological order (oldest first)
-    return messages.reverse().map(({ message, senderName, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone }) => ({
+    return messages.reverse().map(({ message, senderName, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone, senderIsAgent }) => ({
         ...message,
         senderName,
         senderEmail,
@@ -380,6 +382,7 @@ export async function getMessages(
         senderDepartment,
         senderDeskPhone,
         senderCellPhone,
+        senderIsAgent,
     }));
 }
 

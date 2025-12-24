@@ -18,6 +18,7 @@ export async function GET() {
                 department: personnel.department,
                 isAgent: personnel.isAgent,
                 agentStatus: personnel.agentStatus,
+                aco: personnel.aco,
             })
             .from(personnel)
             .where(eq(personnel.isAgent, true))
@@ -30,6 +31,7 @@ export async function GET() {
                 title: a.title,
                 department: a.department,
                 status: a.agentStatus || "dormant",
+                aco: a.aco,
             })),
             total: agents.length,
         });

@@ -57,6 +57,7 @@ import { createPersonnel, updatePersonnel, deletePersonnel } from "@/lib/personn
 import { PersonnelSelector } from "@/components/personnel-selector";
 import { PhotoUpload } from "@/components/photo-upload";
 import { SecureTableWrapper } from "@/components/ui/secure-table-wrapper";
+import { AgentBadge } from "@/components/ui/agent-badge";
 import type { Department, Person } from "@/types/personnel";
 import type { SensitivityLevel, AccessControlObject } from "@/lib/access-control/types";
 
@@ -505,7 +506,12 @@ export function PersonnelPageContent({
                                             </div>
                                         )}
                                     </TableCell>
-                                    <TableCell className="font-medium">{person.name}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <span className="flex items-center gap-2">
+                                            {person.name}
+                                            {person.isAgent && <AgentBadge size="xs" />}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>{person.title || "-"}</TableCell>
                                     <TableCell>{person.department}</TableCell>
                                     <TableCell>{person.email}</TableCell>
@@ -568,7 +574,10 @@ export function PersonnelPageContent({
                     {selectedPerson && (
                         <>
                             <SheetHeader>
-                                <SheetTitle>{selectedPerson.name}</SheetTitle>
+                                <SheetTitle className="flex items-center gap-2">
+                                    {selectedPerson.name}
+                                    {selectedPerson.isAgent && <AgentBadge size="xs" />}
+                                </SheetTitle>
                             </SheetHeader>
                             <div className="mt-6 space-y-6 px-4 overflow-y-auto">
                                 {/* Photo */}

@@ -386,6 +386,7 @@ export const calendarEvents = sqliteTable("calendar_events", {
     updatedAt: text("updated_at").notNull(),
     // Access Control
     aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    descriptionAco: text("description_aco").default('{"sensitivity":"low"}'),
     sco: text("sco"),
 });
 
@@ -565,6 +566,7 @@ export const agentEvents = sqliteTable("agent_events", {
     targetEntity: text("target_entity"), // e.g., "email:123", "chat:456"
     parentEventId: text("parent_event_id"), // For ReAct chains
     metadata: text("metadata"), // JSON for additional context
+    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
 });
 
 /**
@@ -624,6 +626,7 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     payload: text("payload"), // JSON with event-specific details
     createdAt: text("created_at").notNull(), // ISO 8601
     processedAt: text("processed_at"), // ISO 8601, null until processed
+    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
 });
 
 // Collaboration: Presentations
@@ -874,3 +877,25 @@ export const REACTION_TIERS = {
     async: { maxLatencyMs: 3600000 },   // Email, task queue
 } as const;
 export type ReactionTier = keyof typeof REACTION_TIERS;
+
+// ============================================================================
+// Application Settings
+// ============================================================================
+
+/**
+ * App Settings - Key-value store for application-wide preferences
+ */
+export const appSettings = sqliteTable("app_settings", {
+    key: text("key").primaryKey(),
+    value: text("value").notNull(),
+    updatedAt: text("updated_at").notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;
+
+// Well-known setting keys
+export const SETTING_KEYS = {
+    OLLAMA_MODEL: "ollama_model",
+} as const;
+

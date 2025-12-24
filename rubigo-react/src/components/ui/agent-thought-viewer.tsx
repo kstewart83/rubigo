@@ -1,5 +1,7 @@
 /**
  * Agent Thought Viewer - Display agent's internal reasoning
+ * 
+ * Uses shared AgentEventItem component for consistent styling with activity feed.
  */
 
 "use client";
@@ -9,53 +11,26 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AgentStatusIndicator } from "./agent-status-indicator";
+import { SecureTableWrapper } from "./secure-table-wrapper";
+import { X } from "lucide-react";
+import {
+    AgentEventItem,
+    AgentEventDetailModal,
+    useEventDetailModal,
+    parseAco,
+    type AgentEventData,
+} from "./agent-event-item";
 import type { AgentStatus } from "@/db/schema";
-
-export interface ThoughtEntry {
-    id: string;
-    timestamp: string;
-    agentName: string;
-    eventType: "thought" | "action" | "observation" | "decision";
-    content: string;
-    targetEntity?: string;
-}
 
 export interface AgentThoughtViewerProps {
     agentId: string;
     agentName: string;
     status: AgentStatus;
-    thoughts: ThoughtEntry[];
+    thoughts: AgentEventData[];
     maxHeight?: string;
     className?: string;
     onClose?: () => void;
 }
-
-const eventTypeStyles: Record<ThoughtEntry["eventType"], {
-    icon: string;
-    color: string;
-    bgColor: string;
-}> = {
-    thought: {
-        icon: "💭",
-        color: "text-purple-400",
-        bgColor: "bg-purple-500/10",
-    },
-    action: {
-        icon: "⚡",
-        color: "text-amber-400",
-        bgColor: "bg-amber-500/10",
-    },
-    observation: {
-        icon: "👁",
-        color: "text-blue-400",
-        bgColor: "bg-blue-500/10",
-    },
-    decision: {
-        icon: "🎯",
-        color: "text-green-400",
-        bgColor: "bg-green-500/10",
-    },
-};
 
 /**
  * Display an agent's thought stream
@@ -71,6 +46,7 @@ export function AgentThoughtViewer({
 }: AgentThoughtViewerProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
+    const modal = useEventDetailModal();
 
     // Auto-scroll to bottom when new thoughts arrive
     useEffect(() => {
@@ -79,86 +55,85 @@ export function AgentThoughtViewer({
         }
     }, [thoughts, autoScroll]);
 
+    const formatTime = (timestamp: string) => {
+        return new Date(timestamp).toLocaleTimeString();
+    };
+
     return (
-        <Card
-            className={cn("border-purple-500/30", className)}
-            data-testid="agent-thought-viewer"
-            data-agent-id={agentId}
-        >
-            <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <CardTitle className="text-lg">{agentName}</CardTitle>
-                        <AgentStatusIndicator status={status} size="sm" />
-                    </div>
-                    {onClose && (
-                        <button
-                            onClick={onClose}
-                            className="text-muted-foreground hover:text-foreground"
-                            aria-label="Close thought viewer"
-                        >
-                            ✕
-                        </button>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent>
-                <ScrollArea style={{ maxHeight }} ref={scrollRef}>
-                    <div className="space-y-2 pr-4">
-                        {thoughts.length === 0 ? (
-                            <div className="text-center text-muted-foreground py-8">
-                                No thoughts yet...
-                            </div>
-                        ) : (
-                            thoughts.map((thought) => (
-                                <ThoughtItem key={thought.id} thought={thought} />
-                            ))
+        <>
+            <Card
+                className={cn("border-purple-500/30 min-w-0 bg-transparent shadow-none", className)}
+                data-testid="agent-thought-viewer"
+                data-agent-id={agentId}
+            >
+                <CardHeader className="pb-2 px-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <CardTitle className="text-lg">{agentName}</CardTitle>
+                            <AgentStatusIndicator status={status} size="sm" />
+                        </div>
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="text-muted-foreground hover:text-foreground"
+                                aria-label="Close thought viewer"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
                         )}
                     </div>
-                </ScrollArea>
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{thoughts.length} events</span>
-                    <label className="flex items-center gap-1 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={autoScroll}
-                            onChange={(e) => setAutoScroll(e.target.checked)}
-                            className="w-3 h-3"
-                        />
-                        Auto-scroll
-                    </label>
-                </div>
-            </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent className="px-4">
+                    <SecureTableWrapper
+                        items={thoughts}
+                        getSensitivity={(thought) => parseAco(thought.aco).sensitivity}
+                        getTenants={(thought) => parseAco(thought.aco).tenants}
+                        defaultLevel="low"
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <ScrollArea style={{ maxHeight }} ref={scrollRef}>
+                            <div className="space-y-2 p-2">
+                                {thoughts.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-8">
+                                        No thoughts yet...
+                                    </div>
+                                ) : (
+                                    thoughts.map((thought) => (
+                                        <AgentEventItem
+                                            key={thought.id}
+                                            event={thought}
+                                            showAgentName={false}
+                                            formatTime={formatTime}
+                                            onClick={() => modal.openModal(thought)}
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </SecureTableWrapper>
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{thoughts.length} events</span>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={autoScroll}
+                                onChange={(e) => setAutoScroll(e.target.checked)}
+                                className="w-3 h-3"
+                            />
+                            Auto-scroll
+                        </label>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <AgentEventDetailModal
+                event={modal.selectedEvent}
+                open={modal.isOpen}
+                onOpenChange={modal.setOpen}
+            />
+        </>
     );
 }
 
-function ThoughtItem({ thought }: { thought: ThoughtEntry }) {
-    const style = eventTypeStyles[thought.eventType];
-    const time = new Date(thought.timestamp).toLocaleTimeString();
-
-    return (
-        <div
-            className={cn(
-                "rounded-lg p-2 text-sm",
-                style.bgColor
-            )}
-        >
-            <div className="flex items-center gap-2 mb-1">
-                <span>{style.icon}</span>
-                <span className={cn("font-medium capitalize", style.color)}>
-                    {thought.eventType}
-                </span>
-                <span className="text-muted-foreground text-xs ml-auto">
-                    {time}
-                </span>
-            </div>
-            <p className="text-foreground/90">{thought.content}</p>
-            {thought.targetEntity && (
-                <div className="text-xs text-muted-foreground mt-1">
-                    → {thought.targetEntity}
-                </div>
-            )}
-        </div>
-    );
-}
+// Re-export ThoughtEntry type for backwards compatibility
+export type ThoughtEntry = AgentEventData;

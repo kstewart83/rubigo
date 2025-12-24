@@ -31,6 +31,7 @@ export interface PersonnelInput {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
+    isAgent?: boolean; // AI agent flag
     // Security/ABAC fields
     clearanceLevel?: string;
     tenantClearances?: string;

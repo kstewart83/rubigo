@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, Fragment, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -33,6 +33,12 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -61,6 +67,8 @@ import { expandRecurringEvents } from "@/lib/calendar-utils";
 import { usePersona } from "@/contexts/persona-context";
 import { OrphanedDeviationsPanel } from "@/components/orphaned-deviations-panel";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { SecurePanelWrapper } from "@/components/ui/secure-panel-wrapper";
+import { SecurityBadge } from "@/components/ui/security-badge";
 
 // ============================================================================
 // Timezone Constants
@@ -132,34 +140,83 @@ function formatTime12h(hour: number, minute: number): string {
 }
 
 // ============================================================================
+// Security Utilities
+// ============================================================================
+
+type SensitivityLevel = "public" | "low" | "moderate" | "high";
+
+const SENSITIVITY_ORDER: Record<SensitivityLevel, number> = {
+    public: 0,
+    low: 1,
+    moderate: 2,
+    high: 3,
+};
+
+function parseAco(aco: string | undefined): { sensitivity: SensitivityLevel; tenants: string[] } {
+    if (!aco) return { sensitivity: "low", tenants: [] };
+    try {
+        const parsed = JSON.parse(aco);
+        return {
+            sensitivity: (parsed.sensitivity || "low") as SensitivityLevel,
+            tenants: parsed.tenants || [],
+        };
+    } catch {
+        return { sensitivity: "low", tenants: [] };
+    }
+}
+
+function getMaxSensitivity(events: Array<{ aco?: string }>): SensitivityLevel {
+    let max: SensitivityLevel = "low";
+    for (const event of events) {
+        const { sensitivity } = parseAco(event.aco);
+        if (SENSITIVITY_ORDER[sensitivity] > SENSITIVITY_ORDER[max]) {
+            max = sensitivity;
+        }
+    }
+    return max;
+}
+
+function getAllTenants(events: Array<{ aco?: string }>): string[] {
+    const tenantSet = new Set<string>();
+    for (const event of events) {
+        const { tenants } = parseAco(event.aco);
+        tenants.forEach(t => tenantSet.add(t));
+    }
+    return Array.from(tenantSet);
+}
+
+// ============================================================================
 // Event Positioning Utilities
 // ============================================================================
 
-const HOUR_HEIGHT_PX = 48; // Height of one hour in pixels
 const START_HOUR = 6; // Grid starts at 6 AM
+const END_HOUR = 23; // Grid ends at 11 PM
+const SLOTS_PER_HOUR = 6; // 10-minute slots per hour
+const TOTAL_HOURS = END_HOUR - START_HOUR; // 17 hours
+const TOTAL_SLOTS = TOTAL_HOURS * SLOTS_PER_HOUR; // 102 slots
 
 interface PositionedEvent {
     event: CalendarEvent;
-    top: number;      // px from top of grid
-    height: number;   // px height based on duration
-    lane: number;     // 0-indexed lane for horizontal positioning
+    startSlot: number;  // Grid row start (1-indexed for CSS grid)
+    endSlot: number;    // Grid row end (exclusive, CSS grid style)
+    lane: number;       // 0-indexed lane for horizontal positioning
     totalLanes: number; // Total lanes in this overlap group
 }
 
 /**
- * Calculate the vertical position and height of an event based on its time
+ * Calculate the grid slot position for an event based on its time
  */
-function getEventTimePosition(event: CalendarEvent): { top: number; height: number } {
+function getEventSlotPosition(event: CalendarEvent): { startSlot: number; endSlot: number } {
     const { start, end } = getInstanceDateTime(event);
 
-    const startHour = start.getHours() + start.getMinutes() / 60;
-    const endHour = end.getHours() + end.getMinutes() / 60;
+    const startMinutes = (start.getHours() - START_HOUR) * 60 + start.getMinutes();
+    const endMinutes = (end.getHours() - START_HOUR) * 60 + end.getMinutes();
 
-    // Position relative to START_HOUR
-    const top = (startHour - START_HOUR) * HOUR_HEIGHT_PX;
-    const height = Math.max((endHour - startHour) * HOUR_HEIGHT_PX, 20); // Minimum 20px height
+    // Convert minutes to slots (1 slot = 10 minutes), 1-indexed for CSS grid
+    const startSlot = Math.max(1, Math.floor(startMinutes / 10) + 1);
+    const endSlot = Math.max(startSlot + 1, Math.ceil(endMinutes / 10) + 1); // At least 1 slot
 
-    return { top, height };
+    return { startSlot, endSlot };
 }
 
 /**
@@ -285,11 +342,11 @@ function assignLanes(events: CalendarEvent[]): PositionedEvent[] {
         const totalLanes = laneEndTimes.length;
 
         for (const event of group) {
-            const { top, height } = getEventTimePosition(event);
+            const { startSlot, endSlot } = getEventSlotPosition(event);
             result.push({
                 event,
-                top,
-                height,
+                startSlot,
+                endSlot,
                 lane: eventLanes.get(event.id + event.instanceDate) || 0,
                 totalLanes,
             });
@@ -334,6 +391,8 @@ interface CalendarEvent {
     isRecurring: boolean;
     hasDeviation?: boolean;
     timezone?: string;
+    aco?: string;
+    descriptionAco?: string;
 }
 
 // ============================================================================
@@ -343,15 +402,47 @@ interface CalendarEvent {
 export function CalendarPageContent() {
     const { currentPersona } = usePersona();
     const { trackEvent } = useAnalytics();
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState<"month" | "week" | "day">("month");
-    const [workWeekOnly, setWorkWeekOnly] = useState(false);
+
+    // Initialize state from localStorage
+    const [currentDate, setCurrentDate] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('calendar.currentDate');
+            return saved ? new Date(saved) : new Date();
+        }
+        return new Date();
+    });
+    const [view, setView] = useState<"month" | "week" | "day">(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('calendar.view');
+            if (saved === 'month' || saved === 'week' || saved === 'day') return saved;
+        }
+        return "month";
+    });
+    const [workWeekOnly, setWorkWeekOnly] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('calendar.workWeekOnly') === 'true';
+        }
+        return false;
+    });
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [showEventModal, setShowEventModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [showDetailsPanel, setShowDetailsPanel] = useState(false);
+
+    // Persist state to localStorage
+    useEffect(() => {
+        localStorage.setItem('calendar.currentDate', currentDate.toISOString());
+    }, [currentDate]);
+
+    useEffect(() => {
+        localStorage.setItem('calendar.view', view);
+    }, [view]);
+
+    useEffect(() => {
+        localStorage.setItem('calendar.workWeekOnly', String(workWeekOnly));
+    }, [workWeekOnly]);
 
     // Handle view change with analytics tracking
     const handleViewChange = (newView: "month" | "week" | "day") => {
@@ -451,6 +542,28 @@ export function CalendarPageContent() {
         setCurrentDate(new Date());
     };
 
+    // Get events visible in current view for security rollup
+    const getVisibleEvents = () => {
+        if (view === "day") {
+            // Only events on current date
+            const dateStr = format(currentDate, "yyyy-MM-dd");
+            return events.filter(e => e.instanceDate === dateStr);
+        } else if (view === "week") {
+            // Events for the current week
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+            const startStr = format(weekStart, "yyyy-MM-dd");
+            const endDate = new Date(weekStart);
+            endDate.setDate(weekStart.getDate() + 6);
+            const endStr = format(endDate, "yyyy-MM-dd");
+            return events.filter(e => e.instanceDate >= startStr && e.instanceDate <= endStr);
+        }
+        // Month view - return all events (already filtered by fetch)
+        return events;
+    };
+
+    const visibleEvents = getVisibleEvents();
+
     // Get month display name
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
@@ -462,7 +575,7 @@ export function CalendarPageContent() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold">
+                    <h1 className="text-2xl font-bold min-w-48">
                         {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                     </h1>
                     <div className="flex items-center gap-1">
@@ -520,41 +633,47 @@ export function CalendarPageContent() {
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            {loading ? (
-                <div className="flex-1 flex items-center justify-center">
-                    <p className="text-muted-foreground">Loading...</p>
-                </div>
-            ) : view === "month" ? (
-                <MonthGrid
-                    currentDate={currentDate}
-                    events={events}
-                    workWeekOnly={workWeekOnly}
-                    onEventClick={(event) => {
-                        setSelectedEvent(event);
-                        setShowDetailsPanel(true);
-                    }}
-                />
-            ) : view === "week" ? (
-                <WeekView
-                    currentDate={currentDate}
-                    events={events}
-                    workWeekOnly={workWeekOnly}
-                    onEventClick={(event) => {
-                        setSelectedEvent(event);
-                        setShowDetailsPanel(true);
-                    }}
-                />
-            ) : (
-                <DayView
-                    currentDate={currentDate}
-                    events={events}
-                    onEventClick={(event) => {
-                        setSelectedEvent(event);
-                        setShowDetailsPanel(true);
-                    }}
-                />
-            )}
+            {/* Calendar Grid with Security Header/Footer */}
+            <SecurePanelWrapper
+                level={getMaxSensitivity(visibleEvents)}
+                tenants={getAllTenants(visibleEvents)}
+                className="flex-1 flex flex-col border rounded-lg overflow-hidden"
+            >
+                {loading ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-muted-foreground">Loading...</p>
+                    </div>
+                ) : view === "month" ? (
+                    <MonthGrid
+                        currentDate={currentDate}
+                        events={events}
+                        workWeekOnly={workWeekOnly}
+                        onEventClick={(event) => {
+                            setSelectedEvent(event);
+                            setShowDetailsPanel(true);
+                        }}
+                    />
+                ) : view === "week" ? (
+                    <WeekView
+                        currentDate={currentDate}
+                        events={events}
+                        workWeekOnly={workWeekOnly}
+                        onEventClick={(event) => {
+                            setSelectedEvent(event);
+                            setShowDetailsPanel(true);
+                        }}
+                    />
+                ) : (
+                    <DayView
+                        currentDate={currentDate}
+                        events={events}
+                        onEventClick={(event) => {
+                            setSelectedEvent(event);
+                            setShowDetailsPanel(true);
+                        }}
+                    />
+                )}
+            </SecurePanelWrapper>
 
             {/* Event Modal */}
             <EventModal
@@ -910,9 +1029,9 @@ function MonthGrid({
     const gridCols = workWeekOnly ? 5 : 7;
 
     return (
-        <div className="flex-1 overflow-auto" data-testid="month-grid">
+        <div className="flex-1 flex flex-col overflow-auto" data-testid="month-grid">
             {/* Day headers */}
-            <div className={`grid border-b`} style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
+            <div className={`grid border-b shrink-0`} style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
                 {dayNames.map((day) => (
                     <div
                         key={day}
@@ -924,8 +1043,14 @@ function MonthGrid({
                 ))}
             </div>
 
-            {/* Calendar grid */}
-            <div className={`grid flex-1`} style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
+            {/* Calendar grid - fills remaining space */}
+            <div
+                className="grid flex-1"
+                style={{
+                    gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${Math.ceil(days.length / gridCols)}, 1fr)`,
+                }}
+            >
                 {days.map(({ date, isCurrentMonth }, index) => {
                     const dayEvents = getEventsForDate(date);
                     const isTodayCell = isToday(date);
@@ -933,19 +1058,19 @@ function MonthGrid({
                     return (
                         <div
                             key={index}
-                            className={`min-h-24 border-b border-r p-1 ${!isCurrentMonth ? "bg-muted/50" : ""
-                                }`}
+                            className={`border-b border-r p-1 flex flex-col ${!isCurrentMonth ? "bg-muted/50" : ""
+                                } ${isTodayCell ? "ring-2 ring-primary ring-inset bg-primary/5" : ""}`}
                             data-testid={isTodayCell ? "today" : undefined}
                         >
                             <div
-                                className={`text-sm mb-1 ${isTodayCell
+                                className={`text-sm mb-1 shrink-0 ${isTodayCell
                                     ? "bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center"
                                     : ""
                                     } ${!isCurrentMonth ? "text-muted-foreground" : ""}`}
                             >
                                 {date.getDate()}
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 flex-1 overflow-auto">
                                 {dayEvents.slice(0, 3).map((event) => (
                                     <EventPill
                                         key={`${event.id}-${event.instanceDate}`}
@@ -954,9 +1079,27 @@ function MonthGrid({
                                     />
                                 ))}
                                 {dayEvents.length > 3 && (
-                                    <div className="text-xs text-muted-foreground">
-                                        +{dayEvents.length - 3} more
-                                    </div>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="text-xs text-muted-foreground hover:underline cursor-pointer">
+                                                +{dayEvents.length - 3} more
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent side="right" className="w-64 p-2">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-medium text-muted-foreground mb-2">
+                                                    {dayEvents.length - 3} more events
+                                                </p>
+                                                {dayEvents.slice(3).map((event) => (
+                                                    <EventPill
+                                                        key={`${event.id}-${event.instanceDate}`}
+                                                        event={event}
+                                                        onClick={() => onEventClick(event)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 )}
                             </div>
                         </div>
@@ -997,9 +1140,8 @@ function WeekView({
         days.push(day);
     }
 
-    // Time slots (6 AM to 10 PM = 17 hours)
-    const hours = Array.from({ length: 17 }, (_, i) => i + 6);
-    const totalHeight = hours.length * HOUR_HEIGHT_PX;
+    // Time slots and hours
+    const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => i + START_HOUR);
 
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -1020,21 +1162,29 @@ function WeekView({
     const hasAnyAllDayEvents = days.some((day) => getAllDayEventsForDate(day).length > 0);
 
     return (
-        <div className="flex-1 overflow-auto" data-testid="week-view">
+        <div className="flex-1 flex flex-col overflow-hidden" data-testid="week-view">
             {/* Day headers */}
-            <div className="grid sticky top-0 bg-background z-10" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
+            <div className="grid sticky top-0 bg-background z-10 shrink-0" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
                 <div className="p-2 border-b" /> {/* Empty corner */}
-                {days.map((day) => (
-                    <div
-                        key={day.toISOString()}
-                        className="p-2 text-center border-b border-l"
-                    >
-                        <div className="text-sm text-muted-foreground">
-                            {dayNames[day.getDay()]}
+                {days.map((day) => {
+                    const todayStr = format(new Date(), "yyyy-MM-dd");
+                    const dayStr = format(day, "yyyy-MM-dd");
+                    const isToday = dayStr === todayStr;
+
+                    return (
+                        <div
+                            key={day.toISOString()}
+                            className={`p-2 text-center border-b border-l ${isToday ? "bg-primary/5" : ""}`}
+                        >
+                            <div className="text-sm text-muted-foreground">
+                                {dayNames[day.getDay()]}
+                            </div>
+                            <div className={`text-lg font-semibold ${isToday ? "bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto" : ""}`}>
+                                {day.getDate()}
+                            </div>
                         </div>
-                        <div className="text-lg font-semibold">{day.getDate()}</div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* All Day Events Section */}
@@ -1058,15 +1208,21 @@ function WeekView({
                 </div>
             )}
 
-            {/* Time grid with events */}
-            <div className="grid" style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}>
+            {/* Time grid with events - uses CSS Grid for responsive height */}
+            <div
+                className="grid flex-1"
+                style={{ gridTemplateColumns: `60px repeat(${days.length}, 1fr)` }}
+            >
                 {/* Time labels column */}
-                <div className="relative" style={{ height: totalHeight }}>
+                <div
+                    className="grid"
+                    style={{ gridTemplateRows: `repeat(${TOTAL_SLOTS}, 1fr)` }}
+                >
                     {hours.map((hour, idx) => (
                         <div
                             key={hour}
-                            className="absolute text-xs text-muted-foreground pr-2 text-right w-full"
-                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                            className="text-xs text-muted-foreground pr-2 text-right flex items-start pt-1"
+                            style={{ gridRow: `${idx * SLOTS_PER_HOUR + 1} / span ${SLOTS_PER_HOUR}` }}
                         >
                             {hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                         </div>
@@ -1076,33 +1232,36 @@ function WeekView({
                 {/* Day columns */}
                 {days.map((day) => {
                     const positionedEvents = getPositionedEventsForDate(day);
+                    const todayStr = format(new Date(), "yyyy-MM-dd");
+                    const dayStr = format(day, "yyyy-MM-dd");
+                    const isToday = dayStr === todayStr;
 
                     return (
                         <div
                             key={day.toISOString()}
-                            className="relative border-l"
-                            style={{ height: totalHeight }}
+                            className={`grid border-l relative ${isToday ? "bg-primary/5 ring-1 ring-primary/30 ring-inset" : ""}`}
+                            style={{ gridTemplateRows: `repeat(${TOTAL_SLOTS}, 1fr)` }}
                         >
-                            {/* Hour gridlines */}
+                            {/* Hour gridlines - only on hour boundaries */}
                             {hours.map((hour, idx) => (
                                 <div
                                     key={hour}
-                                    className="absolute w-full border-b"
-                                    style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                                    className="border-b border-border/50"
+                                    style={{ gridRow: `${idx * SLOTS_PER_HOUR + 1} / span ${SLOTS_PER_HOUR}` }}
                                 />
                             ))}
 
                             {/* Positioned events */}
-                            {positionedEvents.map(({ event, top, height, lane, totalLanes }) => {
+                            {positionedEvents.map(({ event, startSlot, endSlot, lane, totalLanes }) => {
                                 const width = `calc(${100 / totalLanes}% - 2px)`;
                                 const left = `calc(${(lane / totalLanes) * 100}% + 1px)`;
 
                                 return (
-                                    <PositionedEventPill
+                                    <GridPositionedEventPill
                                         key={`${event.id}-${event.instanceDate}`}
                                         event={event}
-                                        top={top}
-                                        height={height}
+                                        startSlot={startSlot}
+                                        endSlot={endSlot}
                                         width={width}
                                         left={left}
                                         onClick={() => onEventClick(event)}
@@ -1136,21 +1295,74 @@ function CurrentTimeIndicator() {
     // Calculate position based on current hour/minute
     const hour = currentTime.getHours();
     const minute = currentTime.getMinutes();
-    const hourDecimal = hour + minute / 60;
+    const totalMinutes = (hour - START_HOUR) * 60 + minute;
+    const slot = Math.floor(totalMinutes / 10) + 1; // 10-minute slots, 1-indexed
 
-    // Position relative to START_HOUR (6 AM)
-    const top = (hourDecimal - START_HOUR) * HOUR_HEIGHT_PX;
-
-    // Don't render if outside visible range (6 AM - 10 PM)
-    if (hour < START_HOUR || hour >= START_HOUR + 17) {
+    // Don't render if outside visible range
+    if (hour < START_HOUR || hour >= END_HOUR) {
         return null;
     }
+
+    // Use percentage-based positioning within the slot
+    const minuteInSlot = minute % 10;
+    const slotPercentage = (minuteInSlot / 10) * 100;
 
     return (
         <div
             className="absolute left-0 right-0 z-20 pointer-events-none"
-            style={{ top: `${top}px` }}
+            style={{
+                gridRow: `${slot} / span 1`,
+                top: `${slotPercentage}%`
+            }}
             data-testid="current-time-indicator"
+        >
+            {/* Red circle at the start */}
+            <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-red-500" />
+            {/* Red line across */}
+            <div className="h-0.5 bg-red-500 w-full" />
+        </div>
+    );
+}
+
+// ============================================================================
+// Grid Current Time Indicator Component (CSS Grid positioning)
+// ============================================================================
+
+function GridCurrentTimeIndicator() {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        // Update every minute
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Calculate slot based on current hour/minute
+    const hour = currentTime.getHours();
+    const minute = currentTime.getMinutes();
+    const totalMinutes = (hour - START_HOUR) * 60 + minute;
+    const slot = Math.floor(totalMinutes / 10) + 1; // 10-minute slots, 1-indexed
+
+    // Don't render if outside visible range
+    if (hour < START_HOUR || hour >= END_HOUR) {
+        return null;
+    }
+
+    // Calculate percentage within the slot for fine positioning
+    const minuteInSlot = minute % 10;
+    const slotPercentage = (minuteInSlot / 10) * 100;
+
+    return (
+        <div
+            className="absolute left-0 right-0 z-20 pointer-events-none"
+            style={{
+                gridRow: `${slot} / span 1`,
+                top: `${slotPercentage}%`
+            }}
+            data-testid="grid-current-time-indicator"
         >
             {/* Red circle at the start */}
             <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-red-500" />
@@ -1173,9 +1385,8 @@ function DayView({
     events: CalendarEvent[];
     onEventClick: (event: CalendarEvent) => void;
 }) {
-    // Time slots (6 AM to 10 PM = 17 hours)
-    const hours = Array.from({ length: 17 }, (_, i) => i + 6);
-    const totalHeight = hours.length * HOUR_HEIGHT_PX;
+    // Time slots and hours
+    const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => i + START_HOUR);
 
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -1190,9 +1401,9 @@ function DayView({
     const positionedEvents = assignLanes(timedEvents);
 
     return (
-        <div className="flex-1 overflow-auto" data-testid="day-view">
+        <div className="flex-1 flex flex-col overflow-hidden" data-testid="day-view">
             {/* Day header */}
-            <div className="grid sticky top-0 bg-background z-10" style={{ gridTemplateColumns: "60px 1fr" }}>
+            <div className="grid sticky top-0 bg-background z-10 shrink-0" style={{ gridTemplateColumns: "60px 1fr" }}>
                 <div className="p-2 border-b" /> {/* Empty corner */}
                 <div className="p-2 text-center border-b border-l">
                     <div className="text-sm text-muted-foreground">
@@ -1218,15 +1429,21 @@ function DayView({
                 </div>
             )}
 
-            {/* Time grid with events */}
-            <div className="grid" style={{ gridTemplateColumns: "60px 1fr" }}>
+            {/* Time grid with events - uses CSS Grid for responsive height */}
+            <div
+                className="grid flex-1"
+                style={{ gridTemplateColumns: "60px 1fr" }}
+            >
                 {/* Time labels column */}
-                <div className="relative" style={{ height: totalHeight }}>
+                <div
+                    className="grid"
+                    style={{ gridTemplateRows: `repeat(${TOTAL_SLOTS}, 1fr)` }}
+                >
                     {hours.map((hour, idx) => (
                         <div
                             key={hour}
-                            className="absolute text-xs text-muted-foreground pr-2 text-right w-full"
-                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                            className="text-xs text-muted-foreground pr-2 text-right flex items-start pt-1"
+                            style={{ gridRow: `${idx * SLOTS_PER_HOUR + 1} / span ${SLOTS_PER_HOUR}` }}
                         >
                             {hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                         </div>
@@ -1234,27 +1451,30 @@ function DayView({
                 </div>
 
                 {/* Day column */}
-                <div className="relative border-l" style={{ height: totalHeight }}>
-                    {/* Hour gridlines */}
+                <div
+                    className={`grid border-l relative ${isToday ? "bg-primary/5" : ""}`}
+                    style={{ gridTemplateRows: `repeat(${TOTAL_SLOTS}, 1fr)` }}
+                >
+                    {/* Hour gridlines - only on hour boundaries */}
                     {hours.map((hour, idx) => (
                         <div
                             key={hour}
-                            className="absolute w-full border-b"
-                            style={{ top: idx * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                            className="border-b border-border/50"
+                            style={{ gridRow: `${idx * SLOTS_PER_HOUR + 1} / span ${SLOTS_PER_HOUR}` }}
                         />
                     ))}
 
                     {/* Positioned events */}
-                    {positionedEvents.map(({ event, top, height, lane, totalLanes }) => {
+                    {positionedEvents.map(({ event, startSlot, endSlot, lane, totalLanes }) => {
                         const width = `calc(${100 / totalLanes}% - 2px)`;
                         const left = `calc(${(lane / totalLanes) * 100}% + 1px)`;
 
                         return (
-                            <PositionedEventPill
+                            <GridPositionedEventPill
                                 key={`${event.id}-${event.instanceDate}`}
                                 event={event}
-                                top={top}
-                                height={height}
+                                startSlot={startSlot}
+                                endSlot={endSlot}
                                 width={width}
                                 left={left}
                                 onClick={() => onEventClick(event)}
@@ -1263,7 +1483,7 @@ function DayView({
                     })}
 
                     {/* Current time indicator - only show for today */}
-                    {isToday && <CurrentTimeIndicator />}
+                    {isToday && <GridCurrentTimeIndicator />}
                 </div>
             </div>
         </div>
@@ -1282,16 +1502,51 @@ function EventPill({
     onClick: () => void;
 }) {
     const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+    const aco = parseAco(event.aco);
+    const textRef = useRef<HTMLSpanElement>(null);
+    const [isTruncated, setIsTruncated] = useState(false);
 
-    return (
+    // Check if text is truncated on mount and resize
+    useEffect(() => {
+        const checkTruncation = () => {
+            if (textRef.current) {
+                setIsTruncated(textRef.current.scrollHeight > textRef.current.clientHeight);
+            }
+        };
+        checkTruncation();
+        window.addEventListener('resize', checkTruncation);
+        return () => window.removeEventListener('resize', checkTruncation);
+    }, [event.title]);
+
+    const button = (
         <button
-            className="event-pill w-full text-left text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
+            className="event-pill w-full text-left text-xs p-1 rounded cursor-pointer hover:opacity-80 flex items-center gap-1.5 min-w-0"
             style={{ backgroundColor: typeInfo.color, color: typeInfo.textColor || "white" }}
             onClick={onClick}
             data-testid="event-pill"
         >
-            {event.title}
+            <SecurityBadge
+                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                size="sm"
+                className="shrink-0"
+            />
+            <span ref={textRef} className="line-clamp-2 break-words min-w-0">{event.title}</span>
         </button>
+    );
+
+    if (!isTruncated) {
+        return button;
+    }
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>{button}</TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium">{event.title}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
 
@@ -1315,14 +1570,18 @@ function PositionedEventPill({
     onClick: () => void;
 }) {
     const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+    const aco = parseAco(event.aco);
 
     // Format time display
     const startTime = new Date(event.startTime);
     const timeStr = `${startTime.getHours() % 12 || 12}:${startTime.getMinutes().toString().padStart(2, "0")} ${startTime.getHours() >= 12 ? "PM" : "AM"}`;
 
-    return (
+    // For taller events, use vertical layout like month view
+    const isCompact = height < 48;
+
+    const pill = (
         <button
-            className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex flex-col"
             style={{
                 backgroundColor: typeInfo.color,
                 color: typeInfo.textColor || "white",
@@ -1334,9 +1593,99 @@ function PositionedEventPill({
             onClick={onClick}
             data-testid="positioned-event-pill"
         >
-            <div className="font-medium truncate">{event.title}</div>
-            {height >= 36 && <div className="text-xs opacity-80">{timeStr}</div>}
+            <div className={`flex items-center gap-1 ${isCompact ? "" : "mb-0.5"}`}>
+                <SecurityBadge
+                    aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                    size="sm"
+                    className="shrink-0"
+                />
+                <span className={isCompact ? "truncate" : "line-clamp-2 break-words"}>{event.title}</span>
+            </div>
+            {!isCompact && <div className="text-xs opacity-80">{timeStr}</div>}
         </button>
+    );
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>{pill}</TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-xs text-muted-foreground">{timeStr}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+}
+
+// ============================================================================
+// Grid Positioned Event Pill Component (for Day/Week view - CSS Grid positioning)
+// ============================================================================
+
+function GridPositionedEventPill({
+    event,
+    startSlot,
+    endSlot,
+    width,
+    left,
+    onClick,
+}: {
+    event: CalendarEvent;
+    startSlot: number;
+    endSlot: number;
+    width: string;
+    left: string;
+    onClick: () => void;
+}) {
+    const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+    const aco = parseAco(event.aco);
+
+    // Format time display
+    const startTime = new Date(event.startTime);
+    const timeStr = `${startTime.getHours() % 12 || 12}:${startTime.getMinutes().toString().padStart(2, "0")} ${startTime.getHours() >= 12 ? "PM" : "AM"}`;
+
+    // For taller events (more slots), show more content
+    const slots = endSlot - startSlot;
+    const isCompact = slots < 3; // Less than 30 minutes
+
+    const pill = (
+        <button
+            className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex flex-col"
+            style={{
+                backgroundColor: typeInfo.color,
+                color: typeInfo.textColor || "white",
+                gridRow: `${startSlot} / ${endSlot}`,
+                width,
+                maxWidth: 400,
+                left,
+                top: 1,
+                bottom: 1,
+            }}
+            onClick={onClick}
+            data-testid="grid-positioned-event-pill"
+        >
+            <div className={`flex items-center gap-1 ${isCompact ? "" : "mb-0.5"}`}>
+                <SecurityBadge
+                    aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                    size="sm"
+                    className="shrink-0"
+                />
+                <span className={isCompact ? "truncate" : "line-clamp-2 break-words"}>{event.title}</span>
+            </div>
+            {!isCompact && <div className="text-xs opacity-80">{timeStr}</div>}
+        </button>
+    );
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>{pill}</TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-xs text-muted-foreground">{timeStr}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
 
@@ -1352,16 +1701,34 @@ function AllDayEventPill({
     onClick: () => void;
 }) {
     const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
+    const aco = parseAco(event.aco);
 
-    return (
+    const pill = (
         <button
-            className="w-full text-left text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 mb-1"
+            className="w-full text-left text-xs p-1 rounded cursor-pointer hover:opacity-80 mb-1 flex items-center gap-1"
             style={{ backgroundColor: typeInfo.color, color: typeInfo.textColor || "white" }}
             onClick={onClick}
             data-testid="all-day-event-pill"
         >
-            {event.title}
+            <SecurityBadge
+                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                size="sm"
+                className="shrink-0"
+            />
+            <span className="truncate">{event.title}</span>
         </button>
+    );
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>{pill}</TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-xs text-muted-foreground">All day event</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
 
@@ -1788,126 +2155,150 @@ function EventDetailsPanel({
         displayEndTime = new Date(event.endTime);
     }
 
-    // For calculations below that need original startTime
+    // For calculations below that need original startTime  
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
 
     return (
-        <div
-            className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform z-50 ${open ? "translate-x-0" : "translate-x-full"
-                }`}
-            data-testid="event-details-panel"
-        >
-            <div className="p-4 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                    <div
-                        className="px-2 py-1 rounded text-xs text-white"
-                        style={{ backgroundColor: typeInfo.color }}
-                    >
-                        {typeInfo.label}
+        <>
+            {/* Backdrop overlay */}
+            {open && (
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+                    onClick={onClose}
+                />
+            )}
+
+            {/* Modal panel */}
+            <div
+                className={`fixed top-1/2 right-4 -translate-y-1/2 w-96 max-h-[90vh] bg-background border-2 border-border shadow-2xl rounded-lg transform transition-all z-50 ${open ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}
+                data-testid="event-details-panel"
+            >
+                <div className="p-4 flex flex-col max-h-[90vh]">
+                    {/* Top bar with close, edit, delete */}
+                    <div className="flex items-center gap-2 mb-4">
+                        <Button variant="outline" onClick={onEdit} className="flex-1">
+                            Edit
+                        </Button>
+                        <Button variant="destructive" onClick={onDelete} className="flex-1">
+                            Delete
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
 
-                <h2 className="text-xl font-bold mb-4">{event.title}</h2>
-
-                <div className="space-y-4 flex-1">
-                    <div>
-                        <Label className="text-muted-foreground">Date & Time</Label>
-                        <p>
-                            {displayStartTime.toLocaleDateString()}{" "}
-                            {isAllDayEvent(event) ? (
-                                <span className="font-medium">All Day</span>
-                            ) : (
-                                <>
-                                    {displayStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {displayEndTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </>
-                            )}
-                            {event.timezone && (
-                                <span className="text-muted-foreground"> ({getTimezoneDisplayName(event.timezone)})</span>
-                            )}
-                        </p>
-                        {/* Show local time if event timezone differs from browser timezone */}
-                        {event.timezone && event.timezone !== getBrowserTimezone() && (() => {
-                            const browserTz = getBrowserTimezone();
-                            const startHour = startTime.getHours();
-                            const startMin = startTime.getMinutes();
-                            const endHour = endTime.getHours();
-                            const endMin = endTime.getMinutes();
-                            const localStart = convertTime(startHour, startMin, event.timezone, browserTz);
-                            const localEnd = convertTime(endHour, endMin, event.timezone, browserTz);
-                            return (
-                                <div
-                                    className="mt-2 rounded-md bg-muted/50 p-2 text-sm"
-                                    data-testid="local-time-details"
-                                >
-                                    <span className="font-medium text-muted-foreground">Your local time: </span>
-                                    <span>
-                                        {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)} ({getTimezoneDisplayName(browserTz)})
-                                    </span>
+                    <div className="space-y-4 overflow-y-auto">
+                        {/* Event Details Panel */}
+                        <SecurePanelWrapper
+                            level={parseAco(event.aco).sensitivity}
+                            tenants={parseAco(event.aco).tenants}
+                            className="rounded-lg border overflow-hidden"
+                        >
+                            <div className="p-3 space-y-3">
+                                {/* Title and Type */}
+                                <div className="flex items-start justify-between gap-2">
+                                    <h2 className="text-xl font-bold">{event.title}</h2>
+                                    <div
+                                        className="px-2 py-1 rounded text-xs text-white shrink-0"
+                                        style={{ backgroundColor: typeInfo.color }}
+                                    >
+                                        {typeInfo.label}
+                                    </div>
                                 </div>
-                            );
-                        })()}
+
+                                <div>
+                                    <Label className="text-muted-foreground">Date & Time</Label>
+                                    <p>
+                                        {displayStartTime.toLocaleDateString()}{" "}
+                                        {isAllDayEvent(event) ? (
+                                            <span className="font-medium">All Day</span>
+                                        ) : (
+                                            <>
+                                                {displayStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {displayEndTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                            </>
+                                        )}
+                                        {event.timezone && (
+                                            <span className="text-muted-foreground"> ({getTimezoneDisplayName(event.timezone)})</span>
+                                        )}
+                                    </p>
+                                    {/* Show local time if event timezone differs from browser timezone */}
+                                    {event.timezone && event.timezone !== getBrowserTimezone() && (() => {
+                                        const browserTz = getBrowserTimezone();
+                                        const startHour = new Date(event.startTime).getHours();
+                                        const startMin = new Date(event.startTime).getMinutes();
+                                        const endHour = new Date(event.endTime).getHours();
+                                        const endMin = new Date(event.endTime).getMinutes();
+                                        const localStart = convertTime(startHour, startMin, event.timezone, browserTz);
+                                        const localEnd = convertTime(endHour, endMin, event.timezone, browserTz);
+                                        return (
+                                            <div className="mt-2 rounded-md bg-muted/50 p-2 text-sm">
+                                                <span className="font-medium text-muted-foreground">Your local time: </span>
+                                                <span>
+                                                    {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)} ({getTimezoneDisplayName(browserTz)})
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {event.location && (
+                                    <div>
+                                        <Label className="text-muted-foreground">Location</Label>
+                                        <p>{event.location}</p>
+                                    </div>
+                                )}
+
+                                {event.isRecurring && (
+                                    <div>
+                                        <Label className="text-muted-foreground">Recurrence</Label>
+                                        <p className="text-sm">{event.recurrence}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </SecurePanelWrapper>
+
+                        {/* Description Panel (separate ACO) */}
+                        {event.description && (
+                            <SecurePanelWrapper
+                                level={parseAco(event.descriptionAco || event.aco).sensitivity}
+                                tenants={parseAco(event.descriptionAco || event.aco).tenants}
+                                className="rounded-lg border overflow-hidden"
+                            >
+                                <div className="p-3">
+                                    <Label className="text-muted-foreground">Description</Label>
+                                    <p className="mt-1">{event.description}</p>
+                                </div>
+                            </SecurePanelWrapper>
+                        )}
+
+                        {/* Orphaned Deviations Indicator */}
+                        {event.isRecurring && (
+                            <OrphanedDeviationsPanel
+                                eventId={event.id}
+                                isRecurring={event.isRecurring}
+                            />
+                        )}
+
+                        {/* Deviation status indicator */}
+                        {event.hasDeviation && (
+                            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2">
+                                <Label className="text-amber-700 dark:text-amber-400 text-sm font-medium">
+                                    {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
+                                        ? "📅 Moved Instance"
+                                        : "✏️ Modified Instance"}
+                                </Label>
+                                <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+                                    {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
+                                        ? "This occurrence was moved from its original date in the series."
+                                        : "This occurrence has been modified from the series."}
+                                </p>
+                            </div>
+                        )}
                     </div>
-
-                    {event.location && (
-                        <div>
-                            <Label className="text-muted-foreground">Location</Label>
-                            <p>{event.location}</p>
-                        </div>
-                    )}
-
-                    {event.description && (
-                        <div>
-                            <Label className="text-muted-foreground">Description</Label>
-                            <p>{event.description}</p>
-                        </div>
-                    )}
-
-                    {event.isRecurring && (
-                        <div>
-                            <Label className="text-muted-foreground">Recurrence</Label>
-                            <p className="text-sm">{event.recurrence}</p>
-                        </div>
-                    )}
-
-                    {/* Orphaned Deviations Indicator */}
-                    {event.isRecurring && (
-                        <OrphanedDeviationsPanel
-                            eventId={event.id}
-                            isRecurring={event.isRecurring}
-                        />
-                    )}
-
-                    {/* Deviation status indicator */}
-                    {event.hasDeviation && (
-                        <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2">
-                            <Label className="text-amber-700 dark:text-amber-400 text-sm font-medium">
-                                {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
-                                    ? "📅 Moved Instance"
-                                    : "✏️ Modified Instance"}
-                            </Label>
-                            <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
-                                {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
-                                    ? "This occurrence was moved from its original date in the series."
-                                    : "This occurrence has been modified from the series."}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={onEdit} className="flex-1">
-                        Edit
-                    </Button>
-                    <Button variant="destructive" onClick={onDelete}>
-                        Delete
-                    </Button>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 

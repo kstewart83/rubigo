@@ -367,6 +367,7 @@ export async function getPersonnelPage(
                 cellPhone: p.cellPhone,
                 bio: p.bio,
                 isGlobalAdmin: p.isGlobalAdmin ?? false,
+                isAgent: p.isAgent ?? false,
                 // Security/ABAC fields (subject attributes)
                 clearanceLevel: p.clearanceLevel,
                 tenantClearances: p.tenantClearances,

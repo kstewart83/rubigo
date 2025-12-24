@@ -1,17 +1,14 @@
 "use client";
 
 /**
- * Secure Table Wrapper
+ * Secure Panel Wrapper
  *
- * Wraps a table with classification headers and footers showing the highest
- * sensitivity level of the visible data.
+ * Wraps a panel (form, card, etc.) with classification headers and footers
+ * showing the sensitivity level of the data.
  */
 
-import { useMemo } from "react";
 import { Shield, ShieldCheck, ShieldAlert } from "lucide-react";
 import type { SensitivityLevel } from "@/lib/access-control/types";
-import { SENSITIVITY_ORDER } from "@/lib/access-control/types";
-import { cn } from "@/lib/utils";
 
 // ============================================================================
 // Color Configuration (matches SecurityBanner)
@@ -89,75 +86,37 @@ function ClassificationBanner({ level, tenants = [], position }: ClassificationB
 }
 
 // ============================================================================
-// SecureTableWrapper Component
+// SecurePanelWrapper Component
 // ============================================================================
 
-interface SecureTableWrapperProps<T> {
-    /** The table to wrap */
+interface SecurePanelWrapperProps {
+    /** The content to wrap */
     children: React.ReactNode;
-    /** Array of items displayed in the table */
-    items: T[];
-    /** Function to extract sensitivity level from each item */
-    getSensitivity: (item: T) => SensitivityLevel;
-    /** Optional function to extract tenants from each item */
-    getTenants?: (item: T) => string[];
-    /** Default level if no items (defaults to "public") */
-    defaultLevel?: SensitivityLevel;
+    /** The sensitivity level of the data in this panel */
+    level: SensitivityLevel;
+    /** Optional tenants associated with this data */
+    tenants?: string[];
     /** Additional className for the container */
     className?: string;
 }
 
-export function SecureTableWrapper<T>({
+export function SecurePanelWrapper({
     children,
-    items,
-    getSensitivity,
-    getTenants,
-    defaultLevel = "public",
+    level,
+    tenants = [],
     className,
-}: SecureTableWrapperProps<T>) {
-    // Calculate highest sensitivity level from visible items
-    const { highestLevel, allTenants } = useMemo(() => {
-        if (items.length === 0) {
-            return { highestLevel: defaultLevel, allTenants: [] as string[] };
-        }
-
-        let maxIndex = -1;
-        let highestLevel: SensitivityLevel = defaultLevel;
-        const tenantSet = new Set<string>();
-
-        for (const item of items) {
-            const level = getSensitivity(item);
-            const index = SENSITIVITY_ORDER.indexOf(level);
-            if (index > maxIndex) {
-                maxIndex = index;
-                highestLevel = level;
-            }
-
-            if (getTenants) {
-                const itemTenants = getTenants(item);
-                for (const t of itemTenants) {
-                    tenantSet.add(t);
-                }
-            }
-        }
-
-        return {
-            highestLevel,
-            allTenants: Array.from(tenantSet),
-        };
-    }, [items, getSensitivity, getTenants, defaultLevel]);
-
+}: SecurePanelWrapperProps) {
     return (
-        <div className={cn("min-w-0", className)}>
+        <div className={className}>
             <ClassificationBanner
-                level={highestLevel}
-                tenants={allTenants}
+                level={level}
+                tenants={tenants}
                 position="header"
             />
             {children}
             <ClassificationBanner
-                level={highestLevel}
-                tenants={allTenants}
+                level={level}
+                tenants={tenants}
                 position="footer"
             />
         </div>

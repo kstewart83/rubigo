@@ -33,6 +33,7 @@ export interface PersonnelRecord {
     desk_phone?: string;
     cell_phone?: string;
     bio?: string;
+    is_agent?: number; // 1 = AI agent, 0 = human
     // Security/ABAC fields
     clearance_level?: string;
     tenant_clearances?: string;
