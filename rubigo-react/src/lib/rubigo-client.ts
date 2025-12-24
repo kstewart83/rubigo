@@ -31,6 +31,10 @@ export interface PersonnelInput {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
+    // Security/ABAC fields
+    clearanceLevel?: string;
+    tenantClearances?: string;
+    accessRoles?: string;
 }
 
 export interface PersonnelListParams {

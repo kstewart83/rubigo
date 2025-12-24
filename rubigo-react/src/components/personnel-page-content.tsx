@@ -334,11 +334,7 @@ export function PersonnelPageContent({
                 </div>
                 {isAdmin && (
                     <Button
-                        onClick={() => {
-                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "", isAgent: false });
-                            setFormError("");
-                            setShowCreateDialog(true);
-                        }}
+                        onClick={() => router.push("/personnel/new")}
                     >
                         Add Personnel
                     </Button>
@@ -564,7 +560,7 @@ export function PersonnelPageContent({
                                 {/* Admin actions */}
                                 {isAdmin && !selectedPerson.isGlobalAdmin && (
                                     <div className="flex gap-2 pt-4 border-t">
-                                        <Button variant="outline" onClick={() => openEdit(selectedPerson)}>
+                                        <Button variant="outline" onClick={() => router.push(`/personnel/${selectedPerson.id}/edit`)}>
                                             Edit
                                         </Button>
                                         <Button variant="destructive" onClick={() => openDelete(selectedPerson)}>

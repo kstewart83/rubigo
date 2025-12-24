@@ -226,6 +226,9 @@ interface SyncEntityOptions<T, E> {
     // Create a new item, returns the remote ID
     createFn: (item: T) => Promise<{ success: boolean; id?: string; error?: string }>;
 
+    // Update an existing item by remote ID (optional - for full/upsert mode)
+    updateFn?: (id: string, item: T) => Promise<{ success: boolean; error?: string }>;
+
     // Delete an item by remote ID
     deleteFn?: (id: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -309,17 +312,34 @@ async function syncEntityWithMapping<T, E>(
         }
     }
 
-    // Create or skip items based on business key
+    // Create, update, or skip items based on business key and mode
     for (const item of items) {
         const seedId = getSeedId(item);
         const seedKey = getSeedKey(item);
         const existing = existingByKey.get(seedKey);
 
         if (existing) {
-            // Already exists - record the ID mapping and skip
+            // Already exists - record the ID mapping
             const remoteId = getRemoteId(existing);
             idMap.set(seedId, remoteId);
-            stats.skipped++;
+
+            // In full or upsert mode, update existing items if updateFn is provided
+            if ((mode === "full" || mode === "upsert") && options.updateFn) {
+                if (dryRun) {
+                    console.log(`   📝 [DRY-RUN] Would update: ${formatName(item)}`);
+                    stats.updated++;
+                } else {
+                    const result = await options.updateFn(remoteId, item);
+                    if (result.success) {
+                        stats.updated++;
+                    } else {
+                        stats.failed++;
+                        console.log(`   ❌ Failed to update: ${formatName(item)} - ${result.error}`);
+                    }
+                }
+            } else {
+                stats.skipped++;
+            }
             continue;
         }
 
@@ -413,6 +433,26 @@ async function main() {
             deskPhone: p.desk_phone,
             cellPhone: p.cell_phone,
             bio: p.bio,
+            clearanceLevel: p.clearance_level,
+            tenantClearances: p.tenant_clearances,
+            accessRoles: p.access_roles,
+        }),
+        updateFn: (id, p) => client.updatePersonnel(id, {
+            name: p.name,
+            email: p.email,
+            title: p.title,
+            department: p.department,
+            site: p.site,
+            building: p.building,
+            level: p.level,
+            space: p.space,
+            manager: resolveId(idMaps, "personnel", p.manager),
+            deskPhone: p.desk_phone,
+            cellPhone: p.cell_phone,
+            bio: p.bio,
+            clearanceLevel: p.clearance_level,
+            tenantClearances: p.tenant_clearances,
+            accessRoles: p.access_roles,
         }),
         deleteFn: (id) => client.deletePersonnel(id),
         getSeedId: (p) => p.id,
@@ -1038,17 +1078,19 @@ async function main() {
     console.log("📊 Sync Summary");
     console.log("=".repeat(60));
 
-    let totalCreated = 0, totalSkipped = 0, totalFailed = 0, totalDeleted = 0;
+    let totalCreated = 0, totalUpdated = 0, totalSkipped = 0, totalFailed = 0, totalDeleted = 0;
 
     for (const [entity, stats] of Object.entries(allStats)) {
-        if (stats.created || stats.failed || stats.deleted) {
+        if (stats.created || stats.updated || stats.failed || stats.deleted) {
             const parts = [];
             if (stats.deleted) parts.push(`−${stats.deleted}`);
             if (stats.created) parts.push(`+${stats.created}`);
+            if (stats.updated) parts.push(`✏️${stats.updated}`);
             if (stats.failed) parts.push(`✗${stats.failed}`);
             console.log(`   ${entity}: ${parts.join(" ")}`);
         }
         totalCreated += stats.created;
+        totalUpdated += stats.updated;
         totalSkipped += stats.skipped;
         totalFailed += stats.failed;
         totalDeleted += stats.deleted;
@@ -1058,6 +1100,7 @@ async function main() {
     const summaryParts = [];
     if (totalDeleted) summaryParts.push(`−${totalDeleted} deleted`);
     summaryParts.push(`+${totalCreated} created`);
+    if (totalUpdated) summaryParts.push(`✏️${totalUpdated} updated`);
     summaryParts.push(`✗${totalFailed} failed`);
     console.log(`   TOTAL: ${summaryParts.join(", ")}`);
     console.log(`   (${totalSkipped} already exist/skipped)`);

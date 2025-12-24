@@ -31,6 +31,10 @@ export interface PersonnelInput {
     cellPhone?: string;
     bio?: string;
     isAgent?: boolean;
+    // Security fields
+    clearanceLevel?: string;
+    tenantClearances?: string;
+    accessRoles?: string;
 }
 
 export interface ActionResult {
@@ -127,6 +131,10 @@ export async function createPersonnel(
             cellPhone: input.cellPhone?.trim() || null,
             bio: input.bio?.trim() || null,
             isGlobalAdmin: false,
+            isAgent: input.isAgent ? 1 : 0,
+            clearanceLevel: input.clearanceLevel || "low",
+            tenantClearances: input.tenantClearances || "[]",
+            accessRoles: input.accessRoles || "[]",
         });
 
         await logAction(actorId, actorName, "personnel", id, "create", {
@@ -182,7 +190,10 @@ export async function updatePersonnel(
         if (input.deskPhone !== undefined) updates.deskPhone = input.deskPhone?.trim() || null;
         if (input.cellPhone !== undefined) updates.cellPhone = input.cellPhone?.trim() || null;
         if (input.bio !== undefined) updates.bio = input.bio?.trim() || null;
-        if (input.isAgent !== undefined) updates.isAgent = input.isAgent;
+        if (input.isAgent !== undefined) updates.isAgent = input.isAgent ? 1 : 0;
+        if (input.clearanceLevel !== undefined) updates.clearanceLevel = input.clearanceLevel;
+        if (input.tenantClearances !== undefined) updates.tenantClearances = input.tenantClearances;
+        if (input.accessRoles !== undefined) updates.accessRoles = input.accessRoles;
 
         if (Object.keys(updates).length === 0) {
             return { success: false, error: "No updates provided" };
@@ -356,6 +367,10 @@ export async function getPersonnelPage(
                 cellPhone: p.cellPhone,
                 bio: p.bio,
                 isGlobalAdmin: p.isGlobalAdmin ?? false,
+                // Security/ABAC fields
+                clearanceLevel: p.clearanceLevel,
+                tenantClearances: p.tenantClearances,
+                accessRoles: p.accessRoles,
             })),
             total,
             page,

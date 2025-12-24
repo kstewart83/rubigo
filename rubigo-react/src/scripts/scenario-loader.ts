@@ -33,6 +33,10 @@ export interface PersonnelRecord {
     desk_phone?: string;
     cell_phone?: string;
     bio?: string;
+    // Security/ABAC fields
+    clearance_level?: string;
+    tenant_clearances?: string;
+    access_roles?: string;
 }
 
 export interface SolutionRecord {

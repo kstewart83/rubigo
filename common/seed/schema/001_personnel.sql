@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS personnel (
     cell_phone TEXT,
     bio TEXT,
     is_agent INTEGER DEFAULT 0,
+    -- Security/ABAC fields
+    clearance_level TEXT DEFAULT 'low',
+    tenant_clearances TEXT DEFAULT '[]',
+    access_roles TEXT DEFAULT '[]',
     PRIMARY KEY (id, profile_id)
 );
 
