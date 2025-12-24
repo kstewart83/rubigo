@@ -314,9 +314,9 @@ export async function getPersonnelPage(
     params: PaginationParams = {}
 ): Promise<PaginatedPersonnel> {
     const page = Math.max(1, params.page ?? 1);
-    const pageSize = [10, 25, 50, 100].includes(params.pageSize ?? 10)
-        ? (params.pageSize ?? 10)
-        : 10;
+    // Allow any pageSize from 1-100 (for auto mode), default to 10
+    const rawPageSize = params.pageSize ?? 10;
+    const pageSize = rawPageSize >= 1 && rawPageSize <= 100 ? rawPageSize : 10;
     const search = params.search?.trim().toLowerCase() || "";
     const department = params.department && params.department !== "all"
         ? params.department
@@ -367,10 +367,12 @@ export async function getPersonnelPage(
                 cellPhone: p.cellPhone,
                 bio: p.bio,
                 isGlobalAdmin: p.isGlobalAdmin ?? false,
-                // Security/ABAC fields
+                // Security/ABAC fields (subject attributes)
                 clearanceLevel: p.clearanceLevel,
                 tenantClearances: p.tenantClearances,
                 accessRoles: p.accessRoles,
+                // Access Control Object (record classification)
+                aco: p.aco,
             })),
             total,
             page,

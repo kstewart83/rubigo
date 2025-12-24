@@ -353,7 +353,7 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
                 <SidebarProvider className="flex-1 min-h-0 flex">
                     <AppSidebar personnel={personnel} version={version} />
                     <SidebarInset>
-                        <main className="flex-1 p-6 overflow-auto">
+                        <main className="flex-1 h-full p-6 overflow-hidden flex flex-col">
                             {children}
                         </main>
                     </SidebarInset>

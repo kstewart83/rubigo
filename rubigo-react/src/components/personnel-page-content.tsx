@@ -7,7 +7,7 @@
  * Receives paginated data from the server component.
  */
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef, useLayoutEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -56,7 +56,9 @@ import { usePersona } from "@/contexts/persona-context";
 import { createPersonnel, updatePersonnel, deletePersonnel } from "@/lib/personnel-actions";
 import { PersonnelSelector } from "@/components/personnel-selector";
 import { PhotoUpload } from "@/components/photo-upload";
+import { SecureTableWrapper } from "@/components/ui/secure-table-wrapper";
 import type { Department, Person } from "@/types/personnel";
+import type { SensitivityLevel, AccessControlObject } from "@/lib/access-control/types";
 
 interface PersonnelData {
     id: string;
@@ -75,6 +77,17 @@ interface PersonnelData {
     bio: string | null;
     isGlobalAdmin: boolean;
     isAgent?: boolean;
+    aco?: string; // JSON: {sensitivity, tenants}
+}
+
+// Parse ACO JSON string to AccessControlObject
+function parseAco(acoStr?: string): AccessControlObject {
+    if (!acoStr) return { sensitivity: "low" };
+    try {
+        return JSON.parse(acoStr) as AccessControlObject;
+    } catch {
+        return { sensitivity: "low" };
+    }
 }
 
 interface Props {
@@ -88,7 +101,9 @@ interface Props {
     allPersonnel: Person[];
 }
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE_OPTIONS = ["auto", 10, 25, 50, 100] as const;
+const ROW_HEIGHT = 49; // Approximate height of a table row in pixels
+const TABLE_OVERHEAD = 180; // Header + classification banners + padding
 const departments: Department[] = [
     "Executive",
     "Engineering",
@@ -117,6 +132,66 @@ export function PersonnelPageContent({
     // Local state for filters (debounced)
     const [searchInput, setSearchInput] = useState(initialSearch);
     const [selectedPerson, setSelectedPerson] = useState<PersonnelData | null>(null);
+
+    // Auto page size calculation
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [autoPageSize, setAutoPageSize] = useState(25);
+    const [isAutoMode, setIsAutoMode] = useState(false);
+
+    // Calculate optimal page size based on container height
+    const calculateAutoPageSize = useCallback(() => {
+        if (!containerRef.current) return 25;
+        const containerHeight = containerRef.current.clientHeight;
+        const availableHeight = containerHeight - TABLE_OVERHEAD;
+        const fittingRows = Math.floor(availableHeight / ROW_HEIGHT);
+        // Minimum 5 rows
+        return Math.max(5, fittingRows);
+    }, []);
+
+    // Setup ResizeObserver for auto mode
+    const lastCalculatedSize = useRef<number>(pageSize);
+
+    useLayoutEffect(() => {
+        if (!isAutoMode || !containerRef.current) return;
+
+        const updatePageSize = () => {
+            const newSize = calculateAutoPageSize();
+            if (newSize !== lastCalculatedSize.current && newSize > 0) {
+                lastCalculatedSize.current = newSize;
+                setAutoPageSize(newSize);
+                // Use router.push to trigger server-side refetch
+                const params = new URLSearchParams(window.location.search);
+                params.set("pageSize", String(newSize));
+                params.set("autoSize", "true");
+                params.set("page", "1"); // Reset to first page
+                router.push(`/personnel?${params.toString()}`);
+            }
+        };
+
+        const observer = new ResizeObserver(() => {
+            updatePageSize();
+        });
+
+        observer.observe(containerRef.current);
+        // Initial calculation (delayed to let layout settle)
+        const timer = setTimeout(updatePageSize, 100);
+
+        return () => {
+            observer.disconnect();
+            clearTimeout(timer);
+        };
+    }, [isAutoMode, calculateAutoPageSize, router, startTransition]);
+
+    // Check if auto mode from URL - default to auto if no pageSize specified
+    useEffect(() => {
+        const autoSize = searchParams.get("autoSize");
+        const explicitPageSize = searchParams.get("pageSize");
+        // Auto mode is ON by default, OR if explicitly set to true
+        // It's OFF only if autoSize is explicitly "false" OR a pageSize is set without autoSize
+        const shouldBeAuto = autoSize === "true" ||
+            (autoSize === null && explicitPageSize === null);
+        setIsAutoMode(shouldBeAuto);
+    }, [searchParams]);
 
     // Real-time search with debounce
     useEffect(() => {
@@ -195,7 +270,21 @@ export function PersonnelPageContent({
     };
 
     const handlePageSizeChange = (value: string) => {
-        updateUrl({ pageSize: parseInt(value, 10), page: 1 });
+        if (value === "auto") {
+            setIsAutoMode(true);
+            const calculatedSize = calculateAutoPageSize();
+            setAutoPageSize(calculatedSize);
+            updateUrl({ pageSize: calculatedSize, page: 1, autoSize: "true" });
+        } else {
+            setIsAutoMode(false);
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("autoSize");
+            params.set("pageSize", value);
+            params.set("page", "1");
+            startTransition(() => {
+                router.push(`/personnel?${params.toString()}`);
+            });
+        }
     };
 
     const handlePageChange = (newPage: number) => {
@@ -323,7 +412,7 @@ export function PersonnelPageContent({
     const endIndex = Math.min(page * pageSize, total);
 
     return (
-        <>
+        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
@@ -370,8 +459,13 @@ export function PersonnelPageContent({
                 </Select>
             </div>
 
-            {/* Table */}
-            <div className="border rounded-lg overflow-hidden">
+            {/* Table with Classification Header/Footer */}
+            <SecureTableWrapper
+                items={data}
+                getSensitivity={(person) => parseAco(person.aco).sensitivity}
+                getTenants={(person) => parseAco(person.aco).tenants || []}
+                className="border rounded-lg overflow-hidden"
+            >
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -420,24 +514,30 @@ export function PersonnelPageContent({
                         )}
                     </TableBody>
                 </Table>
-            </div>
+            </SecureTableWrapper>
 
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-zinc-500">Rows per page:</span>
-                    <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-                        <SelectTrigger className="w-[70px]">
+                    <Select
+                        value={isAutoMode ? "auto" : String(pageSize)}
+                        onValueChange={handlePageSizeChange}
+                    >
+                        <SelectTrigger className="w-[80px]">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             {PAGE_SIZE_OPTIONS.map((size) => (
-                                <SelectItem key={size} value={String(size)}>
-                                    {size}
+                                <SelectItem key={String(size)} value={String(size)}>
+                                    {size === "auto" ? "Auto" : size}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
+                    {isAutoMode && (
+                        <span className="text-xs text-zinc-400">({pageSize})</span>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
@@ -944,6 +1044,6 @@ export function PersonnelPageContent({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }
