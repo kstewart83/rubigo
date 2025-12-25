@@ -54,6 +54,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePersona } from "@/contexts/persona-context";
 import { createPersonnel, updatePersonnel, deletePersonnel } from "@/lib/personnel-actions";
+import { getTeamsForPersonnel } from "@/lib/teams-actions";
+import { Crown, UsersRound } from "lucide-react";
 import { PersonnelSelector } from "@/components/personnel-selector";
 import { PhotoUpload } from "@/components/photo-upload";
 import { SecureTableWrapper } from "@/components/ui/secure-table-wrapper";
@@ -104,7 +106,7 @@ interface Props {
 
 const PAGE_SIZE_OPTIONS = ["auto", 10, 25, 50, 100] as const;
 const ROW_HEIGHT = 49; // Approximate height of a table row in pixels
-const TABLE_OVERHEAD = 180; // Header + classification banners + padding
+const TABLE_OVERHEAD = 270; // Header + classification banners + pagination footer + padding
 const departments: Department[] = [
     "Executive",
     "Engineering",
@@ -133,6 +135,22 @@ export function PersonnelPageContent({
     // Local state for filters (debounced)
     const [searchInput, setSearchInput] = useState(initialSearch);
     const [selectedPerson, setSelectedPerson] = useState<PersonnelData | null>(null);
+    const [personTeams, setPersonTeams] = useState<Array<{ id: string; name: string; description: string | null; isOwner: boolean }>>([]);
+
+    // Fetch teams when a person is selected
+    useEffect(() => {
+        if (selectedPerson) {
+            getTeamsForPersonnel(selectedPerson.id).then(result => {
+                if (result.success && result.data) {
+                    setPersonTeams(result.data);
+                } else {
+                    setPersonTeams([]);
+                }
+            });
+        } else {
+            setPersonTeams([]);
+        }
+    }, [selectedPerson]);
 
     // Auto page size calculation
     const containerRef = useRef<HTMLDivElement>(null);
@@ -423,11 +441,19 @@ export function PersonnelPageContent({
                     </p>
                 </div>
                 {isAdmin && (
-                    <Button
-                        onClick={() => router.push("/personnel/new")}
-                    >
-                        Add Personnel
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push("/personnel/teams")}
+                        >
+                            Manage Teams
+                        </Button>
+                        <Button
+                            onClick={() => router.push("/personnel/new")}
+                        >
+                            Add Personnel
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -664,6 +690,30 @@ export function PersonnelPageContent({
                                             <div className="text-sm">{selectedPerson.bio}</div>
                                         </div>
                                     )}
+
+                                    {/* Teams section */}
+                                    <div className="pt-2 border-t">
+                                        <div className="text-sm font-medium mb-2">Teams</div>
+                                        {personTeams.length === 0 ? (
+                                            <div className="text-sm text-zinc-500">Not a member of any teams</div>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {personTeams.map(team => (
+                                                    <div
+                                                        key={team.id}
+                                                        className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
+                                                        onClick={() => router.push(`/personnel/teams?team=${team.id}`)}
+                                                    >
+                                                        <UsersRound className="h-4 w-4 text-primary" />
+                                                        <span>{team.name}</span>
+                                                        {team.isOwner && (
+                                                            <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Admin actions */}

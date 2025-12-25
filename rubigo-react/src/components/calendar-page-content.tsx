@@ -1758,15 +1758,23 @@ function GridPositionedEventPill({
 
     // Format time display
     const startTime = new Date(event.startTime);
-    const timeStr = `${startTime.getHours() % 12 || 12}:${startTime.getMinutes().toString().padStart(2, "0")} ${startTime.getHours() >= 12 ? "PM" : "AM"}`;
+    const endTime = new Date(event.endTime);
+    const formatTime = (d: Date) =>
+        `${d.getHours() % 12 || 12}:${d.getMinutes().toString().padStart(2, "0")} ${d.getHours() >= 12 ? "PM" : "AM"}`;
 
     // For taller events (more slots), show more content
     const slots = endSlot - startSlot;
     const isCompact = slots < 3; // Less than 30 minutes
+    const showTimeRange = slots >= 3; // 30 minutes or more
+    const showLocation = slots >= 5 && event.location; // 50 minutes or more
+
+    const timeDisplay = showTimeRange
+        ? `${formatTime(startTime)} - ${formatTime(endTime)}`
+        : formatTime(startTime);
 
     const pill = (
         <button
-            className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex flex-col"
+            className="absolute rounded text-xs p-1.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-2"
             style={{
                 backgroundColor: typeInfo.color,
                 color: typeInfo.textColor || "white",
@@ -1780,15 +1788,18 @@ function GridPositionedEventPill({
             onClick={onClick}
             data-testid="grid-positioned-event-pill"
         >
-            <div className={`flex items-center gap-1 ${isCompact ? "" : "mb-0.5"}`}>
-                <SecurityBadge
-                    aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
-                    size="sm"
-                    className="shrink-0"
-                />
-                <span className={isCompact ? "truncate" : "line-clamp-2 break-words"}>{event.title}</span>
+            {/* Badge column */}
+            <SecurityBadge
+                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                size="sm"
+                className="shrink-0"
+            />
+            {/* Details column - centered vertically */}
+            <div className="flex flex-col justify-center items-center flex-1 min-w-0 text-center">
+                <span className={isCompact ? "truncate w-full" : "line-clamp-2 break-words"}>{event.title}</span>
+                {!isCompact && <div className="text-xs opacity-80">{timeDisplay}</div>}
+                {showLocation && <div className="text-xs opacity-70 truncate w-full">{event.location}</div>}
             </div>
-            {!isCompact && <div className="text-xs opacity-80">{timeStr}</div>}
         </button>
     );
 
@@ -1798,7 +1809,7 @@ function GridPositionedEventPill({
                 <TooltipTrigger asChild>{pill}</TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
                     <p className="font-medium">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">{timeStr}</p>
+                    <p className="text-xs text-muted-foreground">{timeDisplay}</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

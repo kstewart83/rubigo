@@ -65,6 +65,55 @@ export const photoBlobs = sqliteTable("photo_blobs", {
 });
 
 // ============================================================================
+// Personnel: Teams
+// ============================================================================
+
+/**
+ * Teams - Ad-hoc groups of personnel for easy group-based invitations
+ */
+export const teams = sqliteTable("teams", {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdBy: text("created_by").references(() => personnel.id),
+    createdAt: text("created_at").notNull(),
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+});
+
+/**
+ * Team Members - Junction table for team membership
+ */
+export const teamMembers = sqliteTable("team_members", {
+    id: text("id").primaryKey(),
+    teamId: text("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    joinedAt: text("joined_at").notNull(),
+});
+
+/**
+ * Team Teams - Junction table for hierarchical team nesting
+ * A team can contain other teams (max depth: 5)
+ */
+export const teamTeams = sqliteTable("team_teams", {
+    id: text("id").primaryKey(),
+    parentTeamId: text("parent_team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    childTeamId: text("child_team_id").references(() => teams.id).notNull(),
+    addedAt: text("added_at").notNull(),
+});
+
+/**
+ * Team Owners - Personnel who can edit/delete a team
+ * Creator is automatically added as an owner
+ */
+export const teamOwners = sqliteTable("team_owners", {
+    id: text("id").primaryKey(),
+    teamId: text("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    addedAt: text("added_at").notNull(),
+});
+
+
+// ============================================================================
 // Access Control Infrastructure
 // ============================================================================
 
@@ -957,3 +1006,15 @@ export const SETTING_KEYS = {
     OLLAMA_MODEL: "ollama_model",
 } as const;
 
+// Teams
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type NewTeamMember = typeof teamMembers.$inferInsert;
+
+export type TeamTeam = typeof teamTeams.$inferSelect;
+export type NewTeamTeam = typeof teamTeams.$inferInsert;
+
+export type TeamOwner = typeof teamOwners.$inferSelect;
+export type NewTeamOwner = typeof teamOwners.$inferInsert;
