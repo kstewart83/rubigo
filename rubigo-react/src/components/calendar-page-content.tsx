@@ -193,6 +193,31 @@ function getAllTenants(events: Array<{ aco?: string }>): string[] {
     return Array.from(tenantSet);
 }
 
+/**
+ * Check if the event's description is accessible based on session context.
+ * Uses descriptionAco if set, otherwise falls back to base aco.
+ */
+function isDescriptionAccessible(
+    event: { descriptionAco?: string | null; aco?: string },
+    sessionLevel: SensitivityLevel,
+    activeTenants: string[]
+): boolean {
+    const descAco = parseAco(event.descriptionAco || event.aco);
+
+    // Check sensitivity level
+    if (SENSITIVITY_ORDER[descAco.sensitivity] > SENSITIVITY_ORDER[sessionLevel]) {
+        return false;
+    }
+
+    // Check tenants
+    if (descAco.tenants.length > 0) {
+        const hasAllTenants = descAco.tenants.every(t => activeTenants.includes(t));
+        if (!hasAllTenants) return false;
+    }
+
+    return true;
+}
+
 // ============================================================================
 // Event Positioning Utilities
 // ============================================================================
@@ -401,6 +426,7 @@ interface CalendarEvent {
     timezone?: string;
     aco?: string;
     descriptionAco?: string;
+    _descriptionRedacted?: boolean; // Server-side redaction marker
 }
 
 // ============================================================================
@@ -464,7 +490,7 @@ export function CalendarPageContent() {
     const [pendingAction, setPendingAction] = useState<"delete" | "edit" | null>(null);
 
     // Fetch events for current view using server actions
-    const { sessionLevel, activeTenants } = useSecurity();
+    const { sessionLevel, activeTenants, activeTenantLevels } = useSecurity();
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         const year = currentDate.getFullYear();
@@ -484,8 +510,8 @@ export function CalendarPageContent() {
             const rawEvents = await getCalendarEvents(
                 `${startStr}T00:00:00`,
                 `${endStr}T23:59:59`,
-                // Pass session context for server-side ABAC filtering
-                { sessionLevel, activeTenants }
+                // Pass session context for server-side ABAC filtering (includes tenant-specific levels)
+                { sessionLevel, activeTenants, activeTenantLevels }
             );
 
             // Get deviations and expand recurring events
@@ -516,7 +542,7 @@ export function CalendarPageContent() {
         } finally {
             setLoading(false);
         }
-    }, [currentDate, sessionLevel, activeTenants]);
+    }, [currentDate, sessionLevel, activeTenants, activeTenantLevels]);
 
     useEffect(() => {
         fetchEvents();
@@ -1824,6 +1850,9 @@ function EventModal({
     // Reset/populate form when modal opens
     useEffect(() => {
         if (open) {
+            // Always start on Basic Information tab
+            setActiveTab("basic");
+
             if (editingEvent) {
                 // Pre-fill form with existing event data
                 setTitle(editingEvent.title);
@@ -2255,30 +2284,47 @@ function EventModal({
                 {/* Description Tab */}
                 {activeTab === "description" && (
                     <SecurePanelWrapper
-                        level={descriptionAco.sensitivity}
-                        tenants={descriptionAco.tenants || []}
+                        level={editingEvent?._descriptionRedacted ? null : descriptionAco.sensitivity}
+                        tenants={editingEvent?._descriptionRedacted ? [] : (descriptionAco.tenants || [])}
                         className="border rounded-lg overflow-hidden"
                     >
                         <div className="p-4 space-y-4">
-                            {/* Classification Picker */}
-                            <div className="flex items-center justify-between pb-3 border-b">
-                                <Label>Classification</Label>
-                                <SecurityLabelPicker
-                                    value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
-                                    onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
-                                />
-                            </div>
+                            {editingEvent?._descriptionRedacted ? (
+                                // REDACTED: Cannot edit
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <span className="inline-flex items-center rounded-md bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/20 dark:ring-red-500/30 mb-3">
+                                        🔒 REDACTED
+                                    </span>
+                                    <p className="text-muted-foreground text-sm">
+                                        Description is classified above your current access level.
+                                    </p>
+                                    <p className="text-muted-foreground text-xs mt-1">
+                                        Editing is not permitted.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Classification Picker */}
+                                    <div className="flex items-center justify-between pb-3 border-b">
+                                        <Label>Classification</Label>
+                                        <SecurityLabelPicker
+                                            value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
+                                            onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                        />
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Event description"
-                                    rows={6}
-                                />
-                            </div>
+                                    <div>
+                                        <Label htmlFor="description">Description</Label>
+                                        <Textarea
+                                            id="description"
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            placeholder="Event description"
+                                            rows={6}
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </SecurePanelWrapper>
                 )}
@@ -2331,6 +2377,8 @@ function EventDetailsPanel({
     onEdit: () => void;
     onDelete: () => void;
 }) {
+    const { sessionLevel, activeTenants } = useSecurity();
+
     if (!event) return null;
 
     const typeInfo = eventTypeInfo[event.eventType] || eventTypeInfo.meeting;
@@ -2456,16 +2504,27 @@ function EventDetailsPanel({
                             </div>
                         </SecurePanelWrapper>
 
-                        {/* Description Panel (separate ACO) */}
-                        {event.description && (
+                        {/* Description Panel (separate ACO) - uses server-side redaction */}
+                        {(event.description || event._descriptionRedacted) && (
                             <SecurePanelWrapper
-                                level={parseAco(event.descriptionAco || event.aco).sensitivity}
-                                tenants={parseAco(event.descriptionAco || event.aco).tenants}
+                                level={event._descriptionRedacted ? null : parseAco(event.descriptionAco || event.aco).sensitivity}
+                                tenants={event._descriptionRedacted ? [] : parseAco(event.descriptionAco || event.aco).tenants}
                                 className="rounded-lg border overflow-hidden"
                             >
                                 <div className="p-3">
                                     <Label className="text-muted-foreground">Description</Label>
-                                    <p className="mt-1">{event.description}</p>
+                                    {event._descriptionRedacted ? (
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className="inline-flex items-center rounded-md bg-red-50 dark:bg-red-950/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/20 dark:ring-red-500/30">
+                                                🔒 REDACTED
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Insufficient clearance to view
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <p className="mt-1">{event.description}</p>
+                                    )}
                                 </div>
                             </SecurePanelWrapper>
                         )}

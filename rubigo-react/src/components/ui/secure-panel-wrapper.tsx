@@ -61,12 +61,27 @@ const LEVEL_CONFIG: Record<SensitivityLevel, {
 interface ClassificationBannerProps {
     level: SensitivityLevel | null;
     tenants?: string[];
+    /** Optional map of tenant -> level when tenant has different level than base */
+    tenantLevels?: Record<string, SensitivityLevel>;
     position: "header" | "footer";
 }
 
-function ClassificationBanner({ level, tenants = [], position }: ClassificationBannerProps) {
+function ClassificationBanner({ level, tenants = [], tenantLevels = {}, position }: ClassificationBannerProps) {
     const config = level === null ? NONE_CONFIG : LEVEL_CONFIG[level];
     const Icon = config.icon;
+
+    // Separate tenants into those at base level and those with different levels
+    const tenantsAtBase: string[] = [];
+    const tenantsWithDifferentLevel: { tenant: string; level: SensitivityLevel }[] = [];
+
+    for (const tenant of tenants) {
+        const tenantLevel = tenantLevels[tenant];
+        if (tenantLevel && tenantLevel !== level) {
+            tenantsWithDifferentLevel.push({ tenant, level: tenantLevel });
+        } else {
+            tenantsAtBase.push(tenant);
+        }
+    }
 
     return (
         <div
@@ -81,14 +96,24 @@ function ClassificationBanner({ level, tenants = [], position }: ClassificationB
             <span className={config.textClass}>
                 {config.label}
             </span>
-            {tenants.length > 0 && (
+            {/* Show tenants at base level normally */}
+            {tenantsAtBase.length > 0 && (
                 <>
                     <span className="text-zinc-600">|</span>
                     <span className="text-sm">
-                        {tenants.join(" ")}
+                        {tenantsAtBase.join(" ")}
                     </span>
                 </>
             )}
+            {/* Show tenants with different levels in parentheses */}
+            {tenantsWithDifferentLevel.map(({ tenant, level: tenantLevel }) => {
+                const tenantConfig = LEVEL_CONFIG[tenantLevel];
+                return (
+                    <span key={tenant} className={`text-sm ${tenantConfig.textClass}`}>
+                        ({tenantConfig.label.substring(0, 3).toUpperCase()} {tenant})
+                    </span>
+                );
+            })}
         </div>
     );
 }
@@ -104,6 +129,8 @@ interface SecurePanelWrapperProps {
     level: SensitivityLevel | null;
     /** Optional tenants associated with this data */
     tenants?: string[];
+    /** Optional map of tenant -> level when tenant has different level than base */
+    tenantLevels?: Record<string, SensitivityLevel>;
     /** Additional className for the container */
     className?: string;
 }
@@ -112,6 +139,7 @@ export function SecurePanelWrapper({
     children,
     level,
     tenants = [],
+    tenantLevels = {},
     className,
 }: SecurePanelWrapperProps) {
     return (
@@ -119,12 +147,14 @@ export function SecurePanelWrapper({
             <ClassificationBanner
                 level={level}
                 tenants={tenants}
+                tenantLevels={tenantLevels}
                 position="header"
             />
             {children}
             <ClassificationBanner
                 level={level}
                 tenants={tenants}
+                tenantLevels={tenantLevels}
                 position="footer"
             />
         </div>

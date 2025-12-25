@@ -153,7 +153,7 @@ export function SecurityBanner() {
                             <DropdownMenuLabel className="text-[10px] text-zinc-500 font-normal">
                                 Tenant Access
                             </DropdownMenuLabel>
-                            <div className="px-2 py-1 space-y-2">
+                            <div className="px-2 py-3 space-y-4">
                                 {tenantClearances.map((tc) => {
                                     const maxLevelIndex = SENSITIVITY_ORDER.indexOf(tc.maxLevel);
                                     const isAboveSession = maxLevelIndex > sessionLevelIndex;

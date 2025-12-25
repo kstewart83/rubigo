@@ -45,6 +45,8 @@ interface SecurityContextType {
     setTenantLevel: (tenant: string, level: SensitivityLevel) => void;
     /** Unique tenants the user has access to (enabled ones at session level) */
     activeTenants: string[];
+    /** Map of active tenant -> its current session level (for filtering) */
+    activeTenantLevels: Record<string, SensitivityLevel>;
     /** User roles */
     roles: string[];
     /** Whether user is a global admin */
@@ -104,6 +106,7 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
                 toggleTenant: () => { },
                 setTenantLevel: () => { },
                 activeTenants: [],
+                activeTenantLevels: {},
                 roles: [],
                 isGlobalAdmin: false,
             };
@@ -176,8 +179,12 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
             availableLevels,
             tenantClearances,
             toggleTenant: (tenant: string) => {
+                // Lookup this tenant's effective max level for proper default
+                const tc = tenantClearances.find(t => t.tenant === tenant);
+                const defaultLevel = tc?.sessionLevel ?? sessionLevel;
+
                 setTenantOverrides(prev => {
-                    const current = prev[tenant] ?? { enabled: true, sessionLevel: "public" };
+                    const current = prev[tenant] ?? { enabled: false, sessionLevel: defaultLevel };
                     return { ...prev, [tenant]: { ...current, enabled: !current.enabled } };
                 });
             },
@@ -188,6 +195,13 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
                 });
             },
             activeTenants,
+            // Map of active tenant -> its session level for filtering
+            activeTenantLevels: tenantClearances
+                .filter(tc => tc.enabled)
+                .reduce((acc, tc) => {
+                    acc[tc.tenant] = tc.sessionLevel;
+                    return acc;
+                }, {} as Record<string, SensitivityLevel>),
             roles: subject.roles,
             isGlobalAdmin: subject.roles.includes("global_admin"),
         };

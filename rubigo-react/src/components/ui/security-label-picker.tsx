@@ -173,26 +173,80 @@ export function SecurityLabelPicker({
                     <div className="text-xs font-medium text-zinc-500 px-2 py-1">
                         Tenant Compartments
                     </div>
-                    <div className="flex flex-wrap gap-1 px-2 py-1">
+                    <div className="space-y-1 px-2 py-1">
                         {/* Only show tenants the user has access to */}
                         {TENANT_OPTIONS.filter(tenant => userTenants.includes(tenant)).map((tenant) => {
-                            const isSelected = selectedTenants.includes(tenant);
+                            // Find if this tenant is in selected tenants (may be in LEVEL:TENANT format)
+                            const selectedEntry = selectedTenants.find(t =>
+                                t === tenant || t.endsWith(`:${tenant}`)
+                            );
+                            const isSelected = !!selectedEntry;
+
+                            // Parse level from selected tenant (format: "LEVEL:TENANT" or just "TENANT")
+                            let tenantLevel: SensitivityLevel = value.sensitivity;
+                            if (selectedEntry && selectedEntry.includes(":")) {
+                                const parts = selectedEntry.split(":");
+                                const levelStr = parts[0].toLowerCase();
+                                if (SENSITIVITY_ORDER.includes(levelStr as SensitivityLevel)) {
+                                    tenantLevel = levelStr as SensitivityLevel;
+                                }
+                            }
+
+                            // Available levels for this tenant (up to base level)
+                            const baseLevelIndex = SENSITIVITY_ORDER.indexOf(value.sensitivity);
+                            const availableLevels = SENSITIVITY_ORDER.slice(0, baseLevelIndex + 1);
 
                             return (
-                                <button
-                                    key={tenant}
-                                    type="button"
-                                    onClick={() => handleTenantToggle(tenant)}
-                                    className={cn(
-                                        "size-8 rounded flex items-center justify-center text-lg transition-colors border",
-                                        isSelected
-                                            ? "bg-zinc-700 border-zinc-600"
-                                            : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
+                                <div key={tenant} className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const currentTenants = selectedTenants;
+                                            if (isSelected) {
+                                                // Remove tenant (any format)
+                                                const newTenants = currentTenants.filter(t =>
+                                                    t !== tenant && !t.endsWith(`:${tenant}`)
+                                                );
+                                                onChange({ ...value, tenants: newTenants.length > 0 ? newTenants : undefined });
+                                            } else {
+                                                // Add tenant with base level
+                                                const newTenant = `${value.sensitivity}:${tenant}`;
+                                                onChange({ ...value, tenants: [...currentTenants, newTenant] });
+                                            }
+                                        }}
+                                        className={cn(
+                                            "size-8 rounded flex items-center justify-center text-lg transition-colors border shrink-0",
+                                            isSelected
+                                                ? "bg-zinc-700 border-zinc-600"
+                                                : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
+                                        )}
+                                        title={tenant}
+                                    >
+                                        {tenant}
+                                    </button>
+
+                                    {/* Level selector for selected tenants */}
+                                    {isSelected && (
+                                        <select
+                                            value={tenantLevel}
+                                            onChange={(e) => {
+                                                const newLevel = e.target.value as SensitivityLevel;
+                                                const newTenant = `${newLevel}:${tenant}`;
+                                                const newTenants = selectedTenants
+                                                    .filter(t => t !== tenant && !t.endsWith(`:${tenant}`))
+                                                    .concat(newTenant);
+                                                onChange({ ...value, tenants: newTenants });
+                                            }}
+                                            className="h-6 px-1 text-xs bg-zinc-800 border border-zinc-700 rounded"
+                                        >
+                                            {availableLevels.map(level => (
+                                                <option key={level} value={level}>
+                                                    {LEVEL_CONFIG[level].label}
+                                                </option>
+                                            ))}
+                                        </select>
                                     )}
-                                    title={tenant}
-                                >
-                                    {tenant}
-                                </button>
+                                </div>
                             );
                         })}
                     </div>

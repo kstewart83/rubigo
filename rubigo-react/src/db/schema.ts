@@ -440,7 +440,9 @@ export const calendarEvents = sqliteTable("calendar_events", {
     deleted: integer("deleted", { mode: "boolean" }).default(false),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
-    // Access Control
+    // Access Control - Normalized ACO (new)
+    acoId: integer("aco_id").references(() => acoObjects.id),
+    // Legacy ACO fields (kept for migration compatibility)
     aco: text("aco").notNull().default('{"sensitivity":"low"}'),
     descriptionAco: text("description_aco").default('{"sensitivity":"low"}'),
     sco: text("sco"),

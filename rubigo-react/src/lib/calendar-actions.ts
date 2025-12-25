@@ -16,6 +16,8 @@ import {
 import { eq, and, gte, lte, or } from "drizzle-orm";
 import type { CalendarEventWithParticipants } from "@/lib/calendar-utils";
 import { type SessionContext, filterBySession } from "@/lib/access-control/abac-filter";
+import { getOrCreateAcoId } from "@/lib/access-control/aco-registry";
+import { parseAco } from "@/lib/access-control/abac-filter";
 
 // ============================================================================
 // Types
@@ -61,6 +63,14 @@ export async function createCalendarEvent(
         const now = new Date().toISOString();
         const id = crypto.randomUUID();
 
+        // Parse ACO from input and get/create normalized acoId
+        const acoJson = input.aco ?? '{"sensitivity":"low"}';
+        const parsedAco = parseAco(acoJson);
+        const acoId = await getOrCreateAcoId({
+            sensitivity: parsedAco.sensitivity,
+            tenants: parsedAco.tenants,
+        });
+
         // Insert event
         await db.insert(calendarEvents).values({
             id,
@@ -78,8 +88,10 @@ export async function createCalendarEvent(
             deleted: false,
             createdAt: now,
             updatedAt: now,
-            // Security/ABAC fields
-            aco: input.aco ?? '{"sensitivity":"low"}',
+            // Normalized ACO (new)
+            acoId,
+            // Legacy ABAC fields (for backward compatibility)
+            aco: acoJson,
             descriptionAco: input.descriptionAco ?? null,
         });
 
@@ -173,7 +185,68 @@ export async function getCalendarEvents(
 
     // Apply session-level ABAC filtering if context provided
     if (sessionContext) {
-        return filterBySession(result, sessionContext);
+        const SENSITIVITY_ORDER = ["public", "low", "moderate", "high"];
+        const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(sessionContext.sessionLevel);
+
+        // Get tenant-specific session levels (defaults to base session level if not provided)
+        const activeTenantLevels = sessionContext.activeTenantLevels ?? {};
+
+        // Helper to check if an ACO is accessible based on tenant-specific levels
+        const isAcoAccessible = (parsedAco: ReturnType<typeof parseAco>): boolean => {
+            // For untenanted data, check base level only
+            if (parsedAco.tenantNames.length === 0) {
+                const objectLevelIndex = SENSITIVITY_ORDER.indexOf(parsedAco.sensitivity);
+                return sessionLevelIndex >= objectLevelIndex;
+            }
+
+            // For tenanted data, check each tenant's level
+            for (const tenantName of parsedAco.tenantNames) {
+                // User must have this tenant in their active session
+                if (!sessionContext.activeTenants.includes(tenantName)) {
+                    return false;
+                }
+
+                // Get the required level for this tenant from the ACO
+                const requiredLevel = parsedAco.tenantLevels[tenantName] ?? parsedAco.sensitivity;
+                const requiredLevelIndex = SENSITIVITY_ORDER.indexOf(requiredLevel);
+
+                // Get user's session level for this tenant
+                const userTenantLevel = activeTenantLevels[tenantName] ?? sessionContext.sessionLevel;
+                const userTenantLevelIndex = SENSITIVITY_ORDER.indexOf(userTenantLevel);
+
+                // User's tenant level must be >= required level
+                if (userTenantLevelIndex < requiredLevelIndex) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // Helper to check if description is accessible
+        const isDescriptionAccessible = (event: typeof result[0]): boolean => {
+            const descAco = parseAco(event.descriptionAco || event.aco);
+            return isAcoAccessible(descAco);
+        };
+
+        // Filter events and redact inaccessible descriptions
+        return result
+            .filter(event => {
+                // Filter by base event ACO
+                const parsedAco = parseAco(event.aco);
+                return isAcoAccessible(parsedAco);
+            })
+            .map(event => {
+                // Redact description if not accessible (server-side security)
+                if (event.description && !isDescriptionAccessible(event)) {
+                    return {
+                        ...event,
+                        description: null, // Redact content
+                        descriptionAco: null, // Hide classification level
+                        _descriptionRedacted: true, // Marker for UI
+                    };
+                }
+                return event;
+            });
     }
 
     return result;
@@ -218,6 +291,16 @@ export async function updateCalendarEvent(
     try {
         const now = new Date().toISOString();
 
+        // If ACO is being updated, also update the normalized acoId
+        let acoId: number | undefined;
+        if (input.aco !== undefined) {
+            const parsedAco = parseAco(input.aco);
+            acoId = await getOrCreateAcoId({
+                sensitivity: parsedAco.sensitivity,
+                tenants: parsedAco.tenants,
+            });
+        }
+
         await db
             .update(calendarEvents)
             .set({
@@ -233,6 +316,7 @@ export async function updateCalendarEvent(
                 ...(input.recurrenceUntil !== undefined && { recurrenceUntil: input.recurrenceUntil }),
                 ...(input.location !== undefined && { location: input.location }),
                 ...(input.aco !== undefined && { aco: input.aco }),
+                ...(acoId !== undefined && { acoId }), // Normalized ACO
                 ...(input.descriptionAco !== undefined && { descriptionAco: input.descriptionAco }),
                 updatedAt: now,
             })

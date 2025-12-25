@@ -48,9 +48,12 @@ export interface CalendarEventWithParticipants {
     createdAt: string;
     updatedAt: string;
     // Security/ABAC fields
+    acoId: number | null; // Normalized FK to aco_objects
     aco: string;
     descriptionAco: string | null;
     sco: string | null;
+    // Server-side redaction marker
+    _descriptionRedacted?: boolean;
     participants: Array<{
         personnelId: string;
         role: string;

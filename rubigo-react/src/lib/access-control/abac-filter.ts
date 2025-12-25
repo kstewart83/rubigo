@@ -20,6 +20,8 @@ export interface SessionContext {
     sessionLevel: SensitivityLevel;
     /** Currently enabled tenant compartments */
     activeTenants: string[];
+    /** Map of active tenant -> its current session level for tiered filtering */
+    activeTenantLevels?: Record<string, SensitivityLevel>;
 }
 
 /**
@@ -27,7 +29,12 @@ export interface SessionContext {
  */
 interface ParsedAco {
     sensitivity: SensitivityLevel;
+    /** Raw tenant strings (may include LEVEL:TENANT format) */
     tenants: string[];
+    /** Extracted tenant names (emoji/short name only) */
+    tenantNames: string[];
+    /** Map of tenant name -> level (extracted from LEVEL:TENANT format) */
+    tenantLevels: Record<string, SensitivityLevel>;
 }
 
 // ============================================================================
@@ -37,19 +44,50 @@ interface ParsedAco {
 /**
  * Parse ACO JSON string into structured object.
  * Returns default LOW sensitivity if parsing fails.
+ * Extracts tenant levels from "LEVEL:TENANT" format.
  */
 export function parseAco(acoJson: string | null | undefined): ParsedAco {
     if (!acoJson) {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
     }
     try {
         const parsed = JSON.parse(acoJson);
+        const sensitivity = (parsed.sensitivity as SensitivityLevel) || "low";
+        const rawTenants = Array.isArray(parsed.tenants) ? parsed.tenants : [];
+
+        // Extract tenant names and levels from "LEVEL:TENANT" format
+        const tenantNames: string[] = [];
+        const tenantLevels: Record<string, SensitivityLevel> = {};
+
+        for (const t of rawTenants) {
+            if (typeof t === "string" && t.includes(":")) {
+                const [level, name] = t.split(":");
+                if (level && name) {
+                    const normalizedLevel = level.toLowerCase() as SensitivityLevel;
+                    if (SENSITIVITY_ORDER.includes(normalizedLevel)) {
+                        tenantNames.push(name);
+                        tenantLevels[name] = normalizedLevel;
+                    } else {
+                        // Invalid level, treat as tenant name with base sensitivity
+                        tenantNames.push(t);
+                        tenantLevels[t] = sensitivity;
+                    }
+                }
+            } else if (typeof t === "string") {
+                // Plain tenant name without level - use base sensitivity
+                tenantNames.push(t);
+                tenantLevels[t] = sensitivity;
+            }
+        }
+
         return {
-            sensitivity: (parsed.sensitivity as SensitivityLevel) || "low",
-            tenants: Array.isArray(parsed.tenants) ? parsed.tenants : [],
+            sensitivity,
+            tenants: rawTenants,
+            tenantNames,
+            tenantLevels,
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
     }
 }
 
@@ -57,30 +95,42 @@ export function parseAco(acoJson: string | null | undefined): ParsedAco {
  * Check if a session can access an object based on its ACO.
  *
  * Access is granted if:
- * 1. Session level >= object sensitivity level
- * 2. Session has ALL tenants required by the object (if any)
+ * 1. Session level >= object sensitivity level (for untenanted data)
+ * 2. For each tenant the object requires:
+ *    - Session has that tenant enabled
+ *    - Session's level for that tenant >= object's level for that tenant
  *
  * @param session - The active session context
  * @param aco - The parsed ACO of the object
  * @returns true if access is permitted
  */
 export function canAccessObject(session: SessionContext, aco: ParsedAco): boolean {
-    // Check sensitivity level
-    const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(session.sessionLevel);
-    const objectLevelIndex = SENSITIVITY_ORDER.indexOf(aco.sensitivity);
+    const activeTenantLevels = session.activeTenantLevels ?? {};
 
-    if (sessionLevelIndex < objectLevelIndex) {
-        // Session level is lower than object sensitivity - DENY
-        return false;
+    // If object has no tenants, check base level only
+    if (aco.tenantNames.length === 0) {
+        const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(session.sessionLevel);
+        const objectLevelIndex = SENSITIVITY_ORDER.indexOf(aco.sensitivity);
+        return sessionLevelIndex >= objectLevelIndex;
     }
 
-    // Check tenant compartments (if object has any)
-    if (aco.tenants.length > 0) {
-        // User must have ALL tenants in their active session
-        const hasAllTenants = aco.tenants.every(tenant =>
-            session.activeTenants.includes(tenant)
-        );
-        if (!hasAllTenants) {
+    // Object requires tenants - check each one
+    for (const tenantName of aco.tenantNames) {
+        // User must have this tenant in their active session
+        if (!session.activeTenants.includes(tenantName)) {
+            return false;
+        }
+
+        // Get the required level for this tenant from the ACO
+        const requiredLevel = aco.tenantLevels[tenantName] ?? aco.sensitivity;
+        const requiredLevelIndex = SENSITIVITY_ORDER.indexOf(requiredLevel);
+
+        // Get user's session level for this tenant
+        const userTenantLevel = activeTenantLevels[tenantName] ?? session.sessionLevel;
+        const userTenantLevelIndex = SENSITIVITY_ORDER.indexOf(userTenantLevel);
+
+        // User's tenant level must be >= required level
+        if (userTenantLevelIndex < requiredLevelIndex) {
             return false;
         }
     }
