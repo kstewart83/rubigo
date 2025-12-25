@@ -79,17 +79,53 @@ export function SecurityBadge({
     className,
 }: SecurityBadgeProps) {
     const sensitivity = aco?.sensitivity ?? directSensitivity ?? "low";
-    const tenants = aco?.tenants ?? [];
+    const rawTenants = aco?.tenants ?? [];
     const roles = aco?.roles ?? [];
 
+    // Parse tenant names and levels from "LEVEL:TENANT" format
+    const parsedTenants: Array<{ name: string; level: SensitivityLevel; isDifferent: boolean }> = rawTenants.map(t => {
+        if (typeof t === "string" && t.includes(":")) {
+            const [levelPart, name] = t.split(":");
+            const level = levelPart.toLowerCase() as SensitivityLevel;
+            const isValid = ["public", "low", "moderate", "high"].includes(level);
+            return {
+                name: name || t,
+                level: isValid ? level : sensitivity,
+                isDifferent: isValid && level !== sensitivity
+            };
+        }
+        return { name: t, level: sensitivity, isDifferent: false };
+    });
+
+    const tenantNames = parsedTenants.map(t => t.name);
 
     const label = LEVEL_LABELS[sensitivity];
 
-    // Determine tenant indicator: single tenant emoji, or multi-tenant icon
+    // Color classes for tenant level indicators
+    const LEVEL_TEXT_CLASS: Record<SensitivityLevel, string> = {
+        public: "text-emerald-300",
+        low: "text-sky-300",
+        moderate: "text-amber-300",
+        high: "text-red-300",
+    };
+
+    // Determine tenant indicator
     let tenantIndicator: React.ReactNode = null;
-    if (tenants.length === 1) {
-        tenantIndicator = <span className="text-[10px] leading-none">{tenants[0]}</span>;
-    } else if (tenants.length > 1) {
+    if (parsedTenants.length === 1) {
+        const t = parsedTenants[0];
+        if (t.isDifferent) {
+            // Different level - show "(MOD 🍎)" style with color
+            tenantIndicator = (
+                <span className={`text-[10px] leading-none ${LEVEL_TEXT_CLASS[t.level]}`}>
+                    ({LEVEL_LABELS[t.level]} {t.name})
+                </span>
+            );
+        } else {
+            // Same level - just show emoji
+            tenantIndicator = <span className="text-[10px] leading-none">{t.name}</span>;
+        }
+    } else if (parsedTenants.length > 1) {
+        // Multiple tenants - always show stacked icon (details in tooltip)
         tenantIndicator = <Layers className="size-3" />;
     }
 
@@ -104,7 +140,7 @@ export function SecurityBadge({
     );
 
     // Only show tooltip if there are MULTIPLE tenants (single tenant shown inline)
-    if (tenants.length <= 1 && roles.length === 0) {
+    if (tenantNames.length <= 1 && roles.length === 0) {
         return badge;
     }
 
@@ -112,16 +148,30 @@ export function SecurityBadge({
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>{badge}</TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
+                <TooltipContent
+                    side="top"
+                    showArrow={false}
+                    className="text-xs bg-zinc-900 border border-zinc-700 text-zinc-200"
+                >
                     <div className="space-y-1">
                         <div>
                             <span className="text-zinc-500">Sensitivity:</span>{" "}
-                            <span className="font-medium">{sensitivity}</span>
+                            <span className="font-medium">{LEVEL_LABELS[sensitivity]}</span>
                         </div>
-                        {tenants.length > 0 && (
+                        {parsedTenants.length > 0 && (
                             <div>
                                 <span className="text-zinc-500">Tenants:</span>{" "}
-                                <span>{tenants.join(" ")}</span>
+                                <span className="flex flex-wrap items-center gap-1">
+                                    {parsedTenants.map((t, i) => (
+                                        t.isDifferent ? (
+                                            <span key={i} className={LEVEL_TEXT_CLASS[t.level]}>
+                                                ({LEVEL_LABELS[t.level]} {t.name})
+                                            </span>
+                                        ) : (
+                                            <span key={i}>{t.name}</span>
+                                        )
+                                    ))}
+                                </span>
                             </div>
                         )}
                         {roles.length > 0 && (

@@ -241,12 +241,30 @@ export function SecurityBanner() {
                         <div className="flex items-center gap-1">
                             {activeTenants.map((tenant) => {
                                 const tc = tenantClearances.find(t => t.tenant === tenant);
-                                const isReduced = tc && tc.sessionLevel !== tc.maxLevel;
+                                // Check if tenant session level differs from base session level
+                                const tenantLevel = tc?.sessionLevel ?? sessionLevel;
+                                const isDifferentLevel = tenantLevel !== sessionLevel;
+                                const levelConfig = LEVEL_CONFIG[tenantLevel];
+
+                                if (isDifferentLevel) {
+                                    // Show in parentheses format with level color
+                                    return (
+                                        <span
+                                            key={tenant}
+                                            className={`text-sm ${levelConfig.textClass}`}
+                                            title={`${tenant} at ${levelConfig.label}`}
+                                        >
+                                            ({levelConfig.shortLabel} {tenant})
+                                        </span>
+                                    );
+                                }
+
+                                // Same as base - show just the tenant
                                 return (
                                     <span
                                         key={tenant}
-                                        className={`text-base ${isReduced ? "opacity-70" : ""}`}
-                                        title={tc ? `${tenant} at ${LEVEL_CONFIG[tc.sessionLevel].label}${isReduced ? ` (max: ${LEVEL_CONFIG[tc.maxLevel].label})` : ""}` : tenant}
+                                        className="text-base"
+                                        title={`${tenant} at ${levelConfig.label}`}
                                     >
                                         {tenant}
                                     </span>

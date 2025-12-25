@@ -160,16 +160,49 @@ const SENSITIVITY_ORDER: Record<SensitivityLevel, number> = {
     high: 3,
 };
 
-function parseAco(aco: string | undefined): { sensitivity: SensitivityLevel; tenants: string[] } {
-    if (!aco) return { sensitivity: "low", tenants: [] };
+function parseAco(aco: string | undefined): {
+    sensitivity: SensitivityLevel;
+    tenants: string[];
+    tenantNames: string[];
+    tenantLevels: Record<string, SensitivityLevel>;
+} {
+    if (!aco) return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
     try {
         const parsed = JSON.parse(aco);
+        const sensitivity = (parsed.sensitivity || "low") as SensitivityLevel;
+        const rawTenants: string[] = parsed.tenants || [];
+
+        // Extract tenant names and levels from "LEVEL:TENANT" format
+        const tenantNames: string[] = [];
+        const tenantLevels: Record<string, SensitivityLevel> = {};
+
+        for (const t of rawTenants) {
+            if (typeof t === "string" && t.includes(":")) {
+                const [level, name] = t.split(":");
+                if (level && name) {
+                    const normalizedLevel = level.toLowerCase() as SensitivityLevel;
+                    if (["public", "low", "moderate", "high"].includes(normalizedLevel)) {
+                        tenantNames.push(name);
+                        tenantLevels[name] = normalizedLevel;
+                    } else {
+                        tenantNames.push(t);
+                        tenantLevels[t] = sensitivity;
+                    }
+                }
+            } else if (typeof t === "string") {
+                tenantNames.push(t);
+                tenantLevels[t] = sensitivity;
+            }
+        }
+
         return {
-            sensitivity: (parsed.sensitivity || "low") as SensitivityLevel,
-            tenants: parsed.tenants || [],
+            sensitivity,
+            tenants: rawTenants,
+            tenantNames,
+            tenantLevels,
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
     }
 }
 
@@ -187,10 +220,19 @@ function getMaxSensitivity(events: Array<{ aco?: string }>): SensitivityLevel {
 function getAllTenants(events: Array<{ aco?: string }>): string[] {
     const tenantSet = new Set<string>();
     for (const event of events) {
-        const { tenants } = parseAco(event.aco);
-        tenants.forEach(t => tenantSet.add(t));
+        const { tenantNames } = parseAco(event.aco);
+        tenantNames.forEach(t => tenantSet.add(t));
     }
     return Array.from(tenantSet);
+}
+
+function getAllTenantLevels(events: Array<{ aco?: string }>): Record<string, SensitivityLevel> {
+    const levels: Record<string, SensitivityLevel> = {};
+    for (const event of events) {
+        const { tenantLevels } = parseAco(event.aco);
+        Object.assign(levels, tenantLevels);
+    }
+    return levels;
 }
 
 /**
@@ -676,6 +718,7 @@ export function CalendarPageContent() {
                 <SecurePanelWrapper
                     level={getMaxSensitivity(visibleEvents)}
                     tenants={getAllTenants(visibleEvents)}
+                    tenantLevels={getAllTenantLevels(visibleEvents)}
                     className="flex-1 flex flex-col border rounded-lg overflow-hidden"
                 >
                     {loading ? (
@@ -2438,7 +2481,8 @@ function EventDetailsPanel({
                         {/* Event Details Panel */}
                         <SecurePanelWrapper
                             level={parseAco(event.aco).sensitivity}
-                            tenants={parseAco(event.aco).tenants}
+                            tenants={parseAco(event.aco).tenantNames}
+                            tenantLevels={parseAco(event.aco).tenantLevels}
                             className="rounded-lg border overflow-hidden"
                         >
                             <div className="p-3 space-y-3">
@@ -2508,7 +2552,8 @@ function EventDetailsPanel({
                         {(event.description || event._descriptionRedacted) && (
                             <SecurePanelWrapper
                                 level={event._descriptionRedacted ? null : parseAco(event.descriptionAco || event.aco).sensitivity}
-                                tenants={event._descriptionRedacted ? [] : parseAco(event.descriptionAco || event.aco).tenants}
+                                tenants={event._descriptionRedacted ? [] : parseAco(event.descriptionAco || event.aco).tenantNames}
+                                tenantLevels={event._descriptionRedacted ? {} : parseAco(event.descriptionAco || event.aco).tenantLevels}
                                 className="rounded-lg border overflow-hidden"
                             >
                                 <div className="p-3">

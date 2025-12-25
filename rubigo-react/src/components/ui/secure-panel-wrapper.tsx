@@ -17,6 +17,7 @@ import type { SensitivityLevel } from "@/lib/access-control/types";
 // Config for when level is null (unclassified)
 const NONE_CONFIG = {
     label: "NONE",
+    shortLabel: "NONE",
     bgClass: "bg-zinc-500/10 border-zinc-500/50",
     textClass: "text-zinc-400",
     icon: Shield,
@@ -24,30 +25,35 @@ const NONE_CONFIG = {
 
 const LEVEL_CONFIG: Record<SensitivityLevel, {
     label: string;
+    shortLabel: string;
     bgClass: string;
     textClass: string;
     icon: typeof Shield;
 }> = {
     public: {
         label: "PUBLIC",
+        shortLabel: "PUB",
         bgClass: "bg-emerald-500/10 border-emerald-500/50",
         textClass: "text-emerald-400",
         icon: Shield,
     },
     low: {
         label: "LOW",
+        shortLabel: "LOW",
         bgClass: "bg-sky-500/10 border-sky-500/50",
         textClass: "text-sky-400",
         icon: Shield,
     },
     moderate: {
         label: "MODERATE",
+        shortLabel: "MOD",
         bgClass: "bg-amber-500/10 border-amber-500/50",
         textClass: "text-amber-400",
         icon: ShieldCheck,
     },
     high: {
         label: "HIGH",
+        shortLabel: "HIGH",
         bgClass: "bg-red-500/10 border-red-500/50",
         textClass: "text-red-400",
         icon: ShieldAlert,
@@ -110,7 +116,7 @@ function ClassificationBanner({ level, tenants = [], tenantLevels = {}, position
                 const tenantConfig = LEVEL_CONFIG[tenantLevel];
                 return (
                     <span key={tenant} className={`text-sm ${tenantConfig.textClass}`}>
-                        ({tenantConfig.label.substring(0, 3).toUpperCase()} {tenant})
+                        ({tenantConfig.shortLabel} {tenant})
                     </span>
                 );
             })}
