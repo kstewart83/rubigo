@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { eq, and, gte, lte, or } from "drizzle-orm";
 import type { CalendarEventWithParticipants } from "@/lib/calendar-utils";
+import { type SessionContext, filterBySession } from "@/lib/access-control/abac-filter";
 
 // ============================================================================
 // Types
@@ -77,6 +78,9 @@ export async function createCalendarEvent(
             deleted: false,
             createdAt: now,
             updatedAt: now,
+            // Security/ABAC fields
+            aco: input.aco ?? '{"sensitivity":"low"}',
+            descriptionAco: input.descriptionAco ?? null,
         });
 
         // Add organizer as participant
@@ -110,10 +114,14 @@ export async function createCalendarEvent(
 
 /**
  * Get calendar events for a date range
+ * @param startDate - Start of date range (ISO 8601)
+ * @param endDate - End of date range (ISO 8601)
+ * @param sessionContext - Optional session context for ABAC filtering
  */
 export async function getCalendarEvents(
     startDate: string,
-    endDate: string
+    endDate: string,
+    sessionContext?: SessionContext
 ): Promise<CalendarEventWithParticipants[]> {
     // Get base events in range (non-recurring)
     const events = await db
@@ -161,6 +169,11 @@ export async function getCalendarEvents(
                 role: p.role ?? "participant",
             })),
         });
+    }
+
+    // Apply session-level ABAC filtering if context provided
+    if (sessionContext) {
+        return filterBySession(result, sessionContext);
     }
 
     return result;

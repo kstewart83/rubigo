@@ -47,6 +47,10 @@ export interface CalendarEventWithParticipants {
     deleted: boolean | null;
     createdAt: string;
     updatedAt: string;
+    // Security/ABAC fields
+    aco: string;
+    descriptionAco: string | null;
+    sco: string | null;
     participants: Array<{
         personnelId: string;
         role: string;

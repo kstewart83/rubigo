@@ -9,7 +9,7 @@
  * - Strategy Cascade: metrics, kpis, initiatives
  */
 
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
 
 // ============================================================================
 // Personnel (System Users)
@@ -63,6 +63,62 @@ export const photoBlobs = sqliteTable("photo_blobs", {
     size: integer("size").notNull(), // File size in bytes
     createdAt: text("created_at").notNull(), // ISO timestamp for caching
 });
+
+// ============================================================================
+// Access Control Infrastructure
+// ============================================================================
+
+/**
+ * ACO Objects - Immutable registry of unique Access Control Objects
+ * 
+ * Each unique combination of sensitivity/tenants/roles gets one row.
+ * Business objects reference these by ID for efficient query filtering.
+ * Auto-incrementing IDs enable staleness detection for session caching.
+ */
+export const acoObjects = sqliteTable("aco_objects", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hash: text("hash").notNull().unique(), // SHA-256 of canonical JSON
+    sensitivity: text("sensitivity", {
+        enum: ["public", "low", "moderate", "high"]
+    }).notNull(),
+    tenants: text("tenants").notNull().default("[]"), // JSON array, sorted
+    roles: text("roles").notNull().default("[]"), // JSON array, sorted
+    createdAt: text("created_at").notNull(),
+});
+
+/**
+ * Security Sessions - Server-managed session state with pre-validated ACO sets
+ * 
+ * Stores the list of ACO IDs the session is cleared to access.
+ * Staleness detection via highest_aco_id enables incremental refresh.
+ */
+export const securitySessions = sqliteTable("security_sessions", {
+    id: text("id").primaryKey(), // UUID from HttpOnly cookie
+    personnelId: text("personnel_id").references(() => personnel.id),
+    sessionLevel: text("session_level", {
+        enum: ["public", "low", "moderate", "high"]
+    }).notNull(),
+    activeTenants: text("active_tenants").notNull().default("[]"), // JSON array
+    validatedAcoIds: text("validated_aco_ids").notNull().default("[]"), // JSON array of ACO IDs
+    highestAcoId: integer("highest_aco_id").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+});
+
+/**
+ * Secure Descriptions - Extension table for classified description content
+ * 
+ * Allows description fields to have higher classification than base objects.
+ * Generic pattern: parent_type + parent_id identify the owning object.
+ */
+export const secureDescriptions = sqliteTable("secure_descriptions", {
+    parentType: text("parent_type").notNull(), // 'calendar_event', 'email', etc.
+    parentId: text("parent_id").notNull(),
+    acoId: integer("aco_id").notNull().references(() => acoObjects.id),
+    content: text("content").notNull(),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.parentType, table.parentId] }),
+}));
 
 // ============================================================================
 // Solution Space

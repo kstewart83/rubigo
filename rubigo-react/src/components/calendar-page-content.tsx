@@ -76,6 +76,7 @@ import { useAnalytics } from "@/hooks/use-analytics";
 import { SecurePanelWrapper } from "@/components/ui/secure-panel-wrapper";
 import { SecurityBadge } from "@/components/ui/security-badge";
 import { SecurityLabelPicker } from "@/components/ui/security-label-picker";
+import { useSecurity } from "@/contexts/security-context";
 
 // ============================================================================
 // Timezone Constants
@@ -463,6 +464,7 @@ export function CalendarPageContent() {
     const [pendingAction, setPendingAction] = useState<"delete" | "edit" | null>(null);
 
     // Fetch events for current view using server actions
+    const { sessionLevel, activeTenants } = useSecurity();
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         const year = currentDate.getFullYear();
@@ -481,7 +483,9 @@ export function CalendarPageContent() {
             const endStr = format(endDate, "yyyy-MM-dd");
             const rawEvents = await getCalendarEvents(
                 `${startStr}T00:00:00`,
-                `${endStr}T23:59:59`
+                `${endStr}T23:59:59`,
+                // Pass session context for server-side ABAC filtering
+                { sessionLevel, activeTenants }
             );
 
             // Get deviations and expand recurring events
@@ -512,7 +516,7 @@ export function CalendarPageContent() {
         } finally {
             setLoading(false);
         }
-    }, [currentDate]);
+    }, [currentDate, sessionLevel, activeTenants]);
 
     useEffect(() => {
         fetchEvents();
