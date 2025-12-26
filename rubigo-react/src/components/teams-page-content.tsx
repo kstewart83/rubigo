@@ -6,9 +6,10 @@
  * File-manager style navigation for hierarchical teams with 50/50 split editor.
  */
 
-import { useState, useTransition, useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useAutoPagination } from "@/hooks/use-auto-pagination";
 import {
     Table,
     TableBody,
@@ -84,11 +85,6 @@ interface Props {
     allPersonnel: Person[];
 }
 
-// Pagination constants
-const PAGE_SIZE_OPTIONS = ["auto", 10, 25, 50, 100] as const;
-const ROW_HEIGHT = 49; // Approximate height of a table row in pixels
-const TABLE_OVERHEAD = 160; // Header + breadcrumbs + classification banners + pagination footer
-
 // Breadcrumb item type
 interface BreadcrumbItem {
     id: string | null;  // null = root
@@ -101,65 +97,19 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     const { currentPersona } = usePersona();
     const [isPending, startTransition] = useTransition();
 
-    // Pagination state
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(25);
-    const [autoPageSize, setAutoPageSize] = useState(25);
-    const [isAutoMode, setIsAutoMode] = useState(true);
-
-    // Calculate optimal page size based on container height
-    const calculateAutoPageSize = useCallback(() => {
-        if (!containerRef.current) return 25;
-        const containerHeight = containerRef.current.clientHeight;
-        const availableHeight = containerHeight - TABLE_OVERHEAD;
-        const fittingRows = Math.floor(availableHeight / ROW_HEIGHT);
-        return Math.max(5, fittingRows);
-    }, []);
-
-    // Setup ResizeObserver for auto mode
-    const lastCalculatedSize = useRef<number>(pageSize);
-
-    useLayoutEffect(() => {
-        if (!isAutoMode || !containerRef.current) return;
-
-        const updatePageSize = () => {
-            const newSize = calculateAutoPageSize();
-            if (newSize !== lastCalculatedSize.current && newSize > 0) {
-                lastCalculatedSize.current = newSize;
-                setAutoPageSize(newSize);
-                setPageSize(newSize);
-                setCurrentPage(1); // Reset to first page on resize
-            }
-        };
-
-        const observer = new ResizeObserver(() => {
-            updatePageSize();
-        });
-
-        observer.observe(containerRef.current);
-        // Initial calculation (delayed to let layout settle)
-        const timer = setTimeout(updatePageSize, 100);
-
-        return () => {
-            observer.disconnect();
-            clearTimeout(timer);
-        };
-    }, [isAutoMode, calculateAutoPageSize]);
-
-    // Handle page size change
-    const handlePageSizeChange = (value: string) => {
-        if (value === "auto") {
-            setIsAutoMode(true);
-            const autoSize = calculateAutoPageSize();
-            setPageSize(autoSize);
-            setAutoPageSize(autoSize);
-        } else {
-            setIsAutoMode(false);
-            setPageSize(Number(value));
-        }
-        setCurrentPage(1);
-    };
+    // Auto-pagination hook
+    const {
+        containerRef,
+        tableBodyRef,
+        headerRef,
+        paginationRef,
+        currentPage,
+        setCurrentPage,
+        pageSize,
+        isAutoMode,
+        handlePageSizeChange,
+        pageSizeOptions,
+    } = useAutoPagination({ additionalBuffer: 70 });
 
     // Navigation state
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
@@ -167,19 +117,26 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     ]);
     const currentTeamId = breadcrumbs[breadcrumbs.length - 1].id;
 
-    // Read team from URL on initial load
+    // Track which URL team param we've already processed to avoid re-navigation
+    const lastProcessedUrlTeam = useRef<string | null>(null);
+
+    // Read team from URL - only navigate if URL param changed
     useEffect(() => {
         const teamIdFromUrl = searchParams.get("team");
-        if (teamIdFromUrl && breadcrumbs.length === 1) { // Only on initial load
+
+        // Only navigate if:
+        // 1. There's a team in the URL
+        // 2. We haven't already processed this exact team param
+        if (teamIdFromUrl && teamIdFromUrl !== lastProcessedUrlTeam.current) {
             const targetTeam = teams.find(t => t.id === teamIdFromUrl);
             if (targetTeam) {
+                lastProcessedUrlTeam.current = teamIdFromUrl;
+
                 // Build breadcrumb path by finding parent chain
-                // A team's parent is the team that has it as a child
                 const findParentChain = (teamId: string): BreadcrumbItem[] => {
                     const team = teams.find(t => t.id === teamId);
                     if (!team) return [];
 
-                    // Find parent team (one that has this team as child)
                     const parentTeam = teams.find(t =>
                         t.childTeams.some(ct => ct.childTeamId === teamId)
                     );
@@ -198,7 +155,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                 ]);
             }
         }
-    }, [searchParams, teams, breadcrumbs.length]);
+    }, [searchParams, teams]);
 
     // Editor panel state
     const [showEditor, setShowEditor] = useState(false);
@@ -309,13 +266,26 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
             ? allPersonnel.filter(p => currentTeam.members.some(m => m.personnelId === p.id))
             : [];
 
-    // Navigation
+    // Navigation - syncs URL with breadcrumbs
     const navigateToTeam = (team: TeamWithMembers) => {
-        setBreadcrumbs([...breadcrumbs, { id: team.id, name: team.name }]);
+        const newBreadcrumbs = [...breadcrumbs, { id: team.id, name: team.name }];
+        setBreadcrumbs(newBreadcrumbs);
+        // Update URL to reflect new team
+        lastProcessedUrlTeam.current = team.id;
+        router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
     };
 
     const navigateToBreadcrumb = (index: number) => {
-        setBreadcrumbs(breadcrumbs.slice(0, index + 1));
+        const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
+        setBreadcrumbs(newBreadcrumbs);
+        // Update URL - if at root, remove team param; otherwise set to selected team
+        const newTeamId = newBreadcrumbs[newBreadcrumbs.length - 1].id;
+        lastProcessedUrlTeam.current = newTeamId;
+        if (newTeamId) {
+            router.replace(`/personnel/teams?team=${newTeamId}`, { scroll: false });
+        } else {
+            router.replace('/personnel/teams', { scroll: false });
+        }
     };
 
     // Editor handlers
@@ -493,7 +463,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     return (
         <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto">
             {/* Header with breadcrumbs and search */}
-            <div className="flex items-center justify-between mb-4 gap-4">
+            <div ref={headerRef} className="flex items-center justify-between mb-4 gap-4">
                 {/* Breadcrumbs or Search Results indicator */}
                 <div className="flex items-center gap-2 text-sm flex-1">
                     {isSearching ? (
@@ -601,7 +571,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                             <TableHead className="w-[100px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody ref={tableBodyRef}>
                         {paginatedTeams.length === 0 && displayedPersonnel.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={isSearching ? 9 : 8} className="text-center py-8 text-muted-foreground">
@@ -633,6 +603,9 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                                     };
                                                     const path = findParentChain(team.id);
                                                     setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
+                                                    // Sync URL
+                                                    lastProcessedUrlTeam.current = team.id;
+                                                    router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
                                                 } else {
                                                     navigateToTeam(team);
                                                 }
@@ -759,7 +732,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
 
             {/* Pagination footer */}
             {totalTeams > 0 && (
-                <div className="flex items-center justify-between py-3 px-4 border-t bg-muted/30 rounded-b-lg -mt-px">
+                <div ref={paginationRef} className="flex items-center justify-between py-3 px-4 border-t bg-muted/30 rounded-b-lg -mt-px">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -771,8 +744,8 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {PAGE_SIZE_OPTIONS.map((option) => (
-                                        <SelectItem key={option} value={String(option)}>
+                                    {pageSizeOptions.map((option) => (
+                                        <SelectItem key={String(option)} value={String(option)}>
                                             {option === "auto" ? "Auto" : option}
                                         </SelectItem>
                                     ))}
@@ -1179,22 +1152,38 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                             <div className="text-sm text-zinc-500">Not a member of any teams</div>
                                         ) : (
                                             <div className="space-y-1">
-                                                {personTeams.map(team => (
-                                                    <div
-                                                        key={team.id}
-                                                        className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
-                                                        onClick={() => {
-                                                            setSelectedPerson(null);
-                                                            router.push(`/personnel/teams?team=${team.id}`);
-                                                        }}
-                                                    >
-                                                        <UsersRound className="h-4 w-4 text-primary" />
-                                                        <span>{team.name}</span>
-                                                        {team.isOwner && (
-                                                            <Crown className="h-3.5 w-3.5 text-amber-500" />
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                {personTeams.map(team => {
+                                                    // Build parent chain for navigation
+                                                    const findParentChain = (teamId: string): BreadcrumbItem[] => {
+                                                        const t = teams.find(x => x.id === teamId);
+                                                        if (!t) return [];
+                                                        const parent = teams.find(x => x.childTeams.some(ct => ct.childTeamId === teamId));
+                                                        if (parent) {
+                                                            return [...findParentChain(parent.id), { id: t.id, name: t.name }];
+                                                        }
+                                                        return [{ id: t.id, name: t.name }];
+                                                    };
+                                                    return (
+                                                        <div
+                                                            key={team.id}
+                                                            className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
+                                                            onClick={() => {
+                                                                setSelectedPerson(null);
+                                                                const path = findParentChain(team.id);
+                                                                setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
+                                                                // Sync URL
+                                                                lastProcessedUrlTeam.current = team.id;
+                                                                router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
+                                                            }}
+                                                        >
+                                                            <UsersRound className="h-4 w-4 text-primary" />
+                                                            <span>{team.name}</span>
+                                                            {team.isOwner && (
+                                                                <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>

@@ -31,11 +31,6 @@ export interface PersonnelInput {
     deskPhone?: string;
     cellPhone?: string;
     bio?: string;
-    isAgent?: boolean; // AI agent flag
-    // Security/ABAC fields
-    clearanceLevel?: string;
-    tenantClearances?: string;
-    accessRoles?: string;
 }
 
 export interface PersonnelListParams {
@@ -212,9 +207,6 @@ export interface CalendarEventInput {
     allDay?: boolean;
     participantIds?: string[];
     organizerId?: string;
-    // Security/ABAC fields
-    aco?: string;  // Format: "sensitivity/tenant1/tenant2" e.g. "moderate/🏠"
-    descriptionAco?: string;  // Separate ACO for description field
 }
 
 export interface CalendarDeviationInput {
@@ -816,6 +808,61 @@ export class RubigoClient {
         read?: boolean;
     }): Promise<ApiResult> {
         return this.request<ApiResult>("POST", "/api/email/sync", { action: "createRecipient", ...input });
+    }
+
+    // =========================================================================
+    // Teams API
+    // =========================================================================
+
+    async listTeams(): Promise<ListResult<unknown>> {
+        return this.request<ListResult<unknown>>("GET", "/api/teams");
+    }
+
+    async getTeam(id: string): Promise<GetResult<unknown>> {
+        return this.request<GetResult<unknown>>("GET", `/api/teams/${id}`);
+    }
+
+    async createTeam(input: {
+        name: string;
+        description?: string;
+        createdBy?: string;
+        memberIds?: string[];
+        ownerIds?: string[];
+        aco?: string;
+    }): Promise<ApiResult> {
+        return this.request<ApiResult>("POST", "/api/teams", input);
+    }
+
+    async updateTeam(id: string, updates: { name?: string; description?: string; aco?: string }): Promise<ApiResult> {
+        return this.request<ApiResult>("PUT", `/api/teams/${id}`, updates);
+    }
+
+    async deleteTeam(id: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/teams/${id}`);
+    }
+
+    async addTeamMember(input: { teamId: string; personnelId: string }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/teams/members", input);
+    }
+
+    async removeTeamMember(teamId: string, personnelId: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/teams/members?teamId=${teamId}&personnelId=${personnelId}`);
+    }
+
+    async addTeamOwner(input: { teamId: string; personnelId: string }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/teams/owners", input);
+    }
+
+    async removeTeamOwner(teamId: string, personnelId: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/teams/owners?teamId=${teamId}&personnelId=${personnelId}`);
+    }
+
+    async addChildTeam(input: { parentTeamId: string; childTeamId: string }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/teams/hierarchy", input);
+    }
+
+    async removeChildTeam(parentTeamId: string, childTeamId: string): Promise<ApiResult> {
+        return this.request<ApiResult>("DELETE", `/api/teams/hierarchy?parentTeamId=${parentTeamId}&childTeamId=${childTeamId}`);
     }
 }
 

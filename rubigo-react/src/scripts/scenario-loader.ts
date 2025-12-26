@@ -33,11 +33,6 @@ export interface PersonnelRecord {
     desk_phone?: string;
     cell_phone?: string;
     bio?: string;
-    is_agent?: number; // 1 = AI agent, 0 = human
-    // Security/ABAC fields
-    clearance_level?: string;
-    tenant_clearances?: string;
-    access_roles?: string;
 }
 
 export interface SolutionRecord {
@@ -250,6 +245,39 @@ export interface AssetRecord {
     notes?: string;
 }
 
+export interface TeamRecord {
+    id: string;
+    profile_id: string;
+    name: string;
+    description?: string;
+    created_by_email?: string;
+    aco?: string;
+}
+
+export interface TeamMemberRecord {
+    id: string;
+    profile_id: string;
+    team_name: string;
+    personnel_email: string;
+    joined_at: string;
+}
+
+export interface TeamTeamRecord {
+    id: string;
+    profile_id: string;
+    parent_team_name: string;
+    child_team_name: string;
+    added_at: string;
+}
+
+export interface TeamOwnerRecord {
+    id: string;
+    profile_id: string;
+    team_name: string;
+    personnel_email: string;
+    added_at: string;
+}
+
 export interface ScenarioData {
     profileId: string;
     personnel: PersonnelRecord[];
@@ -273,6 +301,10 @@ export interface ScenarioData {
     emailThreads: EmailThreadRecord[];
     emails: EmailRecord[];
     emailRecipients: EmailRecipientRecord[];
+    teams: TeamRecord[];
+    teamMembers: TeamMemberRecord[];
+    teamTeams: TeamTeamRecord[];
+    teamOwners: TeamOwnerRecord[];
 }
 
 // ============================================================================
@@ -338,6 +370,10 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             emailThreads: q("email_threads") as EmailThreadRecord[],
             emails: q("emails") as EmailRecord[],
             emailRecipients: q("email_recipients") as EmailRecipientRecord[],
+            teams: q("teams") as TeamRecord[],
+            teamMembers: q("team_members") as TeamMemberRecord[],
+            teamTeams: q("team_teams") as TeamTeamRecord[],
+            teamOwners: q("team_owners") as TeamOwnerRecord[],
         };
     } finally {
         db.close();

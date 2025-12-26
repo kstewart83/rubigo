@@ -226,9 +226,6 @@ interface SyncEntityOptions<T, E> {
     // Create a new item, returns the remote ID
     createFn: (item: T) => Promise<{ success: boolean; id?: string; error?: string }>;
 
-    // Update an existing item by remote ID (optional - for full/upsert mode)
-    updateFn?: (id: string, item: T) => Promise<{ success: boolean; error?: string }>;
-
     // Delete an item by remote ID
     deleteFn?: (id: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -312,34 +309,17 @@ async function syncEntityWithMapping<T, E>(
         }
     }
 
-    // Create, update, or skip items based on business key and mode
+    // Create or skip items based on business key
     for (const item of items) {
         const seedId = getSeedId(item);
         const seedKey = getSeedKey(item);
         const existing = existingByKey.get(seedKey);
 
         if (existing) {
-            // Already exists - record the ID mapping
+            // Already exists - record the ID mapping and skip
             const remoteId = getRemoteId(existing);
             idMap.set(seedId, remoteId);
-
-            // In full or upsert mode, update existing items if updateFn is provided
-            if ((mode === "full" || mode === "upsert") && options.updateFn) {
-                if (dryRun) {
-                    console.log(`   📝 [DRY-RUN] Would update: ${formatName(item)}`);
-                    stats.updated++;
-                } else {
-                    const result = await options.updateFn(remoteId, item);
-                    if (result.success) {
-                        stats.updated++;
-                    } else {
-                        stats.failed++;
-                        console.log(`   ❌ Failed to update: ${formatName(item)} - ${result.error}`);
-                    }
-                }
-            } else {
-                stats.skipped++;
-            }
+            stats.skipped++;
             continue;
         }
 
@@ -433,28 +413,6 @@ async function main() {
             deskPhone: p.desk_phone,
             cellPhone: p.cell_phone,
             bio: p.bio,
-            isAgent: p.is_agent === 1,
-            clearanceLevel: p.clearance_level,
-            tenantClearances: p.tenant_clearances,
-            accessRoles: p.access_roles,
-        }),
-        updateFn: (id, p) => client.updatePersonnel(id, {
-            name: p.name,
-            email: p.email,
-            title: p.title,
-            department: p.department,
-            site: p.site,
-            building: p.building,
-            level: p.level,
-            space: p.space,
-            manager: resolveId(idMaps, "personnel", p.manager),
-            deskPhone: p.desk_phone,
-            cellPhone: p.cell_phone,
-            bio: p.bio,
-            isAgent: p.is_agent === 1,
-            clearanceLevel: p.clearance_level,
-            tenantClearances: p.tenant_clearances,
-            accessRoles: p.access_roles,
         }),
         deleteFn: (id) => client.deletePersonnel(id),
         getSeedId: (p) => p.id,
@@ -1075,24 +1033,162 @@ async function main() {
     }
     allStats.emailRecipients = { created: recipientCreated, skipped: recipientSkipped, failed: recipientFailed, updated: 0, deleted: 0 };
 
+    // =========================================================================
+    // Teams Sync
+    // =========================================================================
+
+    // Build email-to-personnelId lookup for business key resolution
+    const emailToPersonnelId = new Map<string, string>();
+    for (const p of data.personnel) {
+        const remoteId = resolveId(idMaps, "personnel", p.id);
+        if (remoteId) {
+            emailToPersonnelId.set(p.email, remoteId);
+        }
+    }
+
+    // Sync teams
+    type RemoteTeam = { id: string; name: string };
+    allStats.teams = await syncEntityWithMapping<typeof data.teams[0], RemoteTeam>({
+        entityName: "teams",
+        entityType: "teams",
+        items: data.teams,
+        mode: args.mode,
+        dryRun: args.dryRun,
+        idMaps,
+        listFn: () => client.listTeams() as Promise<{ success: boolean; data?: RemoteTeam[] }>,
+        createFn: (t) => {
+            // Resolve created_by_email to personnel ID
+            const createdBy = t.created_by_email ? emailToPersonnelId.get(t.created_by_email) : undefined;
+            return client.createTeam({
+                name: t.name,
+                description: t.description,
+                createdBy,
+                aco: t.aco,
+            });
+        },
+        deleteFn: (id) => client.deleteTeam(id),
+        getSeedId: (t) => t.id,
+        getRemoteId: (t) => t.id,
+        getSeedKey: (t) => t.name,
+        getRemoteKey: (t) => t.name,
+        formatName: (t) => t.name,
+    });
+
+    // Build team name-to-ID lookup
+    const teamNameToId = new Map<string, string>();
+    const teamsResult = await client.listTeams() as { success: boolean; data?: RemoteTeam[] };
+    if (teamsResult.success && teamsResult.data) {
+        for (const team of teamsResult.data) {
+            teamNameToId.set(team.name, team.id);
+        }
+    }
+
+    // Sync team members using business keys
+    console.log(`\n📦 Syncing ${data.teamMembers.length} team members...`);
+    let tmCreated = 0, tmSkipped = 0, tmFailed = 0;
+
+    for (const tm of data.teamMembers) {
+        const teamId = teamNameToId.get(tm.team_name);
+        const personnelId = emailToPersonnelId.get(tm.personnel_email);
+
+        if (!teamId || !personnelId) {
+            console.log(`   ⚠️  Skipping member: unresolved team=${tm.team_name} or personnel=${tm.personnel_email}`);
+            tmSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would add member ${tm.personnel_email} to ${tm.team_name}`);
+            tmCreated++;
+        } else {
+            const result = await client.addTeamMember({ teamId, personnelId });
+            if (result.success) {
+                if (result.existed) tmSkipped++;
+                else tmCreated++;
+            } else {
+                tmFailed++;
+                console.log(`   ❌ Failed to add member: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamMembers = { created: tmCreated, skipped: tmSkipped, failed: tmFailed, updated: 0, deleted: 0 };
+
+    // Sync team hierarchy
+    console.log(`\n📦 Syncing ${data.teamTeams.length} team hierarchies...`);
+    let thCreated = 0, thSkipped = 0, thFailed = 0;
+
+    for (const tt of data.teamTeams) {
+        const parentTeamId = teamNameToId.get(tt.parent_team_name);
+        const childTeamId = teamNameToId.get(tt.child_team_name);
+
+        if (!parentTeamId || !childTeamId) {
+            console.log(`   ⚠️  Skipping hierarchy: unresolved parent=${tt.parent_team_name} or child=${tt.child_team_name}`);
+            thSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would nest ${tt.child_team_name} under ${tt.parent_team_name}`);
+            thCreated++;
+        } else {
+            const result = await client.addChildTeam({ parentTeamId, childTeamId });
+            if (result.success) {
+                if (result.existed) thSkipped++;
+                else thCreated++;
+            } else {
+                thFailed++;
+                console.log(`   ❌ Failed to nest team: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamHierarchy = { created: thCreated, skipped: thSkipped, failed: thFailed, updated: 0, deleted: 0 };
+
+    // Sync team owners
+    console.log(`\n📦 Syncing ${data.teamOwners.length} team owners...`);
+    let toCreated = 0, toSkipped = 0, toFailed = 0;
+
+    for (const to of data.teamOwners) {
+        const teamId = teamNameToId.get(to.team_name);
+        const personnelId = emailToPersonnelId.get(to.personnel_email);
+
+        if (!teamId || !personnelId) {
+            console.log(`   ⚠️  Skipping owner: unresolved team=${to.team_name} or personnel=${to.personnel_email}`);
+            toSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would add owner ${to.personnel_email} to ${to.team_name}`);
+            toCreated++;
+        } else {
+            const result = await client.addTeamOwner({ teamId, personnelId });
+            if (result.success) {
+                if (result.existed) toSkipped++;
+                else toCreated++;
+            } else {
+                toFailed++;
+                console.log(`   ❌ Failed to add owner: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamOwners = { created: toCreated, skipped: toSkipped, failed: toFailed, updated: 0, deleted: 0 };
+
     // Print summary
     console.log("\n" + "=".repeat(60));
     console.log("📊 Sync Summary");
     console.log("=".repeat(60));
 
-    let totalCreated = 0, totalUpdated = 0, totalSkipped = 0, totalFailed = 0, totalDeleted = 0;
+    let totalCreated = 0, totalSkipped = 0, totalFailed = 0, totalDeleted = 0;
 
     for (const [entity, stats] of Object.entries(allStats)) {
-        if (stats.created || stats.updated || stats.failed || stats.deleted) {
+        if (stats.created || stats.failed || stats.deleted) {
             const parts = [];
             if (stats.deleted) parts.push(`−${stats.deleted}`);
             if (stats.created) parts.push(`+${stats.created}`);
-            if (stats.updated) parts.push(`✏️${stats.updated}`);
             if (stats.failed) parts.push(`✗${stats.failed}`);
             console.log(`   ${entity}: ${parts.join(" ")}`);
         }
         totalCreated += stats.created;
-        totalUpdated += stats.updated;
         totalSkipped += stats.skipped;
         totalFailed += stats.failed;
         totalDeleted += stats.deleted;
@@ -1102,7 +1198,6 @@ async function main() {
     const summaryParts = [];
     if (totalDeleted) summaryParts.push(`−${totalDeleted} deleted`);
     summaryParts.push(`+${totalCreated} created`);
-    if (totalUpdated) summaryParts.push(`✏️${totalUpdated} updated`);
     summaryParts.push(`✗${totalFailed} failed`);
     console.log(`   TOTAL: ${summaryParts.join(", ")}`);
     console.log(`   (${totalSkipped} already exist/skipped)`);
