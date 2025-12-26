@@ -32,6 +32,7 @@
   "dependencies": {
     "@duckdb/node-api": "^1.4.3-r.1",
     "@iarna/toml": "^2.2.5",
+    "@libsql/client": "^0.15.15",
     "@modelcontextprotocol/sdk": "^1.25.1",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
