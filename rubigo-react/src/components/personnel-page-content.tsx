@@ -10,6 +10,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useServerPagination } from "@/hooks/use-server-pagination";
 import {
     Table,
@@ -460,13 +461,22 @@ export function PersonnelPageContent({
                                 >
                                     <TableCell>
                                         {person.photo ? (
-                                            <Image
-                                                src={person.photo}
-                                                alt={person.name}
-                                                width={32}
-                                                height={32}
-                                                className="rounded-full"
-                                            />
+                                            person.isAgent ? (
+                                                <AgentAvatar
+                                                    src={person.photo}
+                                                    alt={person.name}
+                                                    size={32}
+                                                    fadeEdges
+                                                />
+                                            ) : (
+                                                <Image
+                                                    src={person.photo}
+                                                    alt={person.name}
+                                                    width={32}
+                                                    height={32}
+                                                    className="rounded-full"
+                                                />
+                                            )
                                         ) : (
                                             <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
                                                 {person.name.split(" ").map((n) => n[0]).join("")}
@@ -550,13 +560,22 @@ export function PersonnelPageContent({
                                 {/* Photo */}
                                 <div className="flex justify-center">
                                     {selectedPerson.photo ? (
-                                        <Image
-                                            src={selectedPerson.photo}
-                                            alt={selectedPerson.name}
-                                            width={120}
-                                            height={120}
-                                            className="rounded-full"
-                                        />
+                                        selectedPerson.isAgent ? (
+                                            <AgentAvatar
+                                                src={selectedPerson.photo}
+                                                alt={selectedPerson.name}
+                                                size={120}
+                                                fadeEdges
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={selectedPerson.photo}
+                                                alt={selectedPerson.name}
+                                                width={120}
+                                                height={120}
+                                                className="rounded-full"
+                                            />
+                                        )
                                     ) : (
                                         <div className="w-28 h-28 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl">
                                             {selectedPerson.name.split(" ").map((n) => n[0]).join("")}
