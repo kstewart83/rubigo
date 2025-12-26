@@ -336,7 +336,10 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
         );
     }
 
-    // Main application layout with new ShadCN sidebar
+<<<<<<< HEAD
+// Main application layout with new ShadCN sidebar
+=======
+// Main application layout with new ShadCN sidebar
     // Sidebar is expanded on desktop (lg+), collapsed (icon-only) on tablet (md-lg)
     return (
         <SecurityProvider persona={currentPersona}>
@@ -345,7 +348,7 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
                 <SidebarProvider defaultOpen={isDesktop} className="flex-1 min-h-0 flex">
                     <AppSidebar personnel={personnel} version={version} />
                     <SidebarInset>
-                        <main className="flex-1 h-full p-6 pb-24 md:pb-6 overflow-auto flex flex-col">
+                        <main className="flex-1 h-full p-6 pb-24 md:pb-6 overflow-hidden flex flex-col">
                             {children}
                         </main>
                     </SidebarInset>
