@@ -10,7 +10,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgentStatusIndicator } from "./agent-status-indicator";
 import { AgentBadge } from "./agent-badge";
+import { SecureTableWrapper } from "./secure-table-wrapper";
 import type { AgentStatus } from "@/db/schema";
+import type { SensitivityLevel } from "@/lib/access-control/types";
+
+// Helper to parse ACO JSON
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
+    if (!aco) return { sensitivity: "low", tenants: [] };
+    try {
+        const parsed = JSON.parse(aco);
+        return {
+            sensitivity: parsed.sensitivity || "low",
+            tenants: parsed.tenants || [],
+        };
+    } catch {
+        return { sensitivity: "low", tenants: [] };
+    }
+}
 
 export interface AgentInfo {
     id: string;
@@ -18,6 +34,7 @@ export interface AgentInfo {
     status: AgentStatus;
     pendingActions: number;
     lastActivity: string;
+    aco?: string; // JSON: {sensitivity, tenants[]}
 }
 
 export interface SimulationState {
@@ -70,7 +87,7 @@ export function AgentControlPanel({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-lg">Agent Simulation</CardTitle>
-                        <AgentBadge size="sm" />
+                        <AgentBadge size="xs" />
                     </div>
                     <Button
                         variant="ghost"
@@ -155,35 +172,43 @@ export function AgentControlPanel({
                         </Button>
                     </div>
 
-                    {/* Agent List */}
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">
-                            Agents
-                        </h4>
-                        {/* Column Headers */}
-                        {agents.length > 0 && (
-                            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground border-b">
-                                <span className="w-1/3">Name</span>
-                                <span className="w-1/4 text-center">Status</span>
-                                <span className="w-1/4 text-right">Last Activity</span>
-                            </div>
-                        )}
-                        <div className="space-y-1 max-h-64 overflow-y-auto">
-                            {agents.map((agent) => (
-                                <AgentListItem
-                                    key={agent.id}
-                                    agent={agent}
-                                    onClick={() => onSelectAgent?.(agent.id)}
-                                    onActivate={() => onActivate?.(agent.id)}
-                                />
-                            ))}
-                            {agents.length === 0 && (
-                                <div className="text-sm text-muted-foreground text-center py-4">
-                                    No agents configured
+                    {/* Agent List - wrapped with dynamic classification */}
+                    <SecureTableWrapper
+                        items={agents}
+                        getSensitivity={(agent) => parseAco(agent.aco).sensitivity}
+                        getTenants={(agent) => parseAco(agent.aco).tenants}
+                        defaultLevel="low"
+                        className="border rounded-lg overflow-hidden"
+                    >
+                        <div className="space-y-2 p-3">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                                Agents
+                            </h4>
+                            {/* Column Headers */}
+                            {agents.length > 0 && (
+                                <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground border-b">
+                                    <span className="w-1/3">Name</span>
+                                    <span className="w-1/4 text-center">Status</span>
+                                    <span className="w-1/4 text-right">Last Activity</span>
                                 </div>
                             )}
+                            <div className="space-y-1 max-h-64 overflow-y-auto">
+                                {agents.map((agent) => (
+                                    <AgentListItem
+                                        key={agent.id}
+                                        agent={agent}
+                                        onClick={() => onSelectAgent?.(agent.id)}
+                                        onActivate={() => onActivate?.(agent.id)}
+                                    />
+                                ))}
+                                {agents.length === 0 && (
+                                    <div className="text-sm text-muted-foreground text-center py-4">
+                                        No agents configured
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    </SecureTableWrapper>
 
                     {/* Footer Info */}
                     {simulation.ollamaModel && (

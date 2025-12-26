@@ -9,6 +9,7 @@ import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getOrCreateAcoId } from "@/lib/access-control/aco-registry";
 
 // ============================================================================
 // Types
@@ -181,6 +182,9 @@ async function autoInitialize(): Promise<void> {
         isGlobalAdmin: true,
     });
 
+    // Seed common ACO objects
+    await seedAcoObjects();
+
     // Generate API token
     const apiToken = await getOrCreateApiToken();
 
@@ -195,6 +199,28 @@ async function autoInitialize(): Promise<void> {
     }
     console.log("\n" + "=".repeat(60) + "\n");
 }
+
+/**
+ * Seed common ACO objects for all sensitivity levels.
+ * Creates baseline ACOs so sessions can pre-validate against them.
+ */
+async function seedAcoObjects(): Promise<void> {
+    console.log("[Seed] Creating common ACO objects...");
+
+    // Create ACOs for each sensitivity level (no tenants, no roles)
+    const sensitivityLevels = ["public", "low", "moderate", "high"] as const;
+
+    for (const level of sensitivityLevels) {
+        await getOrCreateAcoId({
+            sensitivity: level,
+            tenants: [],
+            roles: [],
+        });
+    }
+
+    console.log(`[Seed] Created ${sensitivityLevels.length} base ACO objects`);
+}
+
 
 /**
  * Validate the provided initialization words

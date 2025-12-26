@@ -9,7 +9,7 @@
  * - Strategy Cascade: metrics, kpis, initiatives
  */
 
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
 
 // ============================================================================
 // Personnel (System Users)
@@ -63,6 +63,111 @@ export const photoBlobs = sqliteTable("photo_blobs", {
     size: integer("size").notNull(), // File size in bytes
     createdAt: text("created_at").notNull(), // ISO timestamp for caching
 });
+
+// ============================================================================
+// Personnel: Teams
+// ============================================================================
+
+/**
+ * Teams - Ad-hoc groups of personnel for easy group-based invitations
+ */
+export const teams = sqliteTable("teams", {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdBy: text("created_by").references(() => personnel.id),
+    createdAt: text("created_at").notNull(),
+    aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+});
+
+/**
+ * Team Members - Junction table for team membership
+ */
+export const teamMembers = sqliteTable("team_members", {
+    id: text("id").primaryKey(),
+    teamId: text("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    joinedAt: text("joined_at").notNull(),
+});
+
+/**
+ * Team Teams - Junction table for hierarchical team nesting
+ * A team can contain other teams (max depth: 5)
+ */
+export const teamTeams = sqliteTable("team_teams", {
+    id: text("id").primaryKey(),
+    parentTeamId: text("parent_team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    childTeamId: text("child_team_id").references(() => teams.id).notNull(),
+    addedAt: text("added_at").notNull(),
+});
+
+/**
+ * Team Owners - Personnel who can edit/delete a team
+ * Creator is automatically added as an owner
+ */
+export const teamOwners = sqliteTable("team_owners", {
+    id: text("id").primaryKey(),
+    teamId: text("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
+    addedAt: text("added_at").notNull(),
+});
+
+
+// ============================================================================
+// Access Control Infrastructure
+// ============================================================================
+
+/**
+ * ACO Objects - Immutable registry of unique Access Control Objects
+ * 
+ * Each unique combination of sensitivity/tenants/roles gets one row.
+ * Business objects reference these by ID for efficient query filtering.
+ * Auto-incrementing IDs enable staleness detection for session caching.
+ */
+export const acoObjects = sqliteTable("aco_objects", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hash: text("hash").notNull().unique(), // SHA-256 of canonical JSON
+    sensitivity: text("sensitivity", {
+        enum: ["public", "low", "moderate", "high"]
+    }).notNull(),
+    tenants: text("tenants").notNull().default("[]"), // JSON array, sorted
+    roles: text("roles").notNull().default("[]"), // JSON array, sorted
+    createdAt: text("created_at").notNull(),
+});
+
+/**
+ * Security Sessions - Server-managed session state with pre-validated ACO sets
+ * 
+ * Stores the list of ACO IDs the session is cleared to access.
+ * Staleness detection via highest_aco_id enables incremental refresh.
+ */
+export const securitySessions = sqliteTable("security_sessions", {
+    id: text("id").primaryKey(), // UUID from HttpOnly cookie
+    personnelId: text("personnel_id").references(() => personnel.id),
+    sessionLevel: text("session_level", {
+        enum: ["public", "low", "moderate", "high"]
+    }).notNull(),
+    activeTenants: text("active_tenants").notNull().default("[]"), // JSON array
+    validatedAcoIds: text("validated_aco_ids").notNull().default("[]"), // JSON array of ACO IDs
+    highestAcoId: integer("highest_aco_id").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+});
+
+/**
+ * Secure Descriptions - Extension table for classified description content
+ * 
+ * Allows description fields to have higher classification than base objects.
+ * Generic pattern: parent_type + parent_id identify the owning object.
+ */
+export const secureDescriptions = sqliteTable("secure_descriptions", {
+    parentType: text("parent_type").notNull(), // 'calendar_event', 'email', etc.
+    parentId: text("parent_id").notNull(),
+    acoId: integer("aco_id").notNull().references(() => acoObjects.id),
+    content: text("content").notNull(),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.parentType, table.parentId] }),
+}));
 
 // ============================================================================
 // Solution Space
@@ -384,19 +489,28 @@ export const calendarEvents = sqliteTable("calendar_events", {
     deleted: integer("deleted", { mode: "boolean" }).default(false),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
-    // Access Control
+    // Access Control - Normalized ACO (new)
+    acoId: integer("aco_id").references(() => acoObjects.id),
+    // Legacy ACO fields (kept for migration compatibility)
     aco: text("aco").notNull().default('{"sensitivity":"low"}'),
+    descriptionAco: text("description_aco").default('{"sensitivity":"low"}'),
     sco: text("sco"),
 });
 
 /**
- * Calendar Participants - Event attendees
+ * Calendar Participants - Polymorphic: personnel OR team
+ * Supports hybrid model where groups are first-class participants
  */
 export const calendarParticipants = sqliteTable("calendar_participants", {
     id: text("id").primaryKey(),
     eventId: text("event_id").references(() => calendarEvents.id).notNull(),
-    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
-    role: text("role", { enum: ["organizer", "participant"] }).default("participant"),
+    // Polymorphic: exactly one of personnelId or teamId should be set
+    personnelId: text("personnel_id").references(() => personnel.id),
+    teamId: text("team_id").references(() => teams.id),
+    // Role hierarchy: organizer > required > optional > excluded
+    role: text("role", { enum: ["organizer", "required", "optional", "excluded"] }).default("required"),
+    addedAt: text("added_at").default("2024-01-01T00:00:00Z"),
+    addedBy: text("added_by").references(() => personnel.id),
 });
 
 /**
@@ -420,6 +534,9 @@ export const calendarDeviations = sqliteTable("calendar_deviations", {
     overrideDescription: text("override_description"),
     overrideLocation: text("override_location"),
     overrideTimezone: text("override_timezone"),
+    // Instance-level participant overrides (JSON arrays)
+    participantsAdd: text("participants_add"),     // [{personnelId?, teamId?, role}]
+    participantsRemove: text("participants_remove"), // [personnelId or teamId to exclude]
 });
 
 // ============================================================================
@@ -565,6 +682,7 @@ export const agentEvents = sqliteTable("agent_events", {
     targetEntity: text("target_entity"), // e.g., "email:123", "chat:456"
     parentEventId: text("parent_event_id"), // For ReAct chains
     metadata: text("metadata"), // JSON for additional context
+    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
 });
 
 /**
@@ -624,6 +742,7 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     payload: text("payload"), // JSON with event-specific details
     createdAt: text("created_at").notNull(), // ISO 8601
     processedAt: text("processed_at"), // ISO 8601, null until processed
+    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
 });
 
 // Collaboration: Presentations
@@ -874,3 +993,37 @@ export const REACTION_TIERS = {
     async: { maxLatencyMs: 3600000 },   // Email, task queue
 } as const;
 export type ReactionTier = keyof typeof REACTION_TIERS;
+
+// ============================================================================
+// Application Settings
+// ============================================================================
+
+/**
+ * App Settings - Key-value store for application-wide preferences
+ */
+export const appSettings = sqliteTable("app_settings", {
+    key: text("key").primaryKey(),
+    value: text("value").notNull(),
+    updatedAt: text("updated_at").notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;
+
+// Well-known setting keys
+export const SETTING_KEYS = {
+    OLLAMA_MODEL: "ollama_model",
+} as const;
+
+// Teams
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type NewTeamMember = typeof teamMembers.$inferInsert;
+
+export type TeamTeam = typeof teamTeams.$inferSelect;
+export type NewTeamTeam = typeof teamTeams.$inferInsert;
+
+export type TeamOwner = typeof teamOwners.$inferSelect;
+export type NewTeamOwner = typeof teamOwners.$inferInsert;

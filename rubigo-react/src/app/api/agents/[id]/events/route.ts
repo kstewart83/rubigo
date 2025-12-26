@@ -48,6 +48,7 @@ export async function GET(
                 content: e.content,
                 targetEntity: e.targetEntity,
                 contextId: e.contextId,
+                aco: e.aco,
             })),
             total: events.length,
         });

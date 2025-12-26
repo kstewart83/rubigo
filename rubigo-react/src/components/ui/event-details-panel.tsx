@@ -7,7 +7,23 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, CheckCircle, User, Calendar, FileText } from "lucide-react";
+import { Clock, CheckCircle, User, Calendar, FileText, X } from "lucide-react";
+import { SecurePanelWrapper } from "./secure-panel-wrapper";
+import type { SensitivityLevel } from "@/lib/access-control/types";
+
+// Helper to parse ACO JSON
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
+    if (!aco) return { sensitivity: "low", tenants: [] };
+    try {
+        const parsed = JSON.parse(aco);
+        return {
+            sensitivity: parsed.sensitivity || "low",
+            tenants: parsed.tenants || [],
+        };
+    } catch {
+        return { sensitivity: "low", tenants: [] };
+    }
+}
 
 export interface EventDetails {
     id: string;
@@ -20,6 +36,7 @@ export interface EventDetails {
     createdAt: string;
     isReady: boolean;
     msUntilReady: number;
+    aco?: string; // JSON: {sensitivity, tenants[]}
 }
 
 interface EventDetailsPanelProps {
@@ -53,96 +70,105 @@ export function EventDetailsPanel({ event, onClose }: EventDetailsPanelProps) {
         // Invalid JSON, show raw
     }
 
+    const aco = parseAco(event.aco);
+
     return (
-        <Card className="h-full">
-            <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Event Details</CardTitle>
-                    {onClose && (
-                        <button
-                            onClick={onClose}
-                            className="text-muted-foreground hover:text-foreground text-sm"
-                        >
-                            ✕ Close
-                        </button>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {/* Status */}
-                <div className="flex items-center gap-3">
-                    {event.isReady ? (
-                        <div className="flex items-center gap-2 text-green-500">
-                            <CheckCircle className="h-5 w-5" />
-                            <span className="font-medium text-lg">Ready to Process</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 text-amber-500">
-                            <Clock className="h-5 w-5" />
-                            <span className="font-medium text-lg">{formatCountdown(event.msUntilReady)}</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Event Type */}
-                <div className="space-y-1">
-                    <label className="text-sm text-muted-foreground">Event Type</label>
-                    <div className="text-lg font-medium">
-                        {formatEventType(event.eventType)}
+        <SecurePanelWrapper
+            level={aco.sensitivity}
+            tenants={aco.tenants}
+            className="border rounded-lg overflow-hidden h-full"
+        >
+            <Card className="h-full border-0">
+                <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Event Details</CardTitle>
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="text-muted-foreground hover:text-foreground"
+                                aria-label="Close event details"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
-                </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Status */}
+                    <div className="flex items-center gap-3">
+                        {event.isReady ? (
+                            <div className="flex items-center gap-2 text-green-500">
+                                <CheckCircle className="h-5 w-5" />
+                                <span className="font-medium text-lg">Ready to Process</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-amber-500">
+                                <Clock className="h-5 w-5" />
+                                <span className="font-medium text-lg">{formatCountdown(event.msUntilReady)}</span>
+                            </div>
+                        )}
+                    </div>
 
-                {/* Agent */}
-                <div className="space-y-1">
-                    <label className="text-sm text-muted-foreground flex items-center gap-1">
-                        <User className="h-3 w-3" /> Agent
-                    </label>
-                    <div className="font-medium">{event.agentName}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{event.agentId}</div>
-                </div>
+                    {/* Event Type */}
+                    <div className="space-y-1">
+                        <label className="text-sm text-muted-foreground">Event Type</label>
+                        <div className="text-lg font-medium">
+                            {formatEventType(event.eventType)}
+                        </div>
+                    </div>
 
-                {/* Timing */}
-                <div className="grid grid-cols-2 gap-4">
+                    {/* Agent */}
                     <div className="space-y-1">
                         <label className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" /> Scheduled For
+                            <User className="h-3 w-3" /> Agent
                         </label>
-                        <div className="text-sm">{formatTime(event.scheduledFor)}</div>
+                        <div className="font-medium">{event.agentName}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{event.agentId}</div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-sm text-muted-foreground">Created At</label>
-                        <div className="text-sm">{formatTime(event.createdAt)}</div>
-                    </div>
-                </div>
 
-                {/* Context */}
-                {event.contextId && (
-                    <div className="space-y-1">
-                        <label className="text-sm text-muted-foreground">Context ID</label>
-                        <div className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                            {event.contextId}
+                    {/* Timing */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" /> Scheduled For
+                            </label>
+                            <div className="text-sm">{formatTime(event.scheduledFor)}</div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm text-muted-foreground">Created At</label>
+                            <div className="text-sm">{formatTime(event.createdAt)}</div>
                         </div>
                     </div>
-                )}
 
-                {/* Payload */}
-                {parsedPayload && (
-                    <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground flex items-center gap-1">
-                            <FileText className="h-3 w-3" /> Payload
-                        </label>
-                        <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-48">
-                            {JSON.stringify(parsedPayload, null, 2)}
-                        </pre>
+                    {/* Context */}
+                    {event.contextId && (
+                        <div className="space-y-1">
+                            <label className="text-sm text-muted-foreground">Context ID</label>
+                            <div className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                                {event.contextId}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Payload */}
+                    {parsedPayload && (
+                        <div className="space-y-2">
+                            <label className="text-sm text-muted-foreground flex items-center gap-1">
+                                <FileText className="h-3 w-3" /> Payload
+                            </label>
+                            <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-48">
+                                {JSON.stringify(parsedPayload, null, 2)}
+                            </pre>
+                        </div>
+                    )}
+
+                    {/* Raw ID */}
+                    <div className="pt-4 border-t">
+                        <label className="text-xs text-muted-foreground">Event ID</label>
+                        <div className="font-mono text-xs text-muted-foreground">{event.id}</div>
                     </div>
-                )}
-
-                {/* Raw ID */}
-                <div className="pt-4 border-t">
-                    <label className="text-xs text-muted-foreground">Event ID</label>
-                    <div className="font-mono text-xs text-muted-foreground">{event.id}</div>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </SecurePanelWrapper>
     );
 }

@@ -10,6 +10,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useServerPagination } from "@/hooks/use-server-pagination";
 import {
     Table,
     TableBody,
@@ -54,9 +55,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePersona } from "@/contexts/persona-context";
 import { createPersonnel, updatePersonnel, deletePersonnel } from "@/lib/personnel-actions";
+import { getTeamsForPersonnel } from "@/lib/teams-actions";
+import { Crown, UsersRound } from "lucide-react";
 import { PersonnelSelector } from "@/components/personnel-selector";
 import { PhotoUpload } from "@/components/photo-upload";
+import { SecureTableWrapper } from "@/components/ui/secure-table-wrapper";
+import { AgentBadge } from "@/components/ui/agent-badge";
 import type { Department, Person } from "@/types/personnel";
+import type { SensitivityLevel, AccessControlObject } from "@/lib/access-control/types";
 
 interface PersonnelData {
     id: string;
@@ -75,6 +81,17 @@ interface PersonnelData {
     bio: string | null;
     isGlobalAdmin: boolean;
     isAgent?: boolean;
+    aco?: string; // JSON: {sensitivity, tenants}
+}
+
+// Parse ACO JSON string to AccessControlObject
+function parseAco(acoStr?: string): AccessControlObject {
+    if (!acoStr) return { sensitivity: "low" };
+    try {
+        return JSON.parse(acoStr) as AccessControlObject;
+    } catch {
+        return { sensitivity: "low" };
+    }
 }
 
 interface Props {
@@ -88,7 +105,6 @@ interface Props {
     allPersonnel: Person[];
 }
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const departments: Department[] = [
     "Executive",
     "Engineering",
@@ -103,7 +119,7 @@ export function PersonnelPageContent({
     data,
     total,
     page,
-    pageSize,
+    pageSize: initialPageSize,
     totalPages,
     search: initialSearch,
     department: initialDepartment,
@@ -114,9 +130,43 @@ export function PersonnelPageContent({
     const { currentPersona } = usePersona();
     const [isPending, startTransition] = useTransition();
 
+    // Server-side pagination with dynamic measurement
+    const {
+        containerRef,
+        tableBodyRef,
+        headerRef,
+        paginationRef,
+        pageSize,
+        isAutoMode,
+        goToPage,
+        handlePageSizeChange,
+        pageSizeOptions,
+    } = useServerPagination({
+        basePath: "/personnel",
+        initialPage: page,
+        initialPageSize,
+        additionalBuffer: 70,
+    });
+
     // Local state for filters (debounced)
     const [searchInput, setSearchInput] = useState(initialSearch);
     const [selectedPerson, setSelectedPerson] = useState<PersonnelData | null>(null);
+    const [personTeams, setPersonTeams] = useState<Array<{ id: string; name: string; description: string | null; isOwner: boolean }>>([]);
+
+    // Fetch teams when a person is selected
+    useEffect(() => {
+        if (selectedPerson) {
+            getTeamsForPersonnel(selectedPerson.id).then(result => {
+                if (result.success && result.data) {
+                    setPersonTeams(result.data);
+                } else {
+                    setPersonTeams([]);
+                }
+            });
+        } else {
+            setPersonTeams([]);
+        }
+    }, [selectedPerson]);
 
     // Real-time search with debounce
     useEffect(() => {
@@ -194,12 +244,8 @@ export function PersonnelPageContent({
         updateUrl({ department: value, page: 1 });
     };
 
-    const handlePageSizeChange = (value: string) => {
-        updateUrl({ pageSize: parseInt(value, 10), page: 1 });
-    };
-
     const handlePageChange = (newPage: number) => {
-        updateUrl({ page: newPage });
+        goToPage(newPage);
     };
 
     // CRUD handlers
@@ -323,59 +369,71 @@ export function PersonnelPageContent({
     const endIndex = Math.min(page * pageSize, total);
 
     return (
-        <>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-semibold">Personnel Directory</h1>
-                    <p className="text-sm text-zinc-500 mt-1">
-                        {total === 0 ? "No personnel found" : `Showing ${startIndex}-${endIndex} of ${total} people`}
-                    </p>
+        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto">
+            {/* Header and Filters - measured together */}
+            <div ref={headerRef}>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-semibold">Personnel Directory</h1>
+                        <p className="text-sm text-zinc-500 mt-1">
+                            {total === 0 ? "No personnel found" : `Showing ${startIndex}-${endIndex} of ${total} people`}
+                        </p>
+                    </div>
+                    {isAdmin && (
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => router.push("/personnel/teams")}
+                            >
+                                Manage Teams
+                            </Button>
+                            <Button
+                                onClick={() => router.push("/personnel/new")}
+                            >
+                                Add Personnel
+                            </Button>
+                        </div>
+                    )}
                 </div>
-                {isAdmin && (
-                    <Button
-                        onClick={() => {
-                            setFormData({ name: "", email: "", title: "", department: "Engineering", bio: "", deskPhone: "", cellPhone: "", site: "", building: "", level: "", space: "", manager: "", photo: "", isAgent: false });
-                            setFormError("");
-                            setShowCreateDialog(true);
-                        }}
-                    >
-                        Add Personnel
-                    </Button>
-                )}
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div className="flex-1 flex gap-2">
+                        <Input
+                            placeholder="Search by name, title, or email..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            className="flex-1"
+                        />
+                        <Button variant="outline" onClick={handleSearch} disabled={isPending}>
+                            Search
+                        </Button>
+                    </div>
+                    <Select value={initialDepartment} onValueChange={handleDepartmentChange}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="All Departments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Departments</SelectItem>
+                            {departments.map((dept) => (
+                                <SelectItem key={dept} value={dept}>
+                                    {dept}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-1 flex gap-2">
-                    <Input
-                        placeholder="Search by name, title, or email..."
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={handleSearchKeyDown}
-                        className="flex-1"
-                    />
-                    <Button variant="outline" onClick={handleSearch} disabled={isPending}>
-                        Search
-                    </Button>
-                </div>
-                <Select value={initialDepartment} onValueChange={handleDepartmentChange}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="All Departments" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Departments</SelectItem>
-                        {departments.map((dept) => (
-                            <SelectItem key={dept} value={dept}>
-                                {dept}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Table */}
-            <div className="border rounded-lg overflow-hidden">
+            {/* Table with Classification Header/Footer */}
+            <SecureTableWrapper
+                items={data}
+                getSensitivity={(person) => parseAco(person.aco).sensitivity}
+                getTenants={(person) => parseAco(person.aco).tenants || []}
+                className="border rounded-lg"
+            >
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -386,7 +444,7 @@ export function PersonnelPageContent({
                             <TableHead>Email</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody ref={tableBodyRef}>
                         {data.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
@@ -415,7 +473,12 @@ export function PersonnelPageContent({
                                             </div>
                                         )}
                                     </TableCell>
-                                    <TableCell className="font-medium">{person.name}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <span className="flex items-center gap-2">
+                                            {person.name}
+                                            {person.isAgent && <AgentBadge size="xs" />}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>{person.title || "-"}</TableCell>
                                     <TableCell>{person.department}</TableCell>
                                     <TableCell>{person.email}</TableCell>
@@ -424,24 +487,30 @@ export function PersonnelPageContent({
                         )}
                     </TableBody>
                 </Table>
-            </div>
+            </SecureTableWrapper>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between mt-4">
+            <div ref={paginationRef} className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-zinc-500">Rows per page:</span>
-                    <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-                        <SelectTrigger className="w-[70px]">
+                    <Select
+                        value={isAutoMode ? "auto" : String(pageSize)}
+                        onValueChange={handlePageSizeChange}
+                    >
+                        <SelectTrigger className="w-[80px]">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {PAGE_SIZE_OPTIONS.map((size) => (
-                                <SelectItem key={size} value={String(size)}>
-                                    {size}
+                            {pageSizeOptions.map((size) => (
+                                <SelectItem key={String(size)} value={String(size)}>
+                                    {size === "auto" ? "Auto" : size}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
+                    {isAutoMode && (
+                        <span className="text-xs text-zinc-400">({pageSize})</span>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
@@ -472,7 +541,10 @@ export function PersonnelPageContent({
                     {selectedPerson && (
                         <>
                             <SheetHeader>
-                                <SheetTitle>{selectedPerson.name}</SheetTitle>
+                                <SheetTitle className="flex items-center gap-2">
+                                    {selectedPerson.name}
+                                    {selectedPerson.isAgent && <AgentBadge size="xs" />}
+                                </SheetTitle>
                             </SheetHeader>
                             <div className="mt-6 space-y-6 px-4 overflow-y-auto">
                                 {/* Photo */}
@@ -559,12 +631,36 @@ export function PersonnelPageContent({
                                             <div className="text-sm">{selectedPerson.bio}</div>
                                         </div>
                                     )}
+
+                                    {/* Teams section */}
+                                    <div className="pt-2 border-t">
+                                        <div className="text-sm font-medium mb-2">Teams</div>
+                                        {personTeams.length === 0 ? (
+                                            <div className="text-sm text-zinc-500">Not a member of any teams</div>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {personTeams.map(team => (
+                                                    <div
+                                                        key={team.id}
+                                                        className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
+                                                        onClick={() => router.push(`/personnel/teams?team=${team.id}`)}
+                                                    >
+                                                        <UsersRound className="h-4 w-4 text-primary" />
+                                                        <span>{team.name}</span>
+                                                        {team.isOwner && (
+                                                            <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Admin actions */}
                                 {isAdmin && !selectedPerson.isGlobalAdmin && (
                                     <div className="flex gap-2 pt-4 border-t">
-                                        <Button variant="outline" onClick={() => openEdit(selectedPerson)}>
+                                        <Button variant="outline" onClick={() => router.push(`/personnel/${selectedPerson.id}/edit`)}>
                                             Edit
                                         </Button>
                                         <Button variant="destructive" onClick={() => openDelete(selectedPerson)}>
@@ -948,6 +1044,6 @@ export function PersonnelPageContent({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }

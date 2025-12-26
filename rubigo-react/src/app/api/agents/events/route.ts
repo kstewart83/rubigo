@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
                 scheduledFor: schema.agentScheduledEvents.scheduledFor,
                 payload: schema.agentScheduledEvents.payload,
                 createdAt: schema.agentScheduledEvents.createdAt,
+                aco: schema.agentScheduledEvents.aco,
             })
             .from(schema.agentScheduledEvents)
             .leftJoin(

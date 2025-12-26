@@ -30,6 +30,10 @@ function mapDbToPerson(p: typeof schema.personnel.$inferSelect): Person {
         cellPhone: p.cellPhone ?? undefined,
         bio: p.bio ?? undefined,
         isGlobalAdmin: p.isGlobalAdmin ?? false,
+        // Security/ABAC fields
+        clearanceLevel: p.clearanceLevel ?? undefined,
+        tenantClearances: p.tenantClearances ?? undefined,
+        accessRoles: p.accessRoles ?? undefined,
     };
 }
 

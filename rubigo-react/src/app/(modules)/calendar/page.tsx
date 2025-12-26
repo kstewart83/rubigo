@@ -19,7 +19,7 @@ export default async function CalendarPage() {
     return (
         <PersonaProvider>
             <AppShell personnel={allPersonnel} version={version}>
-                <div className="container mx-auto py-8 h-[calc(100vh-8rem)]">
+                <div className="h-full px-6 py-4">
                     <CalendarPageContent />
                 </div>
             </AppShell>
