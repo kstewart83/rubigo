@@ -9,6 +9,7 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { useAutoPagination } from "@/hooks/use-auto-pagination";
 import {
     Table,
@@ -25,6 +26,12 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 import {
+    Drawer,
+    DrawerContent,
+    DrawerHeader,
+    DrawerTitle,
+} from "@/components/ui/drawer";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -35,12 +42,18 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SecureTableWrapper, ClassificationCell } from "@/components/ui/secure-table-wrapper";
 import { SecurityLabelPicker } from "@/components/ui/security-label-picker";
 import { usePersona } from "@/contexts/persona-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePagination } from "@/components/mobile-pagination";
+import { TeamCard } from "@/components/team-card";
+import { PersonCard } from "@/components/person-card";
+import { ResponsivePersonnelDetail } from "@/components/responsive-personnel-detail";
 import {
     createTeam,
     updateTeam,
@@ -96,6 +109,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     const searchParams = useSearchParams();
     const { currentPersona } = usePersona();
     const [isPending, startTransition] = useTransition();
+    const isMobile = useIsMobile();
 
     // Auto-pagination hook
     const {
@@ -248,23 +262,51 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
             ? teams.filter(t => currentTeam?.childTeams.some(ct => ct.childTeamId === t.id))
             : teams.filter(t => !teams.some(parent => parent.childTeams.some(ct => ct.childTeamId === t.id)));
 
-    // Pagination
-    const totalTeams = allFilteredTeams.length;
-    const totalPages = Math.ceil(totalTeams / pageSize) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalTeams);
-    const paginatedTeams = allFilteredTeams.slice(startIndex, endIndex);
-
-    // Reset page when navigating or searching
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [currentTeamId, searchQuery]);
-
+    // Get team members (when inside a team, not searching)
     const displayedPersonnel = isSearching
         ? [] // Don't show personnel in search mode
         : currentTeamId && currentTeam
             ? allPersonnel.filter(p => currentTeam.members.some(m => m.personnelId === p.id))
             : [];
+
+    // Combined items: teams first, then members (for mobile pagination)
+    type CombinedItem = { type: 'team'; data: TeamWithMembers } | { type: 'person'; data: Person };
+    const allCombinedItems: CombinedItem[] = [
+        ...allFilteredTeams.map(t => ({ type: 'team' as const, data: t })),
+        ...displayedPersonnel.map(p => ({ type: 'person' as const, data: p })),
+    ];
+
+    // Pagination - now over combined items
+    const totalItems = allCombinedItems.length;
+    const totalTeams = allFilteredTeams.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+    const paginatedItems = allCombinedItems.slice(startIndex, endIndex);
+
+    // Separate paginated items by type for rendering
+    const paginatedTeams = paginatedItems.filter((item): item is CombinedItem & { type: 'team' } => item.type === 'team').map(i => i.data);
+    const paginatedPersonnel = paginatedItems.filter((item): item is CombinedItem & { type: 'person' } => item.type === 'person').map(i => i.data);
+
+    // Calculate range for section headers (e.g., "Teams (1-8 of 8)")
+    const totalPersonnel = displayedPersonnel.length;
+
+    // Teams range: where in the teams list does this page start/end?
+    const teamsStartOnPage = startIndex < totalTeams ? startIndex + 1 : 0;
+    const teamsEndOnPage = startIndex < totalTeams ? Math.min(endIndex, totalTeams) : 0;
+
+    // Members range: where in the members list does this page start/end?
+    const membersStartOnPage = startIndex >= totalTeams
+        ? startIndex - totalTeams + 1
+        : (endIndex > totalTeams ? 1 : 0);
+    const membersEndOnPage = endIndex > totalTeams
+        ? endIndex - totalTeams
+        : 0;
+
+    // Reset page when navigating or searching
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [currentTeamId, searchQuery, setCurrentPage]);
 
     // Navigation - syncs URL with breadcrumbs
     const navigateToTeam = (team: TeamWithMembers) => {
@@ -434,7 +476,8 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
 
     // Get sensitivity for SecureTableWrapper
     const getSensitivity = (item: unknown) => {
-        const obj = item as { aco?: string };
+        const obj = item as { aco?: string; clearanceLevel?: string };
+        // Try aco field first (teams)
         if (obj.aco && typeof obj.aco === 'string') {
             try {
                 const parsed = JSON.parse(obj.aco);
@@ -442,6 +485,17 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
             } catch {
                 return 'low';
             }
+        }
+        // Fall back to clearanceLevel for personnel
+        if (obj.clearanceLevel) {
+            // Map clearance levels to sensitivities
+            const levelMap: Record<string, string> = {
+                public: 'low',
+                low: 'low',
+                moderate: 'medium',
+                high: 'high',
+            };
+            return levelMap[obj.clearanceLevel] || 'low';
         }
         return 'low';
     };
@@ -461,83 +515,99 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     };
 
     return (
-        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto">
+        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto max-w-[1600px] mx-auto w-full">
             {/* Header with breadcrumbs and search */}
-            <div ref={headerRef} className="flex items-center justify-between mb-4 gap-4">
-                {/* Breadcrumbs or Search Results indicator */}
-                <div className="flex items-center gap-2 text-sm flex-1">
-                    {isSearching ? (
-                        <span className="font-medium text-muted-foreground">
-                            Search Results ({allFilteredTeams.length} team{allFilteredTeams.length !== 1 ? 's' : ''})
-                        </span>
-                    ) : (
-                        breadcrumbs.map((crumb, index) => (
-                            <div key={crumb.id ?? "root"} className="flex items-center gap-2">
-                                {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                                <button
-                                    onClick={() => navigateToBreadcrumb(index)}
-                                    className={`flex items-center gap-1 hover:text-primary ${index === breadcrumbs.length - 1 ? 'font-medium' : 'text-muted-foreground'
-                                        }`}
-                                >
-                                    {index === 0 && <Home className="h-4 w-4" />}
-                                    {crumb.name}
-                                </button>
-                            </div>
-                        ))
+            <div ref={headerRef} className={cn(
+                "mb-4",
+                isMobile ? "flex flex-col gap-3" : "flex items-center justify-between gap-4"
+            )}>
+                {/* Row 1: Breadcrumbs (and actions on desktop) */}
+                <div className={cn(
+                    "flex items-center gap-2",
+                    isMobile ? "flex-wrap" : "flex-1"
+                )}>
+                    {/* Breadcrumbs or Search Results indicator */}
+                    <div className="flex items-center gap-2 text-sm flex-wrap">
+                        {isSearching ? (
+                            <span className="font-medium text-muted-foreground">
+                                Search Results ({allFilteredTeams.length} team{allFilteredTeams.length !== 1 ? 's' : ''})
+                            </span>
+                        ) : (
+                            breadcrumbs.map((crumb, index) => (
+                                <div key={crumb.id ?? "root"} className="flex items-center gap-2">
+                                    {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                                    <button
+                                        onClick={() => navigateToBreadcrumb(index)}
+                                        className={`flex items-center gap-1 hover:text-primary ${index === breadcrumbs.length - 1 ? 'font-medium' : 'text-muted-foreground'
+                                            }`}
+                                    >
+                                        {index === 0 && <Home className="h-4 w-4" />}
+                                        {crumb.name}
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop: Actions inline with breadcrumbs */}
+                    {!isMobile && (
+                        <div className="flex items-center gap-2 ml-auto">
+                            {!isSearching && currentTeam && (isAdmin || currentTeam.owners.some(o => o.personnelId === currentPersona?.id)) && (
+                                <>
+                                    <Button variant="outline" size="sm" onClick={() => openEditEditor(currentTeam)}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => {
+                                            setTeamToDelete(currentTeam);
+                                            setShowDeleteDialog(true);
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </>
+                            )}
+                            <Button onClick={openCreateEditor} size="sm">
+                                <Plus className="h-4 w-4 mr-2" />
+                                New Team
+                            </Button>
+                        </div>
                     )}
                 </div>
 
-                {/* Search input */}
-                <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search teams..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-8"
-                    />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
+                {/* Row 2: Search (full width on mobile) + New button */}
+                <div className={cn(
+                    "flex items-center gap-2",
+                    isMobile ? "w-full" : "w-64"
+                )}>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                        <SearchInput
+                            placeholder="Search teams..."
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            inputClassName="pl-9"
+                            className="w-full"
+                        />
+                    </div>
 
-                <div className="flex items-center gap-2">
-                    {/* Edit/Delete buttons when viewing a team user can manage (not in search mode) */}
-                    {!isSearching && currentTeam && (isAdmin || currentTeam.owners.some(o => o.personnelId === currentPersona?.id)) && (
-                        <>
-                            <Button variant="outline" size="sm" onClick={() => openEditEditor(currentTeam)}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Edit
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => {
-                                    setTeamToDelete(currentTeam);
-                                    setShowDeleteDialog(true);
-                                }}
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                            </Button>
-                        </>
+                    {/* Mobile: Icon-only New Team button */}
+                    {isMobile && (
+                        <Button onClick={openCreateEditor} size="icon" className="shrink-0">
+                            <Plus className="h-4 w-4" />
+                        </Button>
                     )}
-                    <Button onClick={openCreateEditor} size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Team
-                    </Button>
                 </div>
             </div>
 
             {/* Owners badge row - only when viewing a team */}
             {currentTeam && currentTeam.owners.length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-center gap-2 px-4 py-3 my-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                     <Crown className="h-4 w-4 text-amber-500 shrink-0" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Owners:</span>
                     <div className="flex flex-wrap gap-2">
@@ -550,189 +620,328 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                 </div>
             )}
 
-            {/* File-manager table */}
-            <SecureTableWrapper
-                items={[...paginatedTeams, ...displayedPersonnel]}
-                getSensitivity={getSensitivity}
-                getTenants={getTenants}
-                className="border rounded-lg"
-            >
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-16">Classification</TableHead>
-                            <TableHead className="w-12"></TableHead>
-                            <TableHead>Name</TableHead>
-                            {isSearching && <TableHead>Parent</TableHead>}
-                            <TableHead className="min-w-[150px]">Description</TableHead>
-                            <TableHead className="text-center">Owners</TableHead>
-                            <TableHead className="text-center">Personnel</TableHead>
-                            <TableHead className="text-center">Teams</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody ref={tableBodyRef}>
-                        {paginatedTeams.length === 0 && displayedPersonnel.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={isSearching ? 9 : 8} className="text-center py-8 text-muted-foreground">
-                                    {isSearching ? "No teams match your search" : currentTeamId ? "This team is empty" : "No teams created yet"}
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            <>
-                                {/* Teams (folders) */}
-                                {paginatedTeams.map((team) => {
-                                    const teamAco = team.aco ? JSON.parse(team.aco) : { sensitivity: "low" };
-                                    const parentTeam = getParentTeam(team.id);
+            {/* Mobile: Card grid with MobilePagination */}
+            {isMobile ? (
+                <SecureTableWrapper
+                    items={[...paginatedTeams, ...paginatedPersonnel]}
+                    getSensitivity={getSensitivity}
+                    getTenants={getTenants}
+                    className="border rounded-lg"
+                >
+                    {/* Top Pagination */}
+                    <MobilePagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        pageSize={pageSize}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={(size) => handlePageSizeChange(String(size))}
+                        isPending={isPending}
+                        showCount={true}
+                        showPageSizeSelect={true}
+                        total={totalItems}
+                        startIndex={startIndex + 1}
+                        endIndex={endIndex}
+                    />
+
+                    {/* Teams section */}
+                    {paginatedTeams.length > 0 && (
+                        <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+                            Teams ({teamsStartOnPage}-{teamsEndOnPage} of {totalTeams})
+                        </div>
+                    )}
+
+                    {/* Team cards grid */}
+                    <div className="grid grid-cols-1 gap-3 p-3 pt-0">
+                        {paginatedTeams.length === 0 && paginatedPersonnel.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                {isSearching ? "No teams match your search" : currentTeamId ? "This team is empty" : "No teams created yet"}
+                            </div>
+                        ) : paginatedTeams.length > 0 ? (
+                            paginatedTeams.map((team) => {
+                                const teamAco = team.aco ? JSON.parse(team.aco) : { sensitivity: "low" };
+                                return (
+                                    <TeamCard
+                                        key={team.id}
+                                        id={team.id}
+                                        name={team.name}
+                                        description={team.description}
+                                        aco={teamAco}
+                                        ownerCount={team.owners.length}
+                                        memberCount={team.totalPersonnelCount}
+                                        childTeamCount={team.childTeamCount}
+                                        onClick={() => {
+                                            if (isSearching) {
+                                                setSearchQuery("");
+                                                const findParentChain = (teamId: string): BreadcrumbItem[] => {
+                                                    const t = teams.find(x => x.id === teamId);
+                                                    if (!t) return [];
+                                                    const parent = teams.find(x => x.childTeams.some(ct => ct.childTeamId === teamId));
+                                                    if (parent) {
+                                                        return [...findParentChain(parent.id), { id: t.id, name: t.name }];
+                                                    }
+                                                    return [{ id: t.id, name: t.name }];
+                                                };
+                                                const path = findParentChain(team.id);
+                                                setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
+                                                lastProcessedUrlTeam.current = team.id;
+                                                router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
+                                            } else {
+                                                navigateToTeam(team);
+                                            }
+                                        }}
+                                    />
+                                );
+                            })
+                        ) : null}
+                    </div>
+
+                    {/* Team Members section */}
+                    {paginatedPersonnel.length > 0 && (
+                        <>
+                            <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground border-t">
+                                Team Members ({membersStartOnPage}-{membersEndOnPage} of {totalPersonnel})
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 p-3 pt-0">
+                                {paginatedPersonnel.map((person) => {
+                                    // Build aco from clearanceLevel and tenantClearances
+                                    type SLevel = 'public' | 'low' | 'moderate' | 'high';
+                                    const levelToSensitivity: Record<string, SLevel> = {
+                                        public: 'public',
+                                        low: 'low',
+                                        moderate: 'moderate',
+                                        high: 'high',
+                                    };
+                                    // Parse tenantClearances if available
+                                    let tenants: string[] = [];
+                                    if (person.tenantClearances) {
+                                        try {
+                                            tenants = JSON.parse(person.tenantClearances);
+                                        } catch {
+                                            tenants = [];
+                                        }
+                                    }
+                                    const personAco: { sensitivity: SLevel; tenants?: string[] } = {
+                                        sensitivity: levelToSensitivity[person.clearanceLevel || 'low'] || 'low',
+                                        tenants,
+                                    };
                                     return (
-                                        <TableRow
-                                            key={team.id}
-                                            className="cursor-pointer hover:bg-muted/50"
-                                            onClick={() => {
-                                                if (isSearching) {
-                                                    // Clear search and navigate properly with full path
-                                                    setSearchQuery("");
-                                                    const findParentChain = (teamId: string): BreadcrumbItem[] => {
-                                                        const t = teams.find(x => x.id === teamId);
-                                                        if (!t) return [];
-                                                        const parent = teams.find(x => x.childTeams.some(ct => ct.childTeamId === teamId));
-                                                        if (parent) {
-                                                            return [...findParentChain(parent.id), { id: t.id, name: t.name }];
-                                                        }
-                                                        return [{ id: t.id, name: t.name }];
-                                                    };
-                                                    const path = findParentChain(team.id);
-                                                    setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
-                                                    // Sync URL
-                                                    lastProcessedUrlTeam.current = team.id;
-                                                    router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
-                                                } else {
-                                                    navigateToTeam(team);
-                                                }
-                                            }}
-                                        >
-                                            <TableCell>
-                                                <ClassificationCell aco={teamAco} />
-                                            </TableCell>
-                                            <TableCell>
-                                                <UsersRound className="h-5 w-5 text-primary" />
-                                            </TableCell>
-                                            <TableCell className="font-medium">{team.name}</TableCell>
-                                            {isSearching && (
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <span className="cursor-help hover:text-foreground">
-                                                                    {parentTeam?.name || "—"}
-                                                                </span>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p className="text-xs">{getHierarchyPath(team.id)}</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </TableCell>
-                                            )}
-                                            <TableCell className="text-muted-foreground text-sm whitespace-normal">
-                                                {team.description || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                                    {team.owners.length}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted">
-                                                    {team.totalPersonnelCount}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted">
-                                                    {team.childTeamCount}
-                                                </span>
-                                            </TableCell>
-                                            {/* Show actions if admin or owner */}
-                                            {(isAdmin || team.owners.some(o => o.personnelId === currentPersona?.id)) && (
-                                                <TableCell onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() => openEditEditor(team)}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() => {
-                                                                setTeamToDelete(team);
-                                                                setShowDeleteDialog(true);
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            )}
-                                            {/* Empty cell for non-owners/non-admins to maintain column alignment */}
-                                            {!isAdmin && !team.owners.some(o => o.personnelId === currentPersona?.id) && (
-                                                <TableCell></TableCell>
-                                            )}
-                                        </TableRow>
+                                        <PersonCard
+                                            key={person.id}
+                                            id={person.id}
+                                            name={person.name}
+                                            email={person.email ?? null}
+                                            title={person.title ?? null}
+                                            department={person.department ?? null}
+                                            photo={person.photo ?? null}
+                                            aco={personAco}
+                                            onClick={() => setSelectedPerson(person)}
+                                        />
                                     );
                                 })}
+                            </div>
+                        </>
+                    )}
 
-                                {/* Personnel (files) */}
-                                {displayedPersonnel.map((person) => (
-                                    <TableRow
-                                        key={person.id}
-                                        className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => setSelectedPerson(person)}
-                                    >
-                                        <TableCell className="text-center text-muted-foreground text-xs">-</TableCell>
-                                        <TableCell>
-                                            {person.photo ? (
-                                                <Image
-                                                    src={person.photo}
-                                                    alt={person.name}
-                                                    width={20}
-                                                    height={20}
-                                                    className="rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs">
-                                                    {person.name.charAt(0)}
-                                                </div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="flex items-center gap-1.5">
-                                                {person.name}
-                                                {currentTeam?.owners.some(o => o.personnelId === person.id) && (
-                                                    <Crown className="h-3.5 w-3.5 text-amber-500" />
+                    {/* Bottom Pagination */}
+                    <MobilePagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        pageSize={pageSize}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={(size) => handlePageSizeChange(String(size))}
+                        isPending={isPending}
+                        showCount={true}
+                        showPageSizeSelect={true}
+                        total={totalItems}
+                        startIndex={startIndex + 1}
+                        endIndex={endIndex}
+                    />
+                </SecureTableWrapper>
+            ) : (
+                /* Desktop: File-manager table */
+                <SecureTableWrapper
+                    items={[...paginatedTeams, ...displayedPersonnel]}
+                    getSensitivity={getSensitivity}
+                    getTenants={getTenants}
+                    className="border rounded-lg"
+                >
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-16">Classification</TableHead>
+                                <TableHead className="w-12"></TableHead>
+                                <TableHead>Name</TableHead>
+                                {isSearching && <TableHead>Parent</TableHead>}
+                                <TableHead className="min-w-[150px]">Description</TableHead>
+                                <TableHead className="text-center">Owners</TableHead>
+                                <TableHead className="text-center">Personnel</TableHead>
+                                <TableHead className="text-center">Teams</TableHead>
+                                <TableHead className="w-[100px]">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody ref={tableBodyRef}>
+                            {paginatedTeams.length === 0 && displayedPersonnel.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={isSearching ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                                        {isSearching ? "No teams match your search" : currentTeamId ? "This team is empty" : "No teams created yet"}
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                <>
+                                    {/* Teams (folders) */}
+                                    {paginatedTeams.map((team) => {
+                                        const teamAco = team.aco ? JSON.parse(team.aco) : { sensitivity: "low" };
+                                        const parentTeam = getParentTeam(team.id);
+                                        return (
+                                            <TableRow
+                                                key={team.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => {
+                                                    if (isSearching) {
+                                                        // Clear search and navigate properly with full path
+                                                        setSearchQuery("");
+                                                        const findParentChain = (teamId: string): BreadcrumbItem[] => {
+                                                            const t = teams.find(x => x.id === teamId);
+                                                            if (!t) return [];
+                                                            const parent = teams.find(x => x.childTeams.some(ct => ct.childTeamId === teamId));
+                                                            if (parent) {
+                                                                return [...findParentChain(parent.id), { id: t.id, name: t.name }];
+                                                            }
+                                                            return [{ id: t.id, name: t.name }];
+                                                        };
+                                                        const path = findParentChain(team.id);
+                                                        setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
+                                                        // Sync URL
+                                                        lastProcessedUrlTeam.current = team.id;
+                                                        router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
+                                                    } else {
+                                                        navigateToTeam(team);
+                                                    }
+                                                }}
+                                            >
+                                                <TableCell>
+                                                    <ClassificationCell aco={teamAco} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <UsersRound className="h-5 w-5 text-primary" />
+                                                </TableCell>
+                                                <TableCell className="font-medium">{team.name}</TableCell>
+                                                {isSearching && (
+                                                    <TableCell className="text-muted-foreground text-sm">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className="cursor-help hover:text-foreground">
+                                                                        {parentTeam?.name || "—"}
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="text-xs">{getHierarchyPath(team.id)}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </TableCell>
                                                 )}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">-</TableCell>
-                                        <TableCell className="text-center">-</TableCell>
-                                        <TableCell className="text-center">-</TableCell>
-                                        <TableCell className="text-center">-</TableCell>
-                                        <TableCell></TableCell>
-                                    </TableRow>
-                                ))}
-                            </>
-                        )}
-                    </TableBody>
-                </Table>
-            </SecureTableWrapper>
+                                                <TableCell className="text-muted-foreground text-sm whitespace-normal">
+                                                    {team.description || '-'}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                                        {team.owners.length}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted">
+                                                        {team.totalPersonnelCount}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted">
+                                                        {team.childTeamCount}
+                                                    </span>
+                                                </TableCell>
+                                                {/* Show actions if admin or owner */}
+                                                {(isAdmin || team.owners.some(o => o.personnelId === currentPersona?.id)) && (
+                                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() => openEditEditor(team)}
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() => {
+                                                                    setTeamToDelete(team);
+                                                                    setShowDeleteDialog(true);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                                {/* Empty cell for non-owners/non-admins to maintain column alignment */}
+                                                {!isAdmin && !team.owners.some(o => o.personnelId === currentPersona?.id) && (
+                                                    <TableCell></TableCell>
+                                                )}
+                                            </TableRow>
+                                        );
+                                    })}
 
-            {/* Pagination footer */}
+                                    {/* Personnel (files) */}
+                                    {displayedPersonnel.map((person) => (
+                                        <TableRow
+                                            key={person.id}
+                                            className="cursor-pointer hover:bg-muted/50"
+                                            onClick={() => setSelectedPerson(person)}
+                                        >
+                                            <TableCell className="text-center text-muted-foreground text-xs">-</TableCell>
+                                            <TableCell>
+                                                {person.photo ? (
+                                                    <Image
+                                                        src={person.photo}
+                                                        alt={person.name}
+                                                        width={20}
+                                                        height={20}
+                                                        className="rounded-full"
+                                                    />
+                                                ) : (
+                                                    <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs">
+                                                        {person.name.charAt(0)}
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="flex items-center gap-1.5">
+                                                    {person.name}
+                                                    {currentTeam?.owners.some(o => o.personnelId === person.id) && (
+                                                        <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                                    )}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                                            <TableCell className="text-center">-</TableCell>
+                                            <TableCell className="text-center">-</TableCell>
+                                            <TableCell className="text-center">-</TableCell>
+                                            <TableCell></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </>
+                            )}
+                        </TableBody>
+                    </Table>
+                </SecureTableWrapper>
+            )}
+
+            {/* Pagination footer - Desktop only */}
             {totalTeams > 0 && (
-                <div ref={paginationRef} className="flex items-center justify-between py-3 px-4 border-t bg-muted/30 rounded-b-lg -mt-px">
+                <div ref={paginationRef} className="hidden md:flex items-center justify-between py-3 px-4 border-t bg-muted/30 rounded-b-lg -mt-px">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -1104,95 +1313,27 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Person Details Sheet */}
-            <Sheet open={!!selectedPerson} onOpenChange={(open) => !open && setSelectedPerson(null)}>
-                <SheetContent>
-                    {selectedPerson && (
-                        <>
-                            <SheetHeader>
-                                <SheetTitle>{selectedPerson.name}</SheetTitle>
-                            </SheetHeader>
-                            <div className="mt-6 space-y-6 px-4 overflow-y-auto">
-                                {/* Photo */}
-                                <div className="flex justify-center">
-                                    {selectedPerson.photo ? (
-                                        <Image
-                                            src={selectedPerson.photo}
-                                            alt={selectedPerson.name}
-                                            width={120}
-                                            height={120}
-                                            className="rounded-full"
-                                        />
-                                    ) : (
-                                        <div className="w-28 h-28 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl">
-                                            {selectedPerson.name.split(" ").map((n) => n[0]).join("")}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Details */}
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Title</div>
-                                        <div>{selectedPerson.title || "-"}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Department</div>
-                                        <div>{selectedPerson.department}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Email</div>
-                                        <div>{selectedPerson.email}</div>
-                                    </div>
-
-                                    {/* Teams section */}
-                                    <div className="pt-2 border-t">
-                                        <div className="text-sm font-medium mb-2">Teams</div>
-                                        {personTeams.length === 0 ? (
-                                            <div className="text-sm text-zinc-500">Not a member of any teams</div>
-                                        ) : (
-                                            <div className="space-y-1">
-                                                {personTeams.map(team => {
-                                                    // Build parent chain for navigation
-                                                    const findParentChain = (teamId: string): BreadcrumbItem[] => {
-                                                        const t = teams.find(x => x.id === teamId);
-                                                        if (!t) return [];
-                                                        const parent = teams.find(x => x.childTeams.some(ct => ct.childTeamId === teamId));
-                                                        if (parent) {
-                                                            return [...findParentChain(parent.id), { id: t.id, name: t.name }];
-                                                        }
-                                                        return [{ id: t.id, name: t.name }];
-                                                    };
-                                                    return (
-                                                        <div
-                                                            key={team.id}
-                                                            className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
-                                                            onClick={() => {
-                                                                setSelectedPerson(null);
-                                                                const path = findParentChain(team.id);
-                                                                setBreadcrumbs([{ id: null, name: "All Teams" }, ...path]);
-                                                                // Sync URL
-                                                                lastProcessedUrlTeam.current = team.id;
-                                                                router.replace(`/personnel/teams?team=${team.id}`, { scroll: false });
-                                                            }}
-                                                        >
-                                                            <UsersRound className="h-4 w-4 text-primary" />
-                                                            <span>{team.name}</span>
-                                                            {team.isOwner && (
-                                                                <Crown className="h-3.5 w-3.5 text-amber-500" />
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </SheetContent>
-            </Sheet>
+            {/* Responsive Person Details - Drawer on mobile, Sheet on desktop */}
+            <ResponsivePersonnelDetail
+                person={selectedPerson ? {
+                    ...selectedPerson,
+                    title: selectedPerson.title ?? null,
+                    site: selectedPerson.site ?? null,
+                    building: selectedPerson.building ?? null,
+                    level: selectedPerson.level ?? null,
+                    space: selectedPerson.space ?? null,
+                    manager: selectedPerson.manager ?? null,
+                    photo: selectedPerson.photo ?? null,
+                    deskPhone: selectedPerson.deskPhone ?? null,
+                    cellPhone: selectedPerson.cellPhone ?? null,
+                    bio: selectedPerson.bio ?? null,
+                    isGlobalAdmin: selectedPerson.isGlobalAdmin ?? false,
+                } : null}
+                open={!!selectedPerson}
+                onOpenChange={(open) => !open && setSelectedPerson(null)}
+                teams={personTeams}
+                isAdmin={isAdmin}
+            />
         </div>
     );
 }

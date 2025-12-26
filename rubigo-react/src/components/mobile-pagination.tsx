@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 // Fixed page size options for mobile (no auto)
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -56,6 +57,19 @@ export function MobilePagination({
         : PAGE_SIZE_OPTIONS.reduce((prev, curr) =>
             Math.abs(curr - pageSize) < Math.abs(prev - pageSize) ? curr : prev
         );
+
+    // Track if we've synced to avoid infinite loops
+    const hasSynced = useRef(false);
+
+    // Sync normalized pageSize back to parent if different
+    useEffect(() => {
+        if (normalizedPageSize !== pageSize && onPageSizeChange && !hasSynced.current) {
+            hasSynced.current = true;
+            onPageSizeChange(normalizedPageSize);
+        } else if (normalizedPageSize === pageSize) {
+            hasSynced.current = false;
+        }
+    }, [normalizedPageSize, pageSize, onPageSizeChange]);
 
     return (
         <div className="flex items-center justify-between py-2 px-2">

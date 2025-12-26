@@ -4,7 +4,7 @@
  * PersonCard - Mobile-friendly card view for personnel
  * 
  * Layout: Photo+Badge column | Info+Actions column
- * Used in place of table rows on mobile breakpoints (< md)
+ * Uses ClassificationCell for consistent security badge display.
  */
 
 import { useRouter } from "next/navigation";
@@ -14,17 +14,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AgentBadge } from "@/components/ui/agent-badge";
 import { MessageCircle, Smartphone, Phone, Mail } from "lucide-react";
+import type { AccessControlObject } from "@/lib/access-control/types";
+import { ClassificationCell } from "@/components/ui/secure-table-wrapper";
 
 interface PersonCardProps {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
     title: string | null;
-    department: string;
+    department: string | null;
     photo: string | null;
     isAgent?: boolean;
     cellPhone?: string | null;
     deskPhone?: string | null;
+    aco?: AccessControlObject;
     onClick?: () => void;
 }
 
@@ -47,6 +50,7 @@ export function PersonCard({
     isAgent,
     cellPhone,
     deskPhone,
+    aco,
     onClick,
 }: PersonCardProps) {
     const router = useRouter();
@@ -64,7 +68,7 @@ export function PersonCard({
             <CardContent className="p-2">
                 {/* 2-column grid: Photo+Badge | Info+Actions */}
                 <div className="grid grid-cols-[2fr_3fr] gap-3">
-                    {/* Left column - Photo with badge below */}
+                    {/* Left column - Photo with classification badge */}
                     <div className="flex flex-col gap-1">
                         <div className="aspect-[4/3] w-full">
                             <Avatar className="h-full w-full rounded-lg">
@@ -74,15 +78,13 @@ export function PersonCard({
                                 </AvatarFallback>
                             </Avatar>
                         </div>
-                        {/* Department badge below photo */}
-                        <Badge variant="secondary" className="text-xs w-full justify-center rounded-lg">
-                            {department}
-                        </Badge>
+                        {/* Classification badge using ClassificationCell */}
+                        <ClassificationCell aco={aco} />
                     </div>
 
-                    {/* Right column - Name, Title, and Action icons */}
+                    {/* Right column - Name, Title, Department, and Action icons */}
                     <div className="flex flex-col justify-between min-w-0">
-                        {/* Name and Title - centered vertically in remaining space */}
+                        {/* Name, Title, Department - centered vertically in remaining space */}
                         <div className="flex-1 flex flex-col justify-center">
                             {/* Name with agent badge */}
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -94,6 +96,12 @@ export function PersonCard({
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     {title}
                                 </p>
+                            )}
+                            {/* Department badge */}
+                            {department && (
+                                <Badge variant="secondary" className="text-xs w-fit mt-1">
+                                    {department}
+                                </Badge>
                             )}
                         </div>
 
