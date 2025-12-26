@@ -83,11 +83,13 @@ jobs:
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Create isolated build database using SQLite backup command
-          # This consolidates WAL into the main file and creates a completely 
-          # independent copy with no shared locks
+          # Create isolated build database copy
+          # Using cp since sqlite3 CLI may not be installed
           BUILD_DB="$BUILD_DIR/rubigo.db"
-          sqlite3 "$DATABASE_URL" ".backup '$BUILD_DB'"
+          cp "$DATABASE_URL" "$BUILD_DB"
+          # Also copy WAL files if they exist (for consistency)
+          cp "$DATABASE_URL-wal" "$BUILD_DIR/rubigo.db-wal" 2>/dev/null || true
+          cp "$DATABASE_URL-shm" "$BUILD_DIR/rubigo.db-shm" 2>/dev/null || true
           
           # Override DATABASE_URL to use isolated build database
           # Using export ensures all subprocesses (Next.js workers) use it
