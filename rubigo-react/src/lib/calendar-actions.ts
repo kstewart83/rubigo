@@ -11,10 +11,15 @@ import {
     calendarEvents,
     calendarParticipants,
     calendarDeviations,
+    personnel,
+    teamMembers,
     type CalendarDeviation,
 } from "@/db/schema";
 import { eq, and, gte, lte, or } from "drizzle-orm";
 import type { CalendarEventWithParticipants } from "@/lib/calendar-utils";
+import { type SessionContext, filterBySession } from "@/lib/access-control/abac-filter";
+import { getOrCreateAcoId } from "@/lib/access-control/aco-registry";
+import { parseAco } from "@/lib/access-control/abac-filter";
 
 // ============================================================================
 // Types
@@ -38,8 +43,16 @@ export interface CalendarEventInput {
     recurrenceUntil?: string;
     timezone?: string;
     location?: string;
-    participantIds?: string[];
+    participantIds?: string[]; // Legacy - deprecated
+    participants?: Array<{
+        type: "personnel" | "team";
+        id: string;
+        role: "organizer" | "required" | "optional";
+    }>;
     allDay?: boolean;
+    // Security/ABAC fields
+    aco?: string;
+    descriptionAco?: string;
 }
 
 // ============================================================================
@@ -56,6 +69,14 @@ export async function createCalendarEvent(
     try {
         const now = new Date().toISOString();
         const id = crypto.randomUUID();
+
+        // Parse ACO from input and get/create normalized acoId
+        const acoJson = input.aco ?? '{"sensitivity":"low"}';
+        const parsedAco = parseAco(acoJson);
+        const acoId = await getOrCreateAcoId({
+            sensitivity: parsedAco.sensitivity,
+            tenants: parsedAco.tenants,
+        });
 
         // Insert event
         await db.insert(calendarEvents).values({
@@ -74,25 +95,45 @@ export async function createCalendarEvent(
             deleted: false,
             createdAt: now,
             updatedAt: now,
+            // Normalized ACO (new)
+            acoId,
+            // Legacy ABAC fields (for backward compatibility)
+            aco: acoJson,
+            descriptionAco: input.descriptionAco ?? null,
         });
 
-        // Add organizer as participant
-        await db.insert(calendarParticipants).values({
-            id: crypto.randomUUID(),
-            eventId: id,
-            personnelId: organizerId,
-            role: "organizer",
-        });
+        // Add organizer as participant (default if no participants provided)
+        if (!input.participants || input.participants.length === 0) {
+            await db.insert(calendarParticipants).values({
+                id: crypto.randomUUID(),
+                eventId: id,
+                personnelId: organizerId,
+                role: "organizer",
+            });
+        }
 
-        // Add other participants
-        if (input.participantIds && input.participantIds.length > 0) {
+        // Add all participants (new format with type/id/role)
+        if (input.participants && input.participants.length > 0) {
+            for (const participant of input.participants) {
+                await db.insert(calendarParticipants).values({
+                    id: crypto.randomUUID(),
+                    eventId: id,
+                    personnelId: participant.type === "personnel" ? participant.id : null,
+                    teamId: participant.type === "team" ? participant.id : null,
+                    role: participant.role as "organizer" | "required" | "optional",
+                });
+            }
+        }
+
+        // Legacy: Add other participants from participantIds (deprecated)
+        if (input.participantIds && input.participantIds.length > 0 && (!input.participants || input.participants.length === 0)) {
             for (const personnelId of input.participantIds) {
                 if (personnelId !== organizerId) {
                     await db.insert(calendarParticipants).values({
                         id: crypto.randomUUID(),
                         eventId: id,
                         personnelId,
-                        role: "participant",
+                        role: "required",
                     });
                 }
             }
@@ -107,11 +148,57 @@ export async function createCalendarEvent(
 
 /**
  * Get calendar events for a date range
+ * @param startDate - Start of date range (ISO 8601)
+ * @param endDate - End of date range (ISO 8601)
+ * @param sessionContext - Optional session context for ABAC filtering
  */
 export async function getCalendarEvents(
     startDate: string,
-    endDate: string
+    endDate: string,
+    sessionContext?: SessionContext,
+    personnelId?: string // Filter to events where this person is a participant
 ): Promise<CalendarEventWithParticipants[]> {
+    // If personnelId provided, get event IDs where person is a participant
+    // (either directly or through team membership)
+    let participatingEventIds: string[] | undefined;
+    if (personnelId) {
+        // 1. Get events where person is directly a participant
+        const directParticipations = await db
+            .select({ eventId: calendarParticipants.eventId })
+            .from(calendarParticipants)
+            .where(eq(calendarParticipants.personnelId, personnelId));
+
+        // 2. Get teams the person belongs to
+        const userTeams = await db
+            .select({ teamId: teamMembers.teamId })
+            .from(teamMembers)
+            .where(eq(teamMembers.personnelId, personnelId));
+        const userTeamIds = userTeams.map(t => t.teamId);
+
+        // 3. Get events where any of the user's teams are participants
+        let teamParticipations: { eventId: string }[] = [];
+        if (userTeamIds.length > 0) {
+            teamParticipations = await db
+                .select({ eventId: calendarParticipants.eventId })
+                .from(calendarParticipants)
+                .where(
+                    or(...userTeamIds.map(teamId => eq(calendarParticipants.teamId, teamId)))
+                );
+        }
+
+        // Combine direct and team-based event IDs (deduplicate)
+        const allEventIds = new Set([
+            ...directParticipations.map(p => p.eventId),
+            ...teamParticipations.map(p => p.eventId),
+        ]);
+        participatingEventIds = Array.from(allEventIds);
+
+        // If no participations, return empty array early
+        if (participatingEventIds.length === 0) {
+            return [];
+        }
+    }
+
     // Get base events in range (non-recurring)
     const events = await db
         .select()
@@ -140,24 +227,125 @@ export async function getCalendarEvents(
             )
         );
 
+    // Filter to participating events if personnelId was provided
+    const filteredEvents = personnelId && participatingEventIds
+        ? events.filter(e => participatingEventIds!.includes(e.id))
+        : events;
+
+    // Get user's team IDs if personnelId provided (for resolving team-based participation)
+    let userTeamIds: string[] = [];
+    if (personnelId) {
+        const userTeams = await db
+            .select({ teamId: teamMembers.teamId })
+            .from(teamMembers)
+            .where(eq(teamMembers.personnelId, personnelId));
+        userTeamIds = userTeams.map(t => t.teamId);
+    }
+
     // Get participants for each event
     const result: CalendarEventWithParticipants[] = [];
-    for (const event of events) {
+    for (const event of filteredEvents) {
         const participants = await db
             .select({
                 personnelId: calendarParticipants.personnelId,
+                teamId: calendarParticipants.teamId,
                 role: calendarParticipants.role,
             })
             .from(calendarParticipants)
             .where(eq(calendarParticipants.eventId, event.id));
 
+        // Calculate userRoles: roles where user is directly named OR is member of a participating team
+        const userRoles: string[] = [];
+        if (personnelId) {
+            for (const p of participants) {
+                const role = p.role ?? "required";
+                // Direct participation
+                if (p.personnelId === personnelId && !userRoles.includes(role)) {
+                    userRoles.push(role);
+                }
+                // Team-based participation
+                if (p.teamId && userTeamIds.includes(p.teamId) && !userRoles.includes(role)) {
+                    userRoles.push(role);
+                }
+            }
+        }
+
         result.push({
             ...event,
             participants: participants.map(p => ({
-                personnelId: p.personnelId,
-                role: p.role ?? "participant",
+                personnelId: p.personnelId ?? "",
+                teamId: p.teamId ?? "",
+                role: p.role ?? "required",
             })),
+            // Include resolved roles for the requesting user (for client-side filtering)
+            userRoles,
         });
+    }
+
+    // Apply session-level ABAC filtering if context provided
+    if (sessionContext) {
+        const SENSITIVITY_ORDER = ["public", "low", "moderate", "high"];
+        const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(sessionContext.sessionLevel);
+
+        // Get tenant-specific session levels (defaults to base session level if not provided)
+        const activeTenantLevels = sessionContext.activeTenantLevels ?? {};
+
+        // Helper to check if an ACO is accessible based on tenant-specific levels
+        const isAcoAccessible = (parsedAco: ReturnType<typeof parseAco>): boolean => {
+            // For untenanted data, check base level only
+            if (parsedAco.tenantNames.length === 0) {
+                const objectLevelIndex = SENSITIVITY_ORDER.indexOf(parsedAco.sensitivity);
+                return sessionLevelIndex >= objectLevelIndex;
+            }
+
+            // For tenanted data, check each tenant's level
+            for (const tenantName of parsedAco.tenantNames) {
+                // User must have this tenant in their active session
+                if (!sessionContext.activeTenants.includes(tenantName)) {
+                    return false;
+                }
+
+                // Get the required level for this tenant from the ACO
+                const requiredLevel = parsedAco.tenantLevels[tenantName] ?? parsedAco.sensitivity;
+                const requiredLevelIndex = SENSITIVITY_ORDER.indexOf(requiredLevel);
+
+                // Get user's session level for this tenant
+                const userTenantLevel = activeTenantLevels[tenantName] ?? sessionContext.sessionLevel;
+                const userTenantLevelIndex = SENSITIVITY_ORDER.indexOf(userTenantLevel);
+
+                // User's tenant level must be >= required level
+                if (userTenantLevelIndex < requiredLevelIndex) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // Helper to check if description is accessible
+        const isDescriptionAccessible = (event: typeof result[0]): boolean => {
+            const descAco = parseAco(event.descriptionAco || event.aco);
+            return isAcoAccessible(descAco);
+        };
+
+        // Filter events and redact inaccessible descriptions
+        return result
+            .filter(event => {
+                // Filter by base event ACO
+                const parsedAco = parseAco(event.aco);
+                return isAcoAccessible(parsedAco);
+            })
+            .map(event => {
+                // Redact description if not accessible (server-side security)
+                if (event.description && !isDescriptionAccessible(event)) {
+                    return {
+                        ...event,
+                        description: null, // Redact content
+                        descriptionAco: null, // Hide classification level
+                        _descriptionRedacted: true, // Marker for UI
+                    };
+                }
+                return event;
+            });
     }
 
     return result;
@@ -178,6 +366,7 @@ export async function getCalendarEvent(id: string): Promise<CalendarEventWithPar
     const participants = await db
         .select({
             personnelId: calendarParticipants.personnelId,
+            teamId: calendarParticipants.teamId,
             role: calendarParticipants.role,
         })
         .from(calendarParticipants)
@@ -186,9 +375,11 @@ export async function getCalendarEvent(id: string): Promise<CalendarEventWithPar
     return {
         ...event,
         participants: participants.map(p => ({
-            personnelId: p.personnelId,
-            role: p.role ?? "participant",
+            personnelId: p.personnelId ?? "",
+            teamId: p.teamId ?? "",
+            role: p.role ?? "required",
         })),
+        userRoles: [], // No user context in getCalendarEvent
     };
 }
 
@@ -201,6 +392,16 @@ export async function updateCalendarEvent(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const now = new Date().toISOString();
+
+        // If ACO is being updated, also update the normalized acoId
+        let acoId: number | undefined;
+        if (input.aco !== undefined) {
+            const parsedAco = parseAco(input.aco);
+            acoId = await getOrCreateAcoId({
+                sensitivity: parsedAco.sensitivity,
+                tenants: parsedAco.tenants,
+            });
+        }
 
         await db
             .update(calendarEvents)
@@ -216,9 +417,29 @@ export async function updateCalendarEvent(
                 }),
                 ...(input.recurrenceUntil !== undefined && { recurrenceUntil: input.recurrenceUntil }),
                 ...(input.location !== undefined && { location: input.location }),
+                ...(input.aco !== undefined && { aco: input.aco }),
+                ...(acoId !== undefined && { acoId }), // Normalized ACO
+                ...(input.descriptionAco !== undefined && { descriptionAco: input.descriptionAco }),
                 updatedAt: now,
             })
             .where(eq(calendarEvents.id, id));
+
+        // Update participants if provided (delete all and re-insert)
+        if (input.participants !== undefined) {
+            // Delete existing participants
+            await db.delete(calendarParticipants).where(eq(calendarParticipants.eventId, id));
+
+            // Insert new participants
+            for (const participant of input.participants) {
+                await db.insert(calendarParticipants).values({
+                    id: crypto.randomUUID(),
+                    eventId: id,
+                    personnelId: participant.type === "personnel" ? participant.id : null,
+                    teamId: participant.type === "team" ? participant.id : null,
+                    role: participant.role as "organizer" | "required" | "optional",
+                });
+            }
+        }
 
         return { success: true };
     } catch (error) {
@@ -519,5 +740,188 @@ export async function deleteAllOrphanedDeviations(
     } catch (error) {
         console.error("Failed to delete orphaned deviations:", error);
         return { success: false, count: 0, error: "Failed to delete orphaned deviations" };
+    }
+}
+
+// ============================================================================
+// Participant Management
+// ============================================================================
+
+import { teams } from "@/db/schema";
+import type { ParticipantRole } from "@/lib/participant-resolver";
+
+/**
+ * Add a participant (individual or team) to an event
+ */
+export async function addEventParticipant(input: {
+    eventId: string;
+    personnelId?: string;
+    teamId?: string;
+    role?: ParticipantRole;
+    addedBy?: string;
+}): Promise<{ success: boolean; id?: string; error?: string; existed?: boolean }> {
+    try {
+        // Validate: must have exactly one of personnelId or teamId
+        if ((!input.personnelId && !input.teamId) || (input.personnelId && input.teamId)) {
+            return { success: false, error: "Must specify exactly one of personnelId or teamId" };
+        }
+
+        // Check for existing participant (dedup)
+        const conditions = [eq(calendarParticipants.eventId, input.eventId)];
+        if (input.personnelId) {
+            conditions.push(eq(calendarParticipants.personnelId, input.personnelId));
+        } else {
+            conditions.push(eq(calendarParticipants.teamId, input.teamId!));
+        }
+        const existing = await db.select({ id: calendarParticipants.id })
+            .from(calendarParticipants)
+            .where(and(...conditions))
+            .get();
+
+        if (existing) {
+            return { success: true, id: existing.id, existed: true };
+        }
+
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        await db.insert(calendarParticipants).values({
+            id,
+            eventId: input.eventId,
+            personnelId: input.personnelId ?? null,
+            teamId: input.teamId ?? null,
+            role: input.role ?? "required",
+            addedAt: now,
+            addedBy: input.addedBy ?? null,
+        });
+
+        return { success: true, id };
+    } catch (error) {
+        console.error("Failed to add participant:", error);
+        return { success: false, error: "Failed to add participant" };
+    }
+}
+
+/**
+ * Remove a participant from an event
+ */
+export async function removeEventParticipant(
+    eventId: string,
+    participantId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(calendarParticipants)
+            .where(
+                and(
+                    eq(calendarParticipants.eventId, eventId),
+                    eq(calendarParticipants.id, participantId)
+                )
+            );
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to remove participant:", error);
+        return { success: false, error: "Failed to remove participant" };
+    }
+}
+
+/**
+ * Update a participant's role
+ */
+export async function updateParticipantRole(
+    participantId: string,
+    role: ParticipantRole
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .update(calendarParticipants)
+            .set({ role })
+            .where(eq(calendarParticipants.id, participantId));
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update participant role:", error);
+        return { success: false, error: "Failed to update role" };
+    }
+}
+
+/**
+ * Get raw participant records for an event (before resolution)
+ */
+export async function getEventParticipantsRaw(eventId: string): Promise<{
+    success: boolean;
+    data?: Array<{
+        id: string;
+        personnelId: string | null;
+        teamId: string | null;
+        role: string | null;
+        addedAt: string | null;
+        personnelName: string | null;
+        teamName: string | null;
+    }>;
+    error?: string;
+}> {
+    try {
+        const participants = await db
+            .select({
+                id: calendarParticipants.id,
+                personnelId: calendarParticipants.personnelId,
+                teamId: calendarParticipants.teamId,
+                role: calendarParticipants.role,
+                addedAt: calendarParticipants.addedAt,
+                personnelName: personnel.name,
+                teamName: teams.name,
+            })
+            .from(calendarParticipants)
+            .leftJoin(personnel, eq(calendarParticipants.personnelId, personnel.id))
+            .leftJoin(teams, eq(calendarParticipants.teamId, teams.id))
+            .where(eq(calendarParticipants.eventId, eventId));
+
+        return { success: true, data: participants };
+    } catch (error) {
+        console.error("Failed to get participants:", error);
+        return { success: false, error: "Failed to get participants" };
+    }
+}
+
+/**
+ * Set all participants for an event (replaces existing)
+ */
+export async function setEventParticipants(
+    eventId: string,
+    participants: Array<{
+        personnelId?: string;
+        teamId?: string;
+        role: ParticipantRole;
+    }>,
+    addedBy?: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Delete existing participants
+        await db
+            .delete(calendarParticipants)
+            .where(eq(calendarParticipants.eventId, eventId));
+
+        // Add new participants
+        const now = new Date().toISOString();
+        for (const p of participants) {
+            if (!p.personnelId && !p.teamId) continue;
+
+            await db.insert(calendarParticipants).values({
+                id: crypto.randomUUID(),
+                eventId,
+                personnelId: p.personnelId ?? null,
+                teamId: p.teamId ?? null,
+                role: p.role,
+                addedAt: now,
+                addedBy: addedBy ?? null,
+            });
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to set participants:", error);
+        return { success: false, error: "Failed to set participants" };
     }
 }

@@ -1033,6 +1033,213 @@ async function main() {
     }
     allStats.emailRecipients = { created: recipientCreated, skipped: recipientSkipped, failed: recipientFailed, updated: 0, deleted: 0 };
 
+    // =========================================================================
+    // Teams Sync
+    // =========================================================================
+
+    // Build email-to-personnelId lookup for business key resolution
+    const emailToPersonnelId = new Map<string, string>();
+    for (const p of data.personnel) {
+        const remoteId = resolveId(idMaps, "personnel", p.id);
+        if (remoteId) {
+            emailToPersonnelId.set(p.email, remoteId);
+        }
+    }
+
+    // Sync teams
+    type RemoteTeam = { id: string; name: string };
+    allStats.teams = await syncEntityWithMapping<typeof data.teams[0], RemoteTeam>({
+        entityName: "teams",
+        entityType: "teams",
+        items: data.teams,
+        mode: args.mode,
+        dryRun: args.dryRun,
+        idMaps,
+        listFn: () => client.listTeams() as Promise<{ success: boolean; data?: RemoteTeam[] }>,
+        createFn: (t) => {
+            // Resolve created_by_email to personnel ID
+            const createdBy = t.created_by_email ? emailToPersonnelId.get(t.created_by_email) : undefined;
+            return client.createTeam({
+                name: t.name,
+                description: t.description,
+                createdBy,
+                aco: t.aco,
+            });
+        },
+        deleteFn: (id) => client.deleteTeam(id),
+        getSeedId: (t) => t.id,
+        getRemoteId: (t) => t.id,
+        getSeedKey: (t) => t.name,
+        getRemoteKey: (t) => t.name,
+        formatName: (t) => t.name,
+    });
+
+    // Build team name-to-ID lookup
+    const teamNameToId = new Map<string, string>();
+    const teamsResult = await client.listTeams() as { success: boolean; data?: RemoteTeam[] };
+    if (teamsResult.success && teamsResult.data) {
+        for (const team of teamsResult.data) {
+            teamNameToId.set(team.name, team.id);
+        }
+    }
+
+    // Sync team members using business keys
+    console.log(`\n📦 Syncing ${data.teamMembers.length} team members...`);
+    let tmCreated = 0, tmSkipped = 0, tmFailed = 0;
+
+    for (const tm of data.teamMembers) {
+        const teamId = teamNameToId.get(tm.team_name);
+        const personnelId = emailToPersonnelId.get(tm.personnel_email);
+
+        if (!teamId || !personnelId) {
+            console.log(`   ⚠️  Skipping member: unresolved team=${tm.team_name} or personnel=${tm.personnel_email}`);
+            tmSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would add member ${tm.personnel_email} to ${tm.team_name}`);
+            tmCreated++;
+        } else {
+            const result = await client.addTeamMember({ teamId, personnelId });
+            if (result.success) {
+                if (result.existed) tmSkipped++;
+                else tmCreated++;
+            } else {
+                tmFailed++;
+                console.log(`   ❌ Failed to add member: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamMembers = { created: tmCreated, skipped: tmSkipped, failed: tmFailed, updated: 0, deleted: 0 };
+
+    // Sync team hierarchy
+    console.log(`\n📦 Syncing ${data.teamTeams.length} team hierarchies...`);
+    let thCreated = 0, thSkipped = 0, thFailed = 0;
+
+    for (const tt of data.teamTeams) {
+        const parentTeamId = teamNameToId.get(tt.parent_team_name);
+        const childTeamId = teamNameToId.get(tt.child_team_name);
+
+        if (!parentTeamId || !childTeamId) {
+            console.log(`   ⚠️  Skipping hierarchy: unresolved parent=${tt.parent_team_name} or child=${tt.child_team_name}`);
+            thSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would nest ${tt.child_team_name} under ${tt.parent_team_name}`);
+            thCreated++;
+        } else {
+            const result = await client.addChildTeam({ parentTeamId, childTeamId });
+            if (result.success) {
+                if (result.existed) thSkipped++;
+                else thCreated++;
+            } else {
+                thFailed++;
+                console.log(`   ❌ Failed to nest team: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamHierarchy = { created: thCreated, skipped: thSkipped, failed: thFailed, updated: 0, deleted: 0 };
+
+    // Sync team owners
+    console.log(`\n📦 Syncing ${data.teamOwners.length} team owners...`);
+    let toCreated = 0, toSkipped = 0, toFailed = 0;
+
+    for (const to of data.teamOwners) {
+        const teamId = teamNameToId.get(to.team_name);
+        const personnelId = emailToPersonnelId.get(to.personnel_email);
+
+        if (!teamId || !personnelId) {
+            console.log(`   ⚠️  Skipping owner: unresolved team=${to.team_name} or personnel=${to.personnel_email}`);
+            toSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            console.log(`   🆕 [DRY-RUN] Would add owner ${to.personnel_email} to ${to.team_name}`);
+            toCreated++;
+        } else {
+            const result = await client.addTeamOwner({ teamId, personnelId });
+            if (result.success) {
+                if (result.existed) toSkipped++;
+                else toCreated++;
+            } else {
+                toFailed++;
+                console.log(`   ❌ Failed to add owner: ${result.error}`);
+            }
+        }
+    }
+    allStats.teamOwners = { created: toCreated, skipped: toSkipped, failed: toFailed, updated: 0, deleted: 0 };
+
+    // =========================================================================
+    // Calendar Participants Sync (after teams since we need teamNameToId)
+    // =========================================================================
+
+    console.log(`\n📦 Syncing ${data.calendarParticipants.length} calendar participants...`);
+    let participantCreated = 0, participantSkipped = 0, participantFailed = 0;
+
+    // Build event title to remote ID map
+    const eventTitleToId = new Map<string, string>();
+    for (const event of data.calendarEvents) {
+        const remoteId = existingEventsByTitle.get(event.title);
+        if (remoteId) {
+            eventTitleToId.set(event.title, remoteId);
+        }
+    }
+
+    for (const participant of data.calendarParticipants) {
+        // Resolve event by title
+        const remoteEventId = eventTitleToId.get(participant.event_title);
+        if (!remoteEventId) {
+            participantSkipped++;
+            continue;
+        }
+
+        // Resolve personnel or team
+        let personnelId: string | undefined;
+        let teamId: string | undefined;
+
+        if (participant.personnel_email) {
+            personnelId = emailToPersonnelId.get(participant.personnel_email);
+            if (!personnelId) {
+                participantSkipped++;
+                continue;
+            }
+        } else if (participant.team_name) {
+            teamId = teamNameToId.get(participant.team_name);
+            if (!teamId) {
+                participantSkipped++;
+                continue;
+            }
+        } else {
+            participantSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            participantCreated++;
+        } else {
+            const result = await client.addEventParticipant({
+                eventId: remoteEventId,
+                personnelId,
+                teamId,
+                role: participant.role as "organizer" | "required" | "optional" | "excluded",
+            });
+            if (result.success) {
+                if ((result as { existed?: boolean }).existed) {
+                    participantSkipped++;
+                } else {
+                    participantCreated++;
+                }
+            } else {
+                participantFailed++;
+            }
+        }
+    }
+    allStats.calendarParticipants = { created: participantCreated, skipped: participantSkipped, failed: participantFailed, updated: 0, deleted: 0 };
+
     // Print summary
     console.log("\n" + "=".repeat(60));
     console.log("📊 Sync Summary");

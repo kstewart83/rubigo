@@ -22,7 +22,27 @@ import {
 } from "@/lib/agent-events";
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma3:4b";
+const FALLBACK_MODEL = process.env.OLLAMA_MODEL || "gemma3:4b";
+
+/**
+ * Get the persisted model from app_settings, falling back to env/default
+ */
+async function getPersistedModel(): Promise<string> {
+    try {
+        const settings = await db
+            .select()
+            .from(schema.appSettings)
+            .where(eq(schema.appSettings.key, schema.SETTING_KEYS.OLLAMA_MODEL))
+            .limit(1);
+
+        if (settings.length > 0 && settings[0].value) {
+            return settings[0].value;
+        }
+    } catch (error) {
+        console.error("Error fetching persisted model:", error);
+    }
+    return FALLBACK_MODEL;
+}
 
 /**
  * Generate a unique ID
@@ -32,13 +52,37 @@ function generateId(): string {
 }
 
 /**
+ * Get model info including digest from Ollama
+ */
+async function getModelInfo(modelName: string): Promise<{ model: string; digest?: string }> {
+    try {
+        const res = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
+            cache: 'no-store',
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const modelInfo = (data.models || []).find(
+                (m: { name: string; digest: string }) => m.name === modelName
+            );
+            if (modelInfo) {
+                return { model: modelName, digest: modelInfo.digest };
+            }
+        }
+    } catch {
+        // Fall back to just model name
+    }
+    return { model: modelName };
+}
+
+/**
  * Handle check_chat event
  * Calls the respond-chat logic inline
  */
 async function handleCheckChat(
     agentId: string,
     contextId: string | null,
-    payload: Record<string, unknown> | null
+    payload: Record<string, unknown> | null,
+    model: string
 ): Promise<{ responded: boolean; response?: string; channel?: string }> {
     // Get agent info
     const agents = await db
@@ -83,6 +127,7 @@ async function handleCheckChat(
             content: schema.chatMessages.content,
             senderId: schema.chatMessages.senderId,
             senderName: schema.personnel.name,
+            senderIsAgent: schema.personnel.isAgent,
             sentAt: schema.chatMessages.sentAt,
         })
         .from(schema.chatMessages)
@@ -92,24 +137,41 @@ async function handleCheckChat(
         )
         .where(eq(schema.chatMessages.channelId, channelId))
         .orderBy(desc(schema.chatMessages.sentAt))
-        .limit(10);
+        .limit(15);
 
     // Reverse to get chronological order (oldest first for context)
     const recentMessages = recentMessagesRaw.reverse();
 
-    // Filter to messages not from this agent
-    const otherMessages = recentMessages.filter(m => m.senderId !== agentId);
+    // Filter to messages from HUMANS only (not from any agent, including self)
+    const humanMessages = recentMessages.filter(m => !m.senderIsAgent);
 
-    if (otherMessages.length === 0) {
+    console.log(`[AGENT DEBUG] ${agent.name} check_chat:`, {
+        channelId,
+        totalMessages: recentMessages.length,
+        humanMessages: humanMessages.length,
+        agentMessages: recentMessages.filter(m => m.senderId === agentId).length,
+    });
+
+    if (humanMessages.length === 0) {
+        console.log(`[AGENT DEBUG] ${agent.name}: No human messages, skipping`);
         return { responded: false };
     }
 
-    // Get the most recent message to respond to
-    const targetMessage = otherMessages[otherMessages.length - 1];
+    // Get the most recent HUMAN message to potentially respond to
+    const targetMessage = humanMessages[humanMessages.length - 1];
 
-    // Check if agent already responded after this message
+    // Check if agent already responded after this human message
     const agentMessages = recentMessages.filter(m => m.senderId === agentId);
     const lastAgentMessage = agentMessages[agentMessages.length - 1];
+
+    console.log(`[AGENT DEBUG] ${agent.name} target:`, {
+        targetMessageId: targetMessage.id,
+        targetSender: targetMessage.senderName,
+        targetContent: targetMessage.content.substring(0, 50),
+        targetSentAt: targetMessage.sentAt,
+        lastAgentMessageId: lastAgentMessage?.id,
+        lastAgentSentAt: lastAgentMessage?.sentAt,
+    });
 
     if (lastAgentMessage) {
         // Compare as Date objects to handle different timestamp formats
@@ -117,15 +179,42 @@ async function handleCheckChat(
         const targetTime = new Date(targetMessage.sentAt).getTime();
         const now = Date.now();
 
-        // Skip if agent already responded after this message
+        console.log(`[AGENT DEBUG] ${agent.name} timing:`, {
+            lastAgentTime,
+            targetTime,
+            now,
+            agentAfterTarget: lastAgentTime > targetTime,
+            timeSinceAgentResponse: now - lastAgentTime,
+            cooldownMs: 30000,
+            cooldownActive: now - lastAgentTime < 30000,
+        });
+
+        // Skip if agent already responded after this human message
         if (lastAgentTime > targetTime) {
+            console.log(`[AGENT DEBUG] ${agent.name}: Already responded after target message, skipping`);
             return { responded: false };
         }
 
-        // Debounce: Skip if agent responded within last 5 seconds (prevents concurrent duplicates)
-        if (now - lastAgentTime < 5000) {
+        // Cooldown: Skip if agent responded within last 30 seconds
+        if (now - lastAgentTime < 30000) {
+            console.log(`[AGENT DEBUG] ${agent.name}: Cooldown active (${Math.round((now - lastAgentTime) / 1000)}s since last response), skipping`);
             return { responded: false };
         }
+    }
+
+    // Response probability: Only respond 30% of the time to avoid spam
+    // (unless this message mentions the agent by name)
+    const mentionsAgent = targetMessage.content.toLowerCase().includes(agent.name.toLowerCase());
+    const randomRoll = Math.random();
+    console.log(`[AGENT DEBUG] ${agent.name} probability:`, {
+        mentionsAgent,
+        randomRoll,
+        threshold: 0.3,
+        willRespond: mentionsAgent || randomRoll <= 0.3,
+    });
+
+    if (!mentionsAgent && randomRoll > 0.3) {
+        return { responded: false };
     }
 
     // Build context for Ollama
@@ -154,7 +243,7 @@ Write your response (just the message text, nothing else):`;
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: OLLAMA_MODEL,
+                model: model,
                 prompt: userPrompt,
                 system: systemPrompt,
                 stream: false,
@@ -178,7 +267,10 @@ Write your response (just the message text, nothing else):`;
             sentAt: new Date().toISOString(),
         });
 
-        // Record as agent event
+        // Get model info including digest
+        const modelInfo = await getModelInfo(model);
+
+        // Record as agent event (inherit ACO from agent)
         await db.insert(schema.agentEvents).values({
             id: generateId(),
             personnelId: agentId,
@@ -187,6 +279,8 @@ Write your response (just the message text, nothing else):`;
             content: `Responded: "${responseContent}"`,
             targetEntity: `chat:${channelId}`,
             contextId,
+            aco: agent.aco, // Inherit classification from agent
+            metadata: JSON.stringify({ type: "message", ...modelInfo }),
         });
 
         // Get channel name for response
@@ -210,7 +304,7 @@ Write your response (just the message text, nothing else):`;
 /**
  * Process an event based on its type
  */
-async function processEvent(event: schema.AgentScheduledEvent): Promise<{
+async function processEvent(event: schema.AgentScheduledEvent, model: string): Promise<{
     action: string;
     details: Record<string, unknown>;
     scheduleNext: boolean;
@@ -266,7 +360,7 @@ async function processEvent(event: schema.AgentScheduledEvent): Promise<{
         }
 
         case "check_chat": {
-            const result = await handleCheckChat(event.agentId, event.contextId, payload);
+            const result = await handleCheckChat(event.agentId, event.contextId, payload, model);
             return {
                 action: result.responded ? "responded_to_chat" : "checked_chat_no_response",
                 details: result,
@@ -295,8 +389,24 @@ async function processEvent(event: schema.AgentScheduledEvent): Promise<{
     }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
     try {
+        // Parse request body for model selection, or use persisted model
+        let model: string | undefined;
+        try {
+            const body = await request.json();
+            if (body.model) {
+                model = body.model;
+            }
+        } catch {
+            // No body or invalid JSON, use persisted model
+        }
+
+        // If no model provided in request, get persisted model from settings
+        if (!model) {
+            model = await getPersistedModel();
+        }
+
         // Get next ready event
         const event = await getNextReadyEvent();
 
@@ -330,8 +440,8 @@ export async function POST() {
 
         const agentName = agents[0]?.name || event.agentId;
 
-        // Process the event
-        const result = await processEvent(event);
+        // Process the event with selected model
+        const result = await processEvent(event, model);
 
         // Mark as processed
         await markEventProcessed(event.id);

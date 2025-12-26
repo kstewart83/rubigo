@@ -8,9 +8,24 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw, Clock, CheckCircle } from "lucide-react";
+import { SecureTableWrapper } from "./secure-table-wrapper";
+import type { SensitivityLevel } from "@/lib/access-control/types";
+
+// Helper to parse ACO JSON
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
+    if (!aco) return { sensitivity: "low", tenants: [] };
+    try {
+        const parsed = JSON.parse(aco);
+        return {
+            sensitivity: parsed.sensitivity || "low",
+            tenants: parsed.tenants || [],
+        };
+    } catch {
+        return { sensitivity: "low", tenants: [] };
+    }
+}
 
 export interface ScheduledEvent {
     id: string;
@@ -23,6 +38,7 @@ export interface ScheduledEvent {
     createdAt: string;
     isReady: boolean;
     msUntilReady: number;
+    aco?: string; // JSON: {sensitivity, tenants[]}
 }
 
 interface Pagination {
@@ -113,17 +129,24 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
     };
 
     return (
-        <Card className="border-0 shadow-none">
-            <CardHeader className="pb-2 px-0">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium">
-                        Event Queue
+        <SecureTableWrapper
+            items={events}
+            getSensitivity={(event) => parseAco(event.aco).sensitivity}
+            getTenants={(event) => parseAco(event.aco).tenants}
+            defaultLevel="low"
+            className="border rounded-lg overflow-hidden"
+        >
+            <div className="p-2">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold">Event Queue</span>
                         {pagination && (
-                            <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                ({pagination.total} pending)
+                            <span className="text-sm text-muted-foreground">
+                                ({pagination.total})
                             </span>
                         )}
-                    </CardTitle>
+                    </div>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -134,14 +157,14 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                         <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
                     </Button>
                 </div>
-            </CardHeader>
-            <CardContent className="px-0">
+
+                {/* Event List */}
                 {events.length === 0 ? (
                     <div className="text-center py-4 text-sm text-muted-foreground">
                         No pending events
                     </div>
                 ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1 max-h-64 overflow-y-auto overflow-x-hidden">
                         {events.map((event) => {
                             const isSelected = selectedEventId === event.id;
                             const isProcessing = processingEventId === event.id;
@@ -150,7 +173,7 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                                     key={event.id}
                                     onClick={() => onSelectEvent?.(event)}
                                     disabled={isProcessing}
-                                    className={`w-full flex items-center gap-2 p-2 rounded text-xs text-left transition-colors ${isProcessing
+                                    className={`w-full flex items-center gap-2 p-2 rounded-lg text-xs text-left transition-colors ${isProcessing
                                         ? "bg-amber-500/20 border border-amber-500/40 animate-pulse"
                                         : isSelected
                                             ? "bg-primary/20 border border-primary/40 ring-1 ring-primary/20"
@@ -247,7 +270,7 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
                         </Button>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </SecureTableWrapper>
     );
 }

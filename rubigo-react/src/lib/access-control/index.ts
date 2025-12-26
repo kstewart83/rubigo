@@ -42,3 +42,32 @@ export {
     createTestSubject,
     resolveSubjectFromPersona,
 } from "./session-resolver";
+
+// ACO Registry (normalized)
+export {
+    canonicalizeAco,
+    hashAco,
+    getOrCreateAcoId,
+    getAcoById,
+    type AcoInput,
+} from "./aco-registry";
+
+// Session Manager
+export {
+    getOrCreateSession,
+    isSessionStale,
+    refreshSessionAcos,
+    ensureFreshSession,
+    type SecuritySession,
+} from "./session-manager";
+
+// Secure Extensions
+export {
+    getExtension,
+    setExtension,
+    getDescription,
+    setDescription,
+    deleteExtension,
+    type ExtensionResult,
+    type ExtensionType,
+} from "./secure-extensions";

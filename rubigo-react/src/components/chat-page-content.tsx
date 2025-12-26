@@ -50,6 +50,7 @@ import type { ChatChannel } from "@/db/schema";
 import { getUserColor } from "@/lib/user-color";
 import { PersonnelPopover } from "@/components/chat/personnel-popover";
 import { useTheme } from "@/components/theme-provider";
+import { AgentBadge } from "@/components/ui/agent-badge";
 
 // Common emoji set for reactions (simple inline grid - no external deps)
 const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀"];
@@ -504,6 +505,7 @@ export function ChatPageContent() {
                                                     personnelEmail={msg.senderEmail ?? undefined}
                                                     personnelDeskPhone={msg.senderDeskPhone ?? undefined}
                                                     personnelCellPhone={msg.senderCellPhone ?? undefined}
+                                                    personnelIsAgent={msg.senderIsAgent ?? false}
                                                     currentUserId={currentPersona?.id}
                                                     onStartDM={handleStartDM}
                                                 >
@@ -521,7 +523,7 @@ export function ChatPageContent() {
                                                         borderColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
                                                     }}
                                                 >
-                                                    <div className="flex items-baseline gap-2">
+                                                    <div className="flex items-center gap-2">
                                                         <PersonnelPopover
                                                             personnelId={msg.senderId}
                                                             personnelName={msg.senderName}
@@ -530,19 +532,21 @@ export function ChatPageContent() {
                                                             personnelEmail={msg.senderEmail ?? undefined}
                                                             personnelDeskPhone={msg.senderDeskPhone ?? undefined}
                                                             personnelCellPhone={msg.senderCellPhone ?? undefined}
+                                                            personnelIsAgent={msg.senderIsAgent ?? false}
                                                             currentUserId={currentPersona?.id}
                                                             onStartDM={handleStartDM}
                                                         >
                                                             <span
                                                                 data-testid="message-sender"
-                                                                className="font-medium text-sm message-sender cursor-pointer hover:underline"
+                                                                className="font-medium text-sm leading-5 message-sender cursor-pointer hover:underline"
                                                             >
                                                                 {msg.senderName}
                                                             </span>
                                                         </PersonnelPopover>
+                                                        {msg.senderIsAgent && <AgentBadge size="xs" />}
                                                         <span
                                                             data-testid="message-timestamp"
-                                                            className="text-xs text-muted-foreground message-timestamp"
+                                                            className="text-xs leading-5 text-muted-foreground message-timestamp"
                                                         >
                                                             {new Date(msg.sentAt).toLocaleTimeString(
                                                                 [],
@@ -556,7 +560,7 @@ export function ChatPageContent() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                                                             onClick={() => setEmojiPickerForMessage(
                                                                 emojiPickerForMessage === msg.id ? null : msg.id
                                                             )}
@@ -568,7 +572,7 @@ export function ChatPageContent() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                                                             data-testid="reply-button"
                                                             title="Reply in thread"
                                                             onClick={() => setActiveThread({

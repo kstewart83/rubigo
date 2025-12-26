@@ -23,12 +23,14 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 );
 
 CREATE TABLE IF NOT EXISTS calendar_participants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT NOT NULL,
     profile_id TEXT NOT NULL REFERENCES profile(id),
-    event_id TEXT NOT NULL,
-    person_id TEXT NOT NULL,
-    status TEXT DEFAULT 'pending',
-    UNIQUE(profile_id, event_id, person_id)
+    event_title TEXT NOT NULL,       -- Business key: resolve to event_id
+    personnel_email TEXT,            -- Business key: resolve to personnel_id
+    team_name TEXT,                  -- Business key: resolve to team_id
+    role TEXT DEFAULT 'required',    -- organizer, required, optional, excluded
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (id, profile_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_profile ON calendar_events(profile_id);

@@ -1,0 +1,1 @@
+ALTER TABLE `calendar_events` ADD `aco_id` integer REFERENCES aco_objects(id);

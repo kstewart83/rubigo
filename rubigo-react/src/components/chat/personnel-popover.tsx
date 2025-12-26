@@ -14,6 +14,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { AgentBadge } from "@/components/ui/agent-badge";
 import { MessageSquare, Mail, Phone, Smartphone } from "lucide-react";
 
 interface PersonnelPopoverProps {
@@ -24,6 +25,7 @@ interface PersonnelPopoverProps {
     personnelEmail?: string;
     personnelDeskPhone?: string;
     personnelCellPhone?: string;
+    personnelIsAgent?: boolean;
     children: React.ReactNode;
     onStartDM?: (personnelId: string) => void;
     currentUserId?: string;
@@ -37,6 +39,7 @@ export function PersonnelPopover({
     personnelEmail,
     personnelDeskPhone,
     personnelCellPhone,
+    personnelIsAgent,
     children,
     onStartDM,
     currentUserId,
@@ -75,9 +78,10 @@ export function PersonnelPopover({
                         <div className="flex-1 min-w-0">
                             <div
                                 data-testid="popup-name"
-                                className="font-semibold text-sm truncate"
+                                className="font-semibold text-sm truncate flex items-center gap-2"
                             >
                                 {personnelName}
+                                {personnelIsAgent && <AgentBadge size="xs" />}
                             </div>
                             {personnelTitle && (
                                 <div

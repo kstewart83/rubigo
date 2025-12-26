@@ -3,6 +3,10 @@
  * 
  * GET /api/calendar - List events for a date range
  * POST /api/calendar - Create a new event
+ * 
+ * Optional session headers for ABAC filtering:
+ * - X-Session-Level: SensitivityLevel (public|low|moderate|high)
+ * - X-Active-Tenants: JSON array of tenant strings
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,6 +18,7 @@ import {
     type CalendarEventInput,
 } from "@/lib/calendar-actions";
 import { expandRecurringEvents } from "@/lib/calendar-utils";
+import type { SensitivityLevel } from "@/lib/access-control/types";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -27,8 +32,30 @@ export async function GET(request: NextRequest) {
         );
     }
 
+    // Extract optional session context from headers for ABAC filtering
+    const sessionLevelHeader = request.headers.get("X-Session-Level");
+    const activeTenants = (() => {
+        try {
+            const header = request.headers.get("X-Active-Tenants");
+            return header ? JSON.parse(header) as string[] : [];
+        } catch {
+            return [];
+        }
+    })();
+
+    // Build session context if headers provided
+    const sessionContext = sessionLevelHeader
+        ? {
+            sessionLevel: sessionLevelHeader as SensitivityLevel,
+            activeTenants,
+        }
+        : undefined;
+
+    // Extract personnel ID for participation filtering
+    const personnelId = request.headers.get("X-Personnel-Id") ?? undefined;
+
     try {
-        const events = await getCalendarEvents(startDate, endDate);
+        const events = await getCalendarEvents(startDate, endDate, sessionContext, personnelId);
 
         // Get deviations for all events
         const deviationsMap = new Map();

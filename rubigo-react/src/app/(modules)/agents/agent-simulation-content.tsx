@@ -6,11 +6,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { AgentControlPanel } from "@/components/ui/agent-control-panel";
+import { SimulationControlPanel, type OllamaModel } from "@/components/ui/simulation-control-panel";
+import { AgentListPanel, type AgentInfo } from "@/components/ui/agent-list-panel";
 import { AgentThoughtViewer } from "@/components/ui/agent-thought-viewer";
 import { EventQueuePanel, type ScheduledEvent } from "@/components/ui/event-queue-panel";
 import { EventDetailsPanel } from "@/components/ui/event-details-panel";
-import type { AgentInfo, SimulationState } from "@/components/ui/agent-control-panel";
+import { AgentActivityFeed } from "@/components/ui/agent-activity-feed";
+import type { SimulationState } from "@/components/ui/simulation-control-panel";
 import type { ThoughtEntry } from "@/components/ui/agent-thought-viewer";
 import type { AgentStatus } from "@/db/schema";
 
@@ -27,6 +29,8 @@ export function AgentSimulationContent() {
     const [processingEventId, setProcessingEventId] = useState<string | null>(null);
     const [thoughts, setThoughts] = useState<ThoughtEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [availableModels, setAvailableModels] = useState<OllamaModel[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined);
 
     // Fetch agents, Ollama status, and loop status
     const fetchStatus = useCallback(async () => {
@@ -43,6 +47,23 @@ export function AgentSimulationContent() {
             const loopRes = await fetch("/api/agents/loop/status");
             const loopData = await loopRes.json();
 
+            // Fetch available models
+            const modelsRes = await fetch("/api/agents/ollama/models");
+            const modelsData = await modelsRes.json();
+            if (modelsData.success && modelsData.models) {
+                setAvailableModels(modelsData.models);
+            }
+
+            // Fetch persisted model setting
+            const settingRes = await fetch("/api/settings?key=ollama_model");
+            const settingData = await settingRes.json();
+            if (settingData.success && settingData.setting?.value) {
+                setSelectedModel(settingData.setting.value);
+            } else if (modelsData.models && modelsData.models.length > 0) {
+                // Default to first available model if no setting exists
+                setSelectedModel(modelsData.models[0].name);
+            }
+
             setSimulation(prev => ({
                 ...prev,
                 ollamaAvailable: health.available,
@@ -52,12 +73,14 @@ export function AgentSimulationContent() {
             }));
 
             setAgents(
-                (agentsData.agents || []).map((a: { id: string; name: string; status: AgentStatus }) => ({
+                (agentsData.agents || []).map((a: { id: string; name: string; department?: string; status: AgentStatus; aco?: string }) => ({
                     id: a.id,
                     name: a.name,
+                    department: a.department,
                     status: a.status as AgentStatus,
                     pendingActions: 0,
                     lastActivity: new Date().toISOString(),
+                    aco: a.aco,
                 }))
             );
         } catch (error) {
@@ -84,6 +107,7 @@ export function AgentSimulationContent() {
                     eventType: ThoughtEntry["eventType"];
                     content: string;
                     targetEntity?: string;
+                    aco?: string;
                 }) => ({
                     id: e.id,
                     timestamp: e.timestamp,
@@ -91,6 +115,7 @@ export function AgentSimulationContent() {
                     eventType: e.eventType,
                     content: e.content,
                     targetEntity: e.targetEntity,
+                    aco: e.aco,
                 }))
             );
         } catch (error) {
@@ -122,7 +147,11 @@ export function AgentSimulationContent() {
                 setProcessingEventId(firstEvent.id);
             }
 
-            const response = await fetch("/api/agents/tick", { method: "POST" });
+            const response = await fetch("/api/agents/tick", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: selectedModel }),
+            });
             const data = await response.json();
             console.log("Tick result:", data);
 
@@ -142,7 +171,7 @@ export function AgentSimulationContent() {
             console.error("Tick error:", error);
             setProcessingEventId(null);
         }
-    }, [fetchStatus, fetchEvents, selectedAgentId]);
+    }, [fetchStatus, fetchEvents, selectedAgentId, selectedModel]);
 
     // Poll for status updates when loop is running
     useEffect(() => {
@@ -176,6 +205,20 @@ export function AgentSimulationContent() {
             }
         } catch (error) {
             console.error("Error stopping loop:", error);
+        }
+    };
+
+    const handleModelChange = async (model: string) => {
+        setSelectedModel(model);
+        // Persist to API
+        try {
+            await fetch("/api/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: "ollama_model", value: model }),
+            });
+        } catch (error) {
+            console.error("Error persisting model selection:", error);
         }
     };
 
@@ -259,22 +302,31 @@ export function AgentSimulationContent() {
 
             {/* Main Content - Full height flex */}
             <div className="flex-1 flex min-h-0">
-                {/* Left Sidebar - Control Panel (1/3 width) */}
-                <div className="w-1/3 flex-shrink-0 border-r overflow-y-auto p-4 space-y-6">
-                    <AgentControlPanel
-                        agents={agents}
+                {/* Left Sidebar - Control Panel */}
+                <div className="w-1/3 min-w-48 shrink border-r overflow-y-auto py-4 pr-4 space-y-4">
+                    {/* Simulation Controls - Static LOW classification */}
+                    <SimulationControlPanel
                         simulation={simulation}
+                        activeAgents={agents.filter(a => a.status === "active").length}
+                        totalAgents={agents.length}
+                        availableModels={availableModels}
+                        selectedModel={selectedModel}
+                        onModelChange={handleModelChange}
                         onStart={handleStart}
                         onStop={handleStop}
                         onTick={handleTick}
                         onReset={handleReset}
+                    />
+
+                    {/* Agent List - Dynamic classification based on ACO */}
+                    <AgentListPanel
+                        agents={agents}
                         onActivate={handleActivate}
                         onSelectAgent={handleSelectAgent}
-                        className="border-0 shadow-none"
                     />
 
                     {/* Event Queue */}
-                    <div className="border-t pt-4">
+                    <div>
                         <EventQueuePanel
                             refreshTrigger={simulation.totalTicks}
                             onSelectEvent={(event) => {
@@ -299,8 +351,8 @@ export function AgentSimulationContent() {
                     </div>
                 </div>
 
-                {/* Right Content - Details Panel (2/3 width) */}
-                <div className="w-2/3 overflow-y-auto p-6">
+                {/* Right Content - Details Panel */}
+                <div className="flex-1 min-w-0 overflow-y-auto p-4">
                     {selectedEvent ? (
                         <EventDetailsPanel
                             event={selectedEvent}
@@ -316,21 +368,9 @@ export function AgentSimulationContent() {
                             onClose={() => setSelectedAgentId(null)}
                         />
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground border rounded-lg bg-muted/20">
-                            <div className="text-4xl mb-4">💭</div>
-                            <p className="text-lg">Select an agent to view their thought stream</p>
-                            <p className="text-sm mt-2">
-                                {agents.length === 0
-                                    ? "No agents configured. Mark personnel as agents to begin."
-                                    : `${agents.length} agent${agents.length !== 1 ? "s" : ""} available`
-                                }
-                            </p>
-                            {!simulation.ollamaAvailable && (
-                                <p className="text-amber-500 text-sm mt-4">
-                                    💡 Start Ollama: <code className="bg-muted px-2 py-1 rounded">ollama pull gemma3:4b</code>
-                                </p>
-                            )}
-                        </div>
+                        <AgentActivityFeed
+                            className="h-full border rounded-lg overflow-hidden"
+                        />
                     )}
                 </div>
             </div>

@@ -32,6 +32,7 @@ import {
 
     Bot,
     FolderOpen,
+    UsersRound,
 
     Presentation,
 
@@ -125,6 +126,7 @@ const sidebarModules: SidebarModule[] = [
         icon: Users,
         subPages: [
             { id: "directory", label: "Directory", href: "/personnel", icon: Users },
+            { id: "teams", label: "Teams", href: "/personnel/teams", icon: UsersRound },
             { id: "agents", label: "AI Agents", href: "/agents", icon: Bot },
         ],
     },
