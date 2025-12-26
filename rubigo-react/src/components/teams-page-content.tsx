@@ -991,8 +991,221 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                 </div>
             )}
 
-            {/* 50/50 Editor Panel */}
-            {showEditor && (
+            {/* Team Editor - Drawer on mobile, inline panel on desktop */}
+            {isMobile ? (
+                <Drawer open={showEditor} onOpenChange={(open) => !open && closeEditor()}>
+                    <DrawerContent className="max-h-[90vh]">
+                        <DrawerHeader className="border-b">
+                            <DrawerTitle>
+                                {isCreating ? "Create Team" : `Edit: ${editingTeam?.name}`}
+                            </DrawerTitle>
+                        </DrawerHeader>
+                        <div className="flex-1 overflow-auto p-4 space-y-4">
+                            {formError && (
+                                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
+                                    {formError}
+                                </div>
+                            )}
+                            <div>
+                                <Label htmlFor="name-mobile">Team Name</Label>
+                                <Input
+                                    id="name-mobile"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="e.g., Engineering Team"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="description-mobile">Description</Label>
+                                <Textarea
+                                    id="description-mobile"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="Brief description..."
+                                    rows={2}
+                                />
+                            </div>
+                            <div>
+                                <Label>Classification</Label>
+                                <SecurityLabelPicker
+                                    value={formData.aco}
+                                    onChange={(aco) => setFormData({ ...formData, aco })}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            {/* Tabs for Personnel/Teams/Owners on mobile */}
+                            <div className="flex border-b">
+                                <button
+                                    className={`flex-1 py-2 text-sm font-medium border-b-2 ${activeTab === 'personnel' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+                                    onClick={() => setActiveTab('personnel')}
+                                >
+                                    Personnel ({selectedMembers.length})
+                                </button>
+                                <button
+                                    className={`flex-1 py-2 text-sm font-medium border-b-2 ${activeTab === 'teams' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+                                    onClick={() => setActiveTab('teams')}
+                                >
+                                    Teams ({selectedChildTeams.length})
+                                </button>
+                                <button
+                                    className={`flex-1 py-2 text-sm font-medium border-b-2 ${activeTab === 'owners' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+                                    onClick={() => setActiveTab('owners')}
+                                >
+                                    <Crown className="h-3 w-3 inline mr-1" />
+                                    ({selectedOwners.length})
+                                </button>
+                            </div>
+
+                            {/* Tab content - simplified for mobile */}
+                            {activeTab === 'personnel' && (
+                                <div className="space-y-2">
+                                    <Input
+                                        placeholder="Search personnel..."
+                                        value={memberSearch}
+                                        onChange={(e) => setMemberSearch(e.target.value)}
+                                    />
+                                    {filteredPersonnel.length > 0 && (
+                                        <div className="border rounded-lg max-h-32 overflow-y-auto">
+                                            {filteredPersonnel.map((p) => (
+                                                <button
+                                                    key={p.id}
+                                                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                    onClick={() => {
+                                                        setSelectedMembers([...selectedMembers, { id: p.id, name: p.name, photo: p.photo }]);
+                                                        setMemberSearch("");
+                                                    }}
+                                                >
+                                                    <User className="h-4 w-4" />
+                                                    {p.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="border rounded max-h-40 overflow-y-auto">
+                                        {selectedMembers.length === 0 ? (
+                                            <div className="p-3 text-sm text-muted-foreground text-center">No personnel</div>
+                                        ) : (
+                                            selectedMembers.map((m) => (
+                                                <div key={m.id} className="flex items-center justify-between px-3 py-1.5 border-b last:border-b-0">
+                                                    <span className="text-sm">{m.name}</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedMembers(selectedMembers.filter(x => x.id !== m.id))}>
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'teams' && (
+                                <div className="space-y-2">
+                                    <Input
+                                        placeholder="Search teams..."
+                                        value={teamSearch}
+                                        onChange={(e) => setTeamSearch(e.target.value)}
+                                    />
+                                    {filteredTeams.length > 0 && (
+                                        <div className="border rounded-lg max-h-32 overflow-y-auto">
+                                            {filteredTeams.map((t) => (
+                                                <button
+                                                    key={t.id}
+                                                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                    onClick={() => {
+                                                        setSelectedChildTeams([...selectedChildTeams, { id: t.id, name: t.name }]);
+                                                        setTeamSearch("");
+                                                    }}
+                                                >
+                                                    <UsersRound className="h-4 w-4" />
+                                                    {t.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="border rounded max-h-40 overflow-y-auto">
+                                        {selectedChildTeams.length === 0 ? (
+                                            <div className="p-3 text-sm text-muted-foreground text-center">No child teams</div>
+                                        ) : (
+                                            selectedChildTeams.map((t) => (
+                                                <div key={t.id} className="flex items-center justify-between px-3 py-1.5 border-b last:border-b-0">
+                                                    <span className="text-sm">{t.name}</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedChildTeams(selectedChildTeams.filter(x => x.id !== t.id))}>
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'owners' && (
+                                <div className="space-y-2">
+                                    <Input
+                                        placeholder="Search personnel..."
+                                        value={ownerSearch}
+                                        onChange={(e) => setOwnerSearch(e.target.value)}
+                                    />
+                                    {ownerSearch && (() => {
+                                        const filtered = allPersonnel.filter(p =>
+                                            p.name.toLowerCase().includes(ownerSearch.toLowerCase()) &&
+                                            !selectedOwners.some(o => o.id === p.id)
+                                        );
+                                        return filtered.length > 0 && (
+                                            <div className="border rounded-lg max-h-32 overflow-y-auto">
+                                                {filtered.map((p) => (
+                                                    <button
+                                                        key={p.id}
+                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                        onClick={() => {
+                                                            setSelectedOwners([...selectedOwners, { id: p.id, name: p.name }]);
+                                                            setOwnerSearch("");
+                                                        }}
+                                                    >
+                                                        <Crown className="h-4 w-4 text-amber-500" />
+                                                        {p.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                    <div className="border rounded max-h-40 overflow-y-auto">
+                                        {selectedOwners.length === 0 ? (
+                                            <div className="p-3 text-sm text-destructive text-center">At least one owner required</div>
+                                        ) : (
+                                            selectedOwners.map((o) => (
+                                                <div key={o.id} className="flex items-center justify-between px-3 py-1.5 border-b last:border-b-0">
+                                                    <span className="text-sm flex items-center gap-2">
+                                                        <Crown className="h-3 w-3 text-amber-500" />
+                                                        {o.name}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => setSelectedOwners(selectedOwners.filter(x => x.id !== o.id))}
+                                                        disabled={selectedOwners.length === 1}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {/* Footer */}
+                        <div className="flex justify-end gap-2 px-4 py-3 border-t">
+                            <Button variant="outline" onClick={closeEditor}>Cancel</Button>
+                            <Button onClick={handleSave} disabled={!formData.name.trim() || selectedOwners.length === 0}>
+                                {isCreating ? "Create" : "Save"}
+                            </Button>
+                        </div>
+                    </DrawerContent>
+                </Drawer>
+            ) : showEditor && (
                 <div className="h-1/2 border-t bg-background flex flex-col">
                     <div className="flex items-center justify-between px-6 py-3 border-b bg-muted/30">
                         <h3 className="font-semibold">
