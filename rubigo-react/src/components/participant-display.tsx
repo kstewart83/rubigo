@@ -34,18 +34,19 @@ export function ParticipantDisplay({
 }: ParticipantDisplayProps) {
     // Group by source (teams vs direct invites)
     const organizers = participants.filter(p => p.role === "organizer");
-    const fromTeams = participants.filter(p => p.role !== "organizer" && p.sourceTeamIds && p.sourceTeamIds.length > 0);
-    const directInvites = participants.filter(p => p.role !== "organizer" && (!p.sourceTeamIds || p.sourceTeamIds.length === 0));
+    const fromTeams = participants.filter(p => p.role !== "organizer" && p.sourceTeamId);
+    const directInvites = participants.filter(p => p.role !== "organizer" && !p.sourceTeamId);
 
     // Count by team
     const teamCounts = new Map<string, { name: string; count: number }>();
     for (const p of fromTeams) {
-        for (const teamId of p.sourceTeamIds || []) {
+        const teamId = p.sourceTeamId;
+        if (teamId) {
             const existing = teamCounts.get(teamId);
             if (existing) {
                 existing.count++;
             } else {
-                teamCounts.set(teamId, { name: p.sourceTeamNames?.[0] || teamId, count: 1 });
+                teamCounts.set(teamId, { name: p.sourceTeamName || teamId, count: 1 });
             }
         }
     }
