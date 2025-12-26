@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -428,10 +429,10 @@ export function PersonnelPageContent({
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <div className="flex-1 flex gap-2">
-                        <Input
+                        <SearchInput
                             placeholder={isMobile ? "Search..." : "Search by name, title, or email..."}
                             value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
+                            onChange={setSearchInput}
                             onKeyDown={handleSearchKeyDown}
                             className="flex-1"
                         />

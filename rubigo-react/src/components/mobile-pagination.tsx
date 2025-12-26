@@ -50,6 +50,13 @@ export function MobilePagination({
     startIndex = 0,
     endIndex = 0,
 }: MobilePaginationProps) {
+    // Normalize pageSize to closest valid option (in case of auto-mode calculated values)
+    const normalizedPageSize = PAGE_SIZE_OPTIONS.includes(pageSize)
+        ? pageSize
+        : PAGE_SIZE_OPTIONS.reduce((prev, curr) =>
+            Math.abs(curr - pageSize) < Math.abs(prev - pageSize) ? curr : prev
+        );
+
     return (
         <div className="flex items-center justify-between py-2 px-2">
             {/* Left - Record count */}
@@ -67,7 +74,7 @@ export function MobilePagination({
             <div className="flex-1 flex justify-center">
                 {showPageSizeSelect && onPageSizeChange ? (
                     <Select
-                        value={String(pageSize)}
+                        value={String(normalizedPageSize)}
                         onValueChange={(value) => onPageSizeChange(Number(value))}
                     >
                         <SelectTrigger className="h-7 w-[65px] text-xs">
