@@ -10,7 +10,6 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useServerPagination } from "@/hooks/use-server-pagination";
 import {
     Table,
@@ -461,63 +460,13 @@ export function PersonnelPageContent({
                                 >
                                     <TableCell>
                                         {person.photo ? (
-                                            person.isAgent ? (
-                                                // AI Agent: Scaled-down layered effect
-                                                <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
-                                                    {/* Neon glow */}
-                                                    <div
-                                                        className="absolute rounded-full"
-                                                        style={{
-                                                            width: 28,
-                                                            height: 28,
-                                                            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(124, 58, 237, 0.08) 100%)',
-                                                            boxShadow: '0 0 4px rgba(168, 85, 247, 0.4), 0 0 8px rgba(147, 51, 234, 0.3), 0 0 12px rgba(124, 58, 237, 0.15)',
-                                                            animation: 'neon-pulse 3s ease-in-out infinite',
-                                                        }}
-                                                    />
-                                                    {/* Glassmorphism */}
-                                                    <div
-                                                        className="absolute rounded-full"
-                                                        style={{
-                                                            width: 26,
-                                                            height: 26,
-                                                            background: 'rgba(255, 255, 255, 0.05)',
-                                                            backdropFilter: 'blur(4px)',
-                                                            WebkitBackdropFilter: 'blur(4px)',
-                                                        }}
-                                                    />
-                                                    {/* Avatar */}
-                                                    <div
-                                                        className="rounded-full overflow-hidden relative z-10"
-                                                        style={{
-                                                            width: 28,
-                                                            height: 28,
-                                                            maskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                            WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                        }}
-                                                    >
-                                                        <Image
-                                                            src={person.photo}
-                                                            alt={person.name}
-                                                            width={28}
-                                                            height={28}
-                                                            style={{
-                                                                objectFit: 'cover',
-                                                                transform: 'scale(1.4) translate(1%, 2%)',
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // Human: simple rounded image
-                                                <Image
-                                                    src={person.photo}
-                                                    alt={person.name}
-                                                    width={32}
-                                                    height={32}
-                                                    className="rounded-full"
-                                                />
-                                            )
+                                            <Image
+                                                src={person.photo}
+                                                alt={person.name}
+                                                width={32}
+                                                height={32}
+                                                className="rounded-full"
+                                            />
                                         ) : (
                                             <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
                                                 {person.name.split(" ").map((n) => n[0]).join("")}
@@ -601,87 +550,13 @@ export function PersonnelPageContent({
                                 {/* Photo */}
                                 <div className="flex justify-center">
                                     {selectedPerson.photo ? (
-                                        selectedPerson.isAgent ? (
-                                            // AI Agent: Layered neon glow + glassmorphism + avatar
-                                            <div className="relative flex items-center justify-center" style={{ width: 450, height: 450 }}>
-                                                {/* Layer 1: Subtle neon glow orb (no cutoff) */}
-                                                <div
-                                                    className="absolute rounded-full"
-                                                    style={{
-                                                        width: 280,
-                                                        height: 280,
-                                                        background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(124, 58, 237, 0.08) 100%)',
-                                                        boxShadow: `
-                                                            0 0 20px rgba(168, 85, 247, 0.35),
-                                                            0 0 40px rgba(147, 51, 234, 0.25),
-                                                            0 0 70px rgba(124, 58, 237, 0.18),
-                                                            0 0 100px rgba(109, 40, 217, 0.12)
-                                                        `,
-                                                        animation: 'neon-pulse 3s ease-in-out infinite',
-                                                    }}
-                                                />
-                                                {/* Layer 2: Glassmorphism overlay */}
-                                                <div
-                                                    className="absolute rounded-full"
-                                                    style={{
-                                                        width: 260,
-                                                        height: 260,
-                                                        background: 'rgba(255, 255, 255, 0.05)',
-                                                        backdropFilter: 'blur(20px)',
-                                                        WebkitBackdropFilter: 'blur(20px)',
-                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                    }}
-                                                />
-                                                {/* Layer 3: Avatar image - zoomed and clipped */}
-                                                <div
-                                                    className="rounded-full overflow-hidden relative z-10"
-                                                    style={{
-                                                        width: 270,
-                                                        height: 270,
-                                                        maskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                        WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                    }}
-                                                >
-                                                    <Image
-                                                        src={selectedPerson.photo}
-                                                        alt={selectedPerson.name}
-                                                        width={260}
-                                                        height={260}
-                                                        style={{
-                                                            objectFit: 'cover',
-                                                            transform: 'scale(1.4) translate(1%, 2%)',
-                                                        }}
-                                                    />
-                                                </div>
-                                                <style jsx>{`
-                                                    @keyframes neon-pulse {
-                                                        0%, 100% { 
-                                                            box-shadow: 
-                                                                0 0 20px rgba(168, 85, 247, 0.35),
-                                                                0 0 40px rgba(147, 51, 234, 0.25),
-                                                                0 0 70px rgba(124, 58, 237, 0.18),
-                                                                0 0 100px rgba(109, 40, 217, 0.12);
-                                                        }
-                                                        50% { 
-                                                            box-shadow: 
-                                                                0 0 25px rgba(168, 85, 247, 0.45),
-                                                                0 0 50px rgba(147, 51, 234, 0.35),
-                                                                0 0 85px rgba(124, 58, 237, 0.25),
-                                                                0 0 120px rgba(109, 40, 217, 0.18);
-                                                        }
-                                                    }
-                                                `}</style>
-                                            </div>
-                                        ) : (
-                                            // Human: rounded square, no effects
-                                            <Image
-                                                src={selectedPerson.photo}
-                                                alt={selectedPerson.name}
-                                                width={360}
-                                                height={360}
-                                                className="rounded-lg"
-                                            />
-                                        )
+                                        <Image
+                                            src={selectedPerson.photo}
+                                            alt={selectedPerson.name}
+                                            width={120}
+                                            height={120}
+                                            className="rounded-full"
+                                        />
                                     ) : (
                                         <div className="w-28 h-28 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl">
                                             {selectedPerson.name.split(" ").map((n) => n[0]).join("")}
