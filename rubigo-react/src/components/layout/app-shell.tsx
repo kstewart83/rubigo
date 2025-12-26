@@ -336,10 +336,7 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
         );
     }
 
-<<<<<<< HEAD
-// Main application layout with new ShadCN sidebar
-=======
-// Main application layout with new ShadCN sidebar
+    // Main application layout with new ShadCN sidebar
     // Sidebar is expanded on desktop (lg+), collapsed (icon-only) on tablet (md-lg)
     return (
         <SecurityProvider persona={currentPersona}>
