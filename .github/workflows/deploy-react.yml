@@ -66,17 +66,17 @@ jobs:
             echo "⚠️ No existing database to backup (fresh install)"
           fi
 
-      - name: Run database migrations
+      - name: Apply database schema
         run: |
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Apply committed migration files using Bun-native migrator
-          # Uses drizzle-orm/bun-sqlite/migrator instead of drizzle-kit CLI
-          # to avoid Node.js/better-sqlite3 dependency
-          DATABASE_URL="$DATABASE_URL" bun run db:migrate:bun
+          # Use db:push --force instead of migrations
+          # This is idempotent - safe to run on existing tables
+          # Proper migrations will be implemented with separate dev/staging/prod environments
+          DATABASE_URL="$DATABASE_URL" bun run db:push --force
           
-          echo "✅ Migrations applied"
+          echo "✅ Database schema applied"
 
       - name: Build application
         run: |
