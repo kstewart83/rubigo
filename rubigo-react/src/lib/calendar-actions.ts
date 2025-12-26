@@ -12,6 +12,7 @@ import {
     calendarParticipants,
     calendarDeviations,
     personnel,
+    teamMembers,
     type CalendarDeviation,
 } from "@/db/schema";
 import { eq, and, gte, lte, or } from "drizzle-orm";
@@ -42,7 +43,12 @@ export interface CalendarEventInput {
     recurrenceUntil?: string;
     timezone?: string;
     location?: string;
-    participantIds?: string[];
+    participantIds?: string[]; // Legacy - deprecated
+    participants?: Array<{
+        type: "personnel" | "team";
+        id: string;
+        role: "organizer" | "required" | "optional";
+    }>;
     allDay?: boolean;
     // Security/ABAC fields
     aco?: string;
@@ -96,16 +102,31 @@ export async function createCalendarEvent(
             descriptionAco: input.descriptionAco ?? null,
         });
 
-        // Add organizer as participant
-        await db.insert(calendarParticipants).values({
-            id: crypto.randomUUID(),
-            eventId: id,
-            personnelId: organizerId,
-            role: "organizer",
-        });
+        // Add organizer as participant (default if no participants provided)
+        if (!input.participants || input.participants.length === 0) {
+            await db.insert(calendarParticipants).values({
+                id: crypto.randomUUID(),
+                eventId: id,
+                personnelId: organizerId,
+                role: "organizer",
+            });
+        }
 
-        // Add other participants
-        if (input.participantIds && input.participantIds.length > 0) {
+        // Add all participants (new format with type/id/role)
+        if (input.participants && input.participants.length > 0) {
+            for (const participant of input.participants) {
+                await db.insert(calendarParticipants).values({
+                    id: crypto.randomUUID(),
+                    eventId: id,
+                    personnelId: participant.type === "personnel" ? participant.id : null,
+                    teamId: participant.type === "team" ? participant.id : null,
+                    role: participant.role as "organizer" | "required" | "optional",
+                });
+            }
+        }
+
+        // Legacy: Add other participants from participantIds (deprecated)
+        if (input.participantIds && input.participantIds.length > 0 && (!input.participants || input.participants.length === 0)) {
             for (const personnelId of input.participantIds) {
                 if (personnelId !== organizerId) {
                     await db.insert(calendarParticipants).values({
@@ -134,8 +155,50 @@ export async function createCalendarEvent(
 export async function getCalendarEvents(
     startDate: string,
     endDate: string,
-    sessionContext?: SessionContext
+    sessionContext?: SessionContext,
+    personnelId?: string // Filter to events where this person is a participant
 ): Promise<CalendarEventWithParticipants[]> {
+    // If personnelId provided, get event IDs where person is a participant
+    // (either directly or through team membership)
+    let participatingEventIds: string[] | undefined;
+    if (personnelId) {
+        // 1. Get events where person is directly a participant
+        const directParticipations = await db
+            .select({ eventId: calendarParticipants.eventId })
+            .from(calendarParticipants)
+            .where(eq(calendarParticipants.personnelId, personnelId));
+
+        // 2. Get teams the person belongs to
+        const userTeams = await db
+            .select({ teamId: teamMembers.teamId })
+            .from(teamMembers)
+            .where(eq(teamMembers.personnelId, personnelId));
+        const userTeamIds = userTeams.map(t => t.teamId);
+
+        // 3. Get events where any of the user's teams are participants
+        let teamParticipations: { eventId: string }[] = [];
+        if (userTeamIds.length > 0) {
+            teamParticipations = await db
+                .select({ eventId: calendarParticipants.eventId })
+                .from(calendarParticipants)
+                .where(
+                    or(...userTeamIds.map(teamId => eq(calendarParticipants.teamId, teamId)))
+                );
+        }
+
+        // Combine direct and team-based event IDs (deduplicate)
+        const allEventIds = new Set([
+            ...directParticipations.map(p => p.eventId),
+            ...teamParticipations.map(p => p.eventId),
+        ]);
+        participatingEventIds = Array.from(allEventIds);
+
+        // If no participations, return empty array early
+        if (participatingEventIds.length === 0) {
+            return [];
+        }
+    }
+
     // Get base events in range (non-recurring)
     const events = await db
         .select()
@@ -164,23 +227,58 @@ export async function getCalendarEvents(
             )
         );
 
+    // Filter to participating events if personnelId was provided
+    const filteredEvents = personnelId && participatingEventIds
+        ? events.filter(e => participatingEventIds!.includes(e.id))
+        : events;
+
+    // Get user's team IDs if personnelId provided (for resolving team-based participation)
+    let userTeamIds: string[] = [];
+    if (personnelId) {
+        const userTeams = await db
+            .select({ teamId: teamMembers.teamId })
+            .from(teamMembers)
+            .where(eq(teamMembers.personnelId, personnelId));
+        userTeamIds = userTeams.map(t => t.teamId);
+    }
+
     // Get participants for each event
     const result: CalendarEventWithParticipants[] = [];
-    for (const event of events) {
+    for (const event of filteredEvents) {
         const participants = await db
             .select({
                 personnelId: calendarParticipants.personnelId,
+                teamId: calendarParticipants.teamId,
                 role: calendarParticipants.role,
             })
             .from(calendarParticipants)
             .where(eq(calendarParticipants.eventId, event.id));
 
+        // Calculate userRoles: roles where user is directly named OR is member of a participating team
+        const userRoles: string[] = [];
+        if (personnelId) {
+            for (const p of participants) {
+                const role = p.role ?? "required";
+                // Direct participation
+                if (p.personnelId === personnelId && !userRoles.includes(role)) {
+                    userRoles.push(role);
+                }
+                // Team-based participation
+                if (p.teamId && userTeamIds.includes(p.teamId) && !userRoles.includes(role)) {
+                    userRoles.push(role);
+                }
+            }
+        }
+
         result.push({
             ...event,
             participants: participants.map(p => ({
                 personnelId: p.personnelId ?? "",
+                teamId: p.teamId ?? "",
                 role: p.role ?? "required",
             })),
+            // Include resolved roles for the requesting user (for client-side filtering)
+            userRoles,
         });
     }
 
@@ -268,6 +366,7 @@ export async function getCalendarEvent(id: string): Promise<CalendarEventWithPar
     const participants = await db
         .select({
             personnelId: calendarParticipants.personnelId,
+            teamId: calendarParticipants.teamId,
             role: calendarParticipants.role,
         })
         .from(calendarParticipants)
@@ -277,8 +376,10 @@ export async function getCalendarEvent(id: string): Promise<CalendarEventWithPar
         ...event,
         participants: participants.map(p => ({
             personnelId: p.personnelId ?? "",
+            teamId: p.teamId ?? "",
             role: p.role ?? "required",
         })),
+        userRoles: [], // No user context in getCalendarEvent
     };
 }
 
@@ -322,6 +423,23 @@ export async function updateCalendarEvent(
                 updatedAt: now,
             })
             .where(eq(calendarEvents.id, id));
+
+        // Update participants if provided (delete all and re-insert)
+        if (input.participants !== undefined) {
+            // Delete existing participants
+            await db.delete(calendarParticipants).where(eq(calendarParticipants.eventId, id));
+
+            // Insert new participants
+            for (const participant of input.participants) {
+                await db.insert(calendarParticipants).values({
+                    id: crypto.randomUUID(),
+                    eventId: id,
+                    personnelId: participant.type === "personnel" ? participant.id : null,
+                    teamId: participant.type === "team" ? participant.id : null,
+                    role: participant.role as "organizer" | "required" | "optional",
+                });
+            }
+        }
 
         return { success: true };
     } catch (error) {

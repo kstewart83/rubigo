@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, Fragment, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -558,6 +558,13 @@ export function CalendarPageContent() {
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [showDetailsPanel, setShowDetailsPanel] = useState(false);
 
+    // Role filter toggles for client-side filtering
+    const [roleFilters, setRoleFilters] = useState({
+        organizer: true,
+        required: true,
+        optional: true,
+    });
+
     // Persist state to localStorage
     useEffect(() => {
         localStorage.setItem('calendar.currentDate', currentDate.toISOString());
@@ -584,6 +591,8 @@ export function CalendarPageContent() {
 
     // Fetch events for current view using server actions
     const { sessionLevel, activeTenants, activeTenantLevels } = useSecurity();
+
+
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         const year = currentDate.getFullYear();
@@ -604,7 +613,10 @@ export function CalendarPageContent() {
                 `${startStr}T00:00:00`,
                 `${endStr}T23:59:59`,
                 // Pass session context for server-side ABAC filtering (includes tenant-specific levels)
-                { sessionLevel, activeTenants, activeTenantLevels }
+                { sessionLevel, activeTenants, activeTenantLevels },
+                // Pass current persona ID for participation filtering
+                // Global Administrator sees all events (no participation filter)
+                currentPersona?.name === "Global Administrator" ? undefined : currentPersona?.id
             );
 
             // Get deviations and expand recurring events
@@ -635,11 +647,37 @@ export function CalendarPageContent() {
         } finally {
             setLoading(false);
         }
-    }, [currentDate, sessionLevel, activeTenants, activeTenantLevels]);
+    }, [currentDate, sessionLevel, activeTenants, activeTenantLevels, currentPersona?.id]);
 
     useEffect(() => {
         fetchEvents();
     }, [fetchEvents]);
+
+    // Apply client-side role filtering
+    // Global Administrator sees all events regardless of role filters
+    const isGlobalAdmin = currentPersona?.name === "Global Administrator";
+    const filteredEvents = useMemo(() => {
+        if (isGlobalAdmin) return events; // Admin sees all
+
+        return events.filter(event => {
+            // Use server-resolved userRoles which includes team-based participation
+            const eventWithRoles = event as CalendarEvent & { userRoles?: string[] };
+            const userRoles = eventWithRoles.userRoles ?? [];
+
+            // If no roles found, user doesn't participate in this event - don't show it
+            if (userRoles.length === 0) return false;
+
+            // Show event if ANY of user's roles has its toggle enabled
+            const hasVisibleRole = userRoles.some(role => {
+                if (role === "organizer" && roleFilters.organizer) return true;
+                if (role === "required" && roleFilters.required) return true;
+                if (role === "optional" && roleFilters.optional) return true;
+                return false;
+            });
+
+            return hasVisibleRole;
+        });
+    }, [events, roleFilters, isGlobalAdmin]);
 
     // Navigation - view-aware (days in day view, weeks in week view, months in month view)
     const goToPrevious = () => {
@@ -702,8 +740,8 @@ export function CalendarPageContent() {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Main calendar area - shrinks when edit panel is open */}
-            <div className={`flex flex-col overflow-hidden transition-all duration-300 ${showEventModal ? "flex-1 min-h-0" : "flex-1"}`}>
+            {/* Main calendar area - shrinks when edit/details panel is open */}
+            <div className={`flex flex-col overflow-hidden transition-all duration-300 ${(showEventModal || showDetailsPanel) ? "flex-1 min-h-0" : "flex-1"}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6 shrink-0">
                     <div className="flex items-center gap-4">
@@ -758,6 +796,35 @@ export function CalendarPageContent() {
                             />
                             Work week
                         </label>
+
+                        {/* Role filter toggles */}
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-md ml-2">
+                            <Button
+                                variant={roleFilters.organizer ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => setRoleFilters(f => ({ ...f, organizer: !f.organizer }))}
+                                className="text-xs h-7"
+                            >
+                                Organizer
+                            </Button>
+                            <Button
+                                variant={roleFilters.required ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => setRoleFilters(f => ({ ...f, required: !f.required }))}
+                                className="text-xs h-7"
+                            >
+                                Required
+                            </Button>
+                            <Button
+                                variant={roleFilters.optional ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => setRoleFilters(f => ({ ...f, optional: !f.optional }))}
+                                className="text-xs h-7"
+                            >
+                                Optional
+                            </Button>
+                        </div>
+
                         <Button onClick={() => setShowEventModal(true)}>
                             <Plus className="h-4 w-4 mr-2" />
                             New Event
@@ -779,7 +846,7 @@ export function CalendarPageContent() {
                     ) : view === "month" ? (
                         <MonthGrid
                             currentDate={currentDate}
-                            events={events}
+                            events={filteredEvents}
                             workWeekOnly={workWeekOnly}
                             onEventClick={(event) => {
                                 setSelectedEvent(event);
@@ -797,7 +864,7 @@ export function CalendarPageContent() {
                     ) : view === "week" ? (
                         <WeekView
                             currentDate={currentDate}
-                            events={events}
+                            events={filteredEvents}
                             workWeekOnly={workWeekOnly}
                             onEventClick={(event) => {
                                 setSelectedEvent(event);
@@ -811,7 +878,7 @@ export function CalendarPageContent() {
                     ) : (
                         <DayView
                             currentDate={currentDate}
-                            events={events}
+                            events={filteredEvents}
                             onEventClick={(event) => {
                                 setSelectedEvent(event);
                                 setShowDetailsPanel(true);
@@ -1968,16 +2035,27 @@ function RoleColumn({
     };
     const cfg = colorConfig[color];
 
-    // Filter out already selected personnel/teams
-    const selectedIds = new Set(selectedPersonnel.map(p => p.id));
+    // Filter out already selected personnel/teams based on role:
+    // - Organizer column: only hide those already in organizer role
+    // - Required/Optional columns: hide those already in required OR optional (mutually exclusive attendance)
+    const getExcludedIds = () => {
+        if (role === "organizer") {
+            // Organizers: only exclude those already marked as organizers
+            return new Set(selectedPersonnel.filter(p => p.role === "organizer").map(p => p.id));
+        } else {
+            // Required/Optional: exclude those in either attendance role (mutually exclusive)
+            return new Set(selectedPersonnel.filter(p => p.role === "required" || p.role === "optional").map(p => p.id));
+        }
+    };
+    const excludedIds = getExcludedIds();
     const filteredPersonnel = allPersonnel.filter(p => {
-        if (selectedIds.has(p.id)) return false;
+        if (excludedIds.has(p.id)) return false;
         if (!search) return true;
         const s = search.toLowerCase();
         return p.name.toLowerCase().includes(s) || (p.title?.toLowerCase().includes(s) ?? false);
     });
     const filteredTeams = allTeams.filter(t => {
-        if (selectedIds.has(t.id)) return false;
+        if (excludedIds.has(t.id)) return false;
         if (!search) return true;
         return t.name.toLowerCase().includes(search.toLowerCase());
     });
@@ -2137,8 +2215,8 @@ function EventModal({
 
     // Tab and ACO state for Create Event
     const [activeTab, setActiveTab] = useState<"basic" | "series" | "description" | "participants">("basic");
-    const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
-    const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
+    const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: "low" });
+    const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: "low" });
 
     // Personnel state
     const [personnelList, setPersonnelList] = useState<Array<{ id: string; name: string; title?: string | null }>>([]);
@@ -2223,9 +2301,9 @@ function EventModal({
                 setRecurrence("weekly");
                 setRecurrenceDays([]);
                 setTimezone(getBrowserTimezone());
-                // Reset ACO to null for new events
-                setBasicInfoAco({ sensitivity: null });
-                setDescriptionAco({ sensitivity: null });
+                // Set default ACO to 'low' for new events
+                setBasicInfoAco({ sensitivity: "low" });
+                setDescriptionAco({ sensitivity: "low" });
                 // Set current user as default organizer and required
                 if (currentPersona) {
                     setSelectedPersonnel([
@@ -2318,6 +2396,14 @@ function EventModal({
                 allDay,
                 aco: formatAcoForSave(basicInfoAco),
                 descriptionAco: formatAcoForSave(descriptionAco),
+                // Pass participants with type/id/role (filter out excluded, cast role for type safety)
+                participants: selectedPersonnel
+                    .filter(p => p.role !== "excluded")
+                    .map(p => ({
+                        type: p.type,
+                        id: p.id,
+                        role: p.role as "organizer" | "required" | "optional",
+                    })),
             }, editingEvent?.id);
             onClose(); // Close modal after successful save
         } finally {
@@ -2336,46 +2422,13 @@ function EventModal({
     if (!open) return null;
 
     return (
-        <div className="flex-1 border-t bg-background overflow-hidden flex flex-col">
-            <div className="p-4 overflow-y-auto flex-1">
-                {/* Header with Title and Tabs */}
+        <div className="shrink-0 border-t bg-background overflow-hidden max-h-[50vh]">
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+                {/* Header with Title */}
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-lg font-semibold">
-                            {editingEvent ? (isEditingInstanceOnly ? "Edit This Instance" : "Edit Event") : "Create Event"}
-                        </h2>
-                        {/* Tab Headers */}
-                        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-                            <button
-                                onClick={() => setActiveTab("basic")}
-                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "basic" ? "bg-background shadow-sm" : "hover:bg-background/50"
-                                    }`}
-                            >
-                                Basic Information
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("series")}
-                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "series" ? "bg-background shadow-sm" : "hover:bg-background/50"
-                                    }`}
-                            >
-                                Series
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("description")}
-                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "description" ? "bg-background shadow-sm" : "hover:bg-background/50"
-                                    }`}
-                            >
-                                Description
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("participants")}
-                                className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "participants" ? "bg-background shadow-sm" : "hover:bg-background/50"
-                                    }`}
-                            >
-                                Personnel
-                            </button>
-                        </div>
-                    </div>
+                    <h2 className="text-lg font-semibold">
+                        {editingEvent ? (isEditingInstanceOnly ? "Edit This Instance" : "Edit Event") : "Create Event"}
+                    </h2>
                     <Button variant="ghost" size="icon" onClick={onClose}>
                         <X className="h-4 w-4" />
                     </Button>
@@ -2384,12 +2437,8 @@ function EventModal({
                 {/* Tab Content */}
 
                 {/* Basic Information Tab */}
-                {activeTab === "basic" && (
-                    <SecurePanelWrapper
-                        level={basicInfoAco.sensitivity}
-                        tenants={basicInfoAco.tenants || []}
-                        className="border rounded-lg overflow-hidden"
-                    >
+                {activeTab === "basic" && (() => {
+                    const content = (
                         <div className="p-4 space-y-4">
                             {/* Classification Picker */}
                             <div className="flex items-center justify-between pb-3 border-b">
@@ -2539,16 +2588,26 @@ function EventModal({
                                 />
                             </div>
                         </div>
-                    </SecurePanelWrapper>
-                )}
+                    );
+
+                    // Only wrap in SecurePanelWrapper for Edit mode
+                    if (editingEvent) {
+                        return (
+                            <SecurePanelWrapper
+                                level={basicInfoAco.sensitivity}
+                                tenants={basicInfoAco.tenants || []}
+                                className="border rounded-lg overflow-hidden"
+                            >
+                                {content}
+                            </SecurePanelWrapper>
+                        );
+                    }
+                    return <div className="border rounded-lg overflow-hidden">{content}</div>;
+                })()}
 
                 {/* Series Tab */}
-                {activeTab === "series" && (
-                    <SecurePanelWrapper
-                        level={basicInfoAco.sensitivity}
-                        tenants={basicInfoAco.tenants || []}
-                        className="border rounded-lg overflow-hidden"
-                    >
+                {activeTab === "series" && (() => {
+                    const content = (
                         <div className="p-4 space-y-4">
                             {isEditingInstanceOnly ? (
                                 <p className="text-muted-foreground text-sm">
@@ -2645,16 +2704,25 @@ function EventModal({
                                 </>
                             )}
                         </div>
-                    </SecurePanelWrapper>
-                )}
+                    );
+
+                    if (editingEvent) {
+                        return (
+                            <SecurePanelWrapper
+                                level={basicInfoAco.sensitivity}
+                                tenants={basicInfoAco.tenants || []}
+                                className="border rounded-lg overflow-hidden"
+                            >
+                                {content}
+                            </SecurePanelWrapper>
+                        );
+                    }
+                    return <div className="border rounded-lg overflow-hidden">{content}</div>;
+                })()}
 
                 {/* Description Tab */}
-                {activeTab === "description" && (
-                    <SecurePanelWrapper
-                        level={editingEvent?._descriptionRedacted ? null : descriptionAco.sensitivity}
-                        tenants={editingEvent?._descriptionRedacted ? [] : (descriptionAco.tenants || [])}
-                        className="border rounded-lg overflow-hidden"
-                    >
+                {activeTab === "description" && (() => {
+                    const content = (
                         <div className="p-4 space-y-4">
                             {editingEvent?._descriptionRedacted ? (
                                 // REDACTED: Cannot edit
@@ -2725,118 +2793,171 @@ function EventModal({
                                 </>
                             )}
                         </div>
-                    </SecurePanelWrapper>
-                )}
+                    );
+
+                    if (editingEvent) {
+                        return (
+                            <SecurePanelWrapper
+                                level={editingEvent?._descriptionRedacted ? null : descriptionAco.sensitivity}
+                                tenants={editingEvent?._descriptionRedacted ? [] : (descriptionAco.tenants || [])}
+                                className="border rounded-lg overflow-hidden"
+                            >
+                                {content}
+                            </SecurePanelWrapper>
+                        );
+                    }
+                    return <div className="border rounded-lg overflow-hidden">{content}</div>;
+                })()}
 
                 {/* Personnel Tab - Three Column Layout */}
                 {activeTab === "participants" && (() => {
                     const rawTenants = personnelAco.tenants || basicInfoAco.tenants || [];
                     const level = personnelAco.sensitivity || basicInfoAco.sensitivity;
                     const { tenantNames, tenantLevels } = parseTenants(rawTenants, level || "low");
-                    return (
-                        <SecurePanelWrapper
-                            level={level}
-                            tenants={tenantNames}
-                            tenantLevels={tenantLevels}
-                            className="border rounded-lg overflow-hidden"
-                        >
-                            <div className="p-4 space-y-4">
-                                {/* Classification Picker */}
-                                <div className="flex items-center justify-between pb-3 border-b">
-                                    <Label className="text-sm font-medium">Personnel List Classification</Label>
-                                    <div className="flex items-center gap-2">
-                                        {/* Mismatch warning - check sensitivity AND tenants */}
-                                        {(() => {
-                                            const baseSens = basicInfoAco.sensitivity;
-                                            const persSens = personnelAco.sensitivity;
-                                            const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
-                                            const persTenants = (personnelAco.tenants || []).sort().join(",");
-                                            const sensMismatch = baseSens && persSens && persSens !== baseSens;
-                                            const tenantMismatch = persTenants !== "" && baseTenants !== persTenants;
 
-                                            if (!sensMismatch && !tenantMismatch) return null;
+                    const content = (
+                        <div className="p-4 space-y-4">
+                            {/* Classification Picker */}
+                            <div className="flex items-center justify-between pb-3 border-b">
+                                <Label className="text-sm font-medium">Personnel List Classification</Label>
+                                <div className="flex items-center gap-2">
+                                    {/* Mismatch warning - check sensitivity AND tenants */}
+                                    {(() => {
+                                        const baseSens = basicInfoAco.sensitivity;
+                                        const persSens = personnelAco.sensitivity;
+                                        const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
+                                        const persTenants = (personnelAco.tenants || []).sort().join(",");
+                                        const sensMismatch = baseSens && persSens && persSens !== baseSens;
+                                        const tenantMismatch = persTenants !== "" && baseTenants !== persTenants;
 
-                                            return (
-                                                <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top" showArrow={false} className="max-w-xs bg-popover text-popover-foreground border shadow-md">
-                                                        <p className="font-medium text-foreground">Classification Mismatch</p>
-                                                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                                                            {sensMismatch && (
-                                                                <p>Sensitivity: <span className="font-medium text-foreground">{persSens?.toUpperCase()}</span> vs base <span className="font-medium text-foreground">{baseSens?.toUpperCase()}</span></p>
-                                                            )}
-                                                            {tenantMismatch && (
-                                                                <p>Tenants differ from base event</p>
-                                                            )}
-                                                        </div>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            );
-                                        })()}
-                                        <SecurityLabelPicker
-                                            value={{
-                                                sensitivity: personnelAco.sensitivity || basicInfoAco.sensitivity || "low",
-                                                tenants: personnelAco.tenants || basicInfoAco.tenants
-                                            }}
-                                            onChange={(aco) => setPersonnelAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
-                                        />
-                                    </div>
+                                        if (!sensMismatch && !tenantMismatch) return null;
+
+                                        return (
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" showArrow={false} className="max-w-xs bg-popover text-popover-foreground border shadow-md">
+                                                    <p className="font-medium text-foreground">Classification Mismatch</p>
+                                                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                                        {sensMismatch && (
+                                                            <p>Sensitivity: <span className="font-medium text-foreground">{persSens?.toUpperCase()}</span> vs base <span className="font-medium text-foreground">{baseSens?.toUpperCase()}</span></p>
+                                                        )}
+                                                        {tenantMismatch && (
+                                                            <p>Tenants differ from base event</p>
+                                                        )}
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        );
+                                    })()}
+                                    <SecurityLabelPicker
+                                        value={{
+                                            sensitivity: personnelAco.sensitivity || basicInfoAco.sensitivity || "low",
+                                            tenants: personnelAco.tenants || basicInfoAco.tenants
+                                        }}
+                                        onChange={(aco) => setPersonnelAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                    />
                                 </div>
-
-                                {/* Three Column Layout */}
-                                {personnelLoading ? (
-                                    <p className="text-sm text-muted-foreground py-4">Loading personnel...</p>
-                                ) : (
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {/* Organizers Column */}
-                                        <RoleColumn
-                                            role="organizer"
-                                            label="Organizers"
-                                            description="Who can edit this event"
-                                            color="purple"
-                                            items={selectedPersonnel.filter(p => p.role === "organizer")}
-                                            allPersonnel={personnelList}
-                                            allTeams={teamsList}
-                                            selectedPersonnel={selectedPersonnel}
-                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "organizer" }])}
-                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
-                                        />
-
-                                        {/* Required Column */}
-                                        <RoleColumn
-                                            role="required"
-                                            label="Required"
-                                            description="Must attend"
-                                            color="blue"
-                                            items={selectedPersonnel.filter(p => p.role === "required")}
-                                            allPersonnel={personnelList}
-                                            allTeams={teamsList}
-                                            selectedPersonnel={selectedPersonnel}
-                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "required" }])}
-                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
-                                        />
-
-                                        {/* Optional Column */}
-                                        <RoleColumn
-                                            role="optional"
-                                            label="Optional"
-                                            description="Invited but not required"
-                                            color="gray"
-                                            items={selectedPersonnel.filter(p => p.role === "optional")}
-                                            allPersonnel={personnelList}
-                                            allTeams={teamsList}
-                                            selectedPersonnel={selectedPersonnel}
-                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "optional" }])}
-                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
-                                        />
-                                    </div>
-                                )}
                             </div>
-                        </SecurePanelWrapper>
+
+                            {/* Three Column Layout */}
+                            {personnelLoading ? (
+                                <p className="text-sm text-muted-foreground py-4">Loading personnel...</p>
+                            ) : (
+                                <div className="grid grid-cols-3 gap-4">
+                                    {/* Organizers Column */}
+                                    <RoleColumn
+                                        role="organizer"
+                                        label="Organizers"
+                                        description="Who can edit this event"
+                                        color="purple"
+                                        items={selectedPersonnel.filter(p => p.role === "organizer")}
+                                        allPersonnel={personnelList}
+                                        allTeams={teamsList}
+                                        selectedPersonnel={selectedPersonnel}
+                                        onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "organizer" }])}
+                                        onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => !(p.id === id && p.role === "organizer")))}
+                                    />
+
+                                    {/* Required Column */}
+                                    <RoleColumn
+                                        role="required"
+                                        label="Required"
+                                        description="Must attend"
+                                        color="blue"
+                                        items={selectedPersonnel.filter(p => p.role === "required")}
+                                        allPersonnel={personnelList}
+                                        allTeams={teamsList}
+                                        selectedPersonnel={selectedPersonnel}
+                                        onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "required" }])}
+                                        onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => !(p.id === id && p.role === "required")))}
+                                    />
+
+                                    {/* Optional Column */}
+                                    <RoleColumn
+                                        role="optional"
+                                        label="Optional"
+                                        description="Invited but not required"
+                                        color="gray"
+                                        items={selectedPersonnel.filter(p => p.role === "optional")}
+                                        allPersonnel={personnelList}
+                                        allTeams={teamsList}
+                                        selectedPersonnel={selectedPersonnel}
+                                        onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "optional" }])}
+                                        onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => !(p.id === id && p.role === "optional")))}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     );
+
+                    if (editingEvent) {
+                        return (
+                            <SecurePanelWrapper
+                                level={level}
+                                tenants={tenantNames}
+                                tenantLevels={tenantLevels}
+                                className="border rounded-lg overflow-hidden"
+                            >
+                                {content}
+                            </SecurePanelWrapper>
+                        );
+                    }
+                    return <div className="border rounded-lg overflow-hidden">{content}</div>;
                 })()}
+
+                {/* Tab Headers - at bottom for consistent position */}
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-md mt-4 w-fit">
+                    <button
+                        onClick={() => setActiveTab("basic")}
+                        className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "basic" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                            }`}
+                    >
+                        Basic Information
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("series")}
+                        className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "series" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                            }`}
+                    >
+                        Series
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("description")}
+                        className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "description" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                            }`}
+                    >
+                        Description
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("participants")}
+                        className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "participants" ? "bg-background shadow-sm" : "hover:bg-background/50"
+                            }`}
+                    >
+                        Personnel
+                    </button>
+                </div>
 
                 {/* Footer with Cancel/Save */}
                 <div className="flex justify-end gap-2 mt-4">
@@ -2915,57 +3036,80 @@ function EventDetailsPanel({
     const endTime = new Date(event.endTime);
 
     return (
-        <>
-            {/* Backdrop overlay */}
-            {open && (
-                <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-                    onClick={onClose}
-                />
-            )}
-
-            {/* Modal panel */}
-            <div
-                className={`fixed top-1/2 right-4 -translate-y-1/2 w-96 max-h-[90vh] bg-background border-2 border-border shadow-2xl rounded-lg transform transition-all z-50 ${open ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}
-                data-testid="event-details-panel"
-            >
-                <div className="p-4 flex flex-col max-h-[90vh]">
-                    {/* Top bar with close, edit, delete */}
-                    <div className="flex items-center gap-2 mb-4">
-                        <Button variant="outline" onClick={onEdit} className="flex-1">
-                            Edit
-                        </Button>
-                        <Button variant="destructive" onClick={onDelete} className="flex-1">
-                            Delete
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+        <div
+            className={`
+                shrink-0 border-t bg-background
+                transition-all duration-300 ease-in-out overflow-hidden
+                ${open ? "max-h-[50vh] opacity-100" : "max-h-0 opacity-0"}
+            `}
+            data-testid="event-details-panel"
+        >
+            <div className="p-4 max-h-[50vh] overflow-y-auto">
+                <SecurePanelWrapper
+                    level={parseAco(event.aco).sensitivity}
+                    tenants={parseAco(event.aco).tenantNames}
+                    tenantLevels={parseAco(event.aco).tenantLevels}
+                    className="rounded-lg border overflow-hidden"
+                >
+                    <div className="p-4 relative">
+                        {/* Close button - top right corner */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="absolute top-2 right-2"
+                        >
                             <X className="h-4 w-4" />
                         </Button>
-                    </div>
 
-                    <div className="space-y-4 overflow-y-auto">
-                        {/* Event Details Panel */}
-                        <SecurePanelWrapper
-                            level={parseAco(event.aco).sensitivity}
-                            tenants={parseAco(event.aco).tenantNames}
-                            tenantLevels={parseAco(event.aco).tenantLevels}
-                            className="rounded-lg border overflow-hidden"
-                        >
-                            <div className="p-3 space-y-3">
-                                {/* Title and Type */}
-                                <div className="flex items-start justify-between gap-2">
-                                    <h2 className="text-xl font-bold">{event.title}</h2>
-                                    <div
-                                        className="px-2 py-1 rounded text-xs text-white shrink-0"
-                                        style={{ backgroundColor: typeInfo.color }}
-                                    >
-                                        {typeInfo.label}
+                        {/* Horizontal layout: Info | Details | Personnel */}
+                        <div className="flex gap-6 pr-8">
+                            {/* Left column: Title, Type, Description, Actions */}
+                            <div className="flex-1 min-w-0 flex flex-col">
+                                <div className="space-y-3 flex-1">
+                                    <div className="flex items-start gap-3">
+                                        <h2 className="text-xl font-bold truncate">{event.title}</h2>
+                                        <div
+                                            className="px-2 py-1 rounded text-xs text-white shrink-0"
+                                            style={{ backgroundColor: typeInfo.color }}
+                                        >
+                                            {typeInfo.label}
+                                        </div>
                                     </div>
+
+                                    {/* Description */}
+                                    {(event.description || event._descriptionRedacted) && (
+                                        <div>
+                                            <Label className="text-muted-foreground text-xs">Description</Label>
+                                            {event._descriptionRedacted ? (
+                                                <div className="mt-1 flex items-center gap-2">
+                                                    <span className="inline-flex items-center rounded-md bg-red-50 dark:bg-red-950/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/20 dark:ring-red-500/30">
+                                                        🔒 REDACTED
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm line-clamp-2">{event.description}</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
+                                {/* Actions - stick to bottom */}
+                                <div className="flex items-center gap-2 pt-3 mt-auto">
+                                    <Button variant="outline" size="sm" onClick={onEdit}>
+                                        Edit
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={onDelete}>
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Middle column: Time, Location, Recurrence */}
+                            <div className="flex-1 min-w-0 space-y-3 border-l pl-6">
                                 <div>
-                                    <Label className="text-muted-foreground">Date & Time</Label>
-                                    <p>
+                                    <Label className="text-muted-foreground text-xs">Date & Time</Label>
+                                    <p className="text-sm">
                                         {displayStartTime.toLocaleDateString()}{" "}
                                         {isAllDayEvent(event) ? (
                                             <span className="font-medium">All Day</span>
@@ -2978,7 +3122,7 @@ function EventDetailsPanel({
                                             <span className="text-muted-foreground"> ({getTimezoneDisplayName(event.timezone)})</span>
                                         )}
                                     </p>
-                                    {/* Show local time if event timezone differs from browser timezone */}
+                                    {/* Local time conversion */}
                                     {event.timezone && event.timezone !== getBrowserTimezone() && (() => {
                                         const browserTz = getBrowserTimezone();
                                         const startHour = new Date(event.startTime).getHours();
@@ -2988,88 +3132,57 @@ function EventDetailsPanel({
                                         const localStart = convertTime(startHour, startMin, event.timezone, browserTz);
                                         const localEnd = convertTime(endHour, endMin, event.timezone, browserTz);
                                         return (
-                                            <div className="mt-2 rounded-md bg-muted/50 p-2 text-sm">
-                                                <span className="font-medium text-muted-foreground">Your local time: </span>
-                                                <span>
-                                                    {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)} ({getTimezoneDisplayName(browserTz)})
-                                                </span>
-                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Your time: {formatTime12h(localStart.hour, localStart.minute)} - {formatTime12h(localEnd.hour, localEnd.minute)}
+                                            </p>
                                         );
                                     })()}
                                 </div>
 
                                 {event.location && (
                                     <div>
-                                        <Label className="text-muted-foreground">Location</Label>
-                                        <p>{event.location}</p>
+                                        <Label className="text-muted-foreground text-xs">Location</Label>
+                                        <p className="text-sm">{event.location}</p>
                                     </div>
                                 )}
 
                                 {event.isRecurring && (
                                     <div>
-                                        <Label className="text-muted-foreground">Recurrence</Label>
+                                        <Label className="text-muted-foreground text-xs">Recurrence</Label>
                                         <p className="text-sm">{event.recurrence}</p>
                                     </div>
                                 )}
+
+                                {/* Deviation indicator */}
+                                {event.hasDeviation && (
+                                    <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-1">
+                                        <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                                            {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
+                                                ? "📅 Moved Instance"
+                                                : "✏️ Modified Instance"}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
-                        </SecurePanelWrapper>
 
-                        {/* Description Panel (separate ACO) - uses server-side redaction */}
-                        {(event.description || event._descriptionRedacted) && (
-                            <SecurePanelWrapper
-                                level={event._descriptionRedacted ? null : parseAco(event.descriptionAco || event.aco).sensitivity}
-                                tenants={event._descriptionRedacted ? [] : parseAco(event.descriptionAco || event.aco).tenantNames}
-                                tenantLevels={event._descriptionRedacted ? {} : parseAco(event.descriptionAco || event.aco).tenantLevels}
-                                className="rounded-lg border overflow-hidden"
-                            >
-                                <div className="p-3">
-                                    <Label className="text-muted-foreground">Description</Label>
-                                    {event._descriptionRedacted ? (
-                                        <div className="mt-1 flex items-center gap-2">
-                                            <span className="inline-flex items-center rounded-md bg-red-50 dark:bg-red-950/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/20 dark:ring-red-500/30">
-                                                🔒 REDACTED
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                Insufficient clearance to view
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <p className="mt-1">{event.description}</p>
-                                    )}
-                                </div>
-                            </SecurePanelWrapper>
-                        )}
+                            {/* Right column: Personnel */}
+                            <div className="w-64 shrink-0 space-y-3 border-l pl-6">
+                                {/* Personnel summary */}
+                                <PersonnelSection eventId={event.id} />
 
-                        {/* Participants Panel */}
-                        <PersonnelSection eventId={event.id} />
-
-                        {/* Orphaned Deviations Indicator */}
-                        {event.isRecurring && (
-                            <OrphanedDeviationsPanel
-                                eventId={event.id}
-                                isRecurring={event.isRecurring}
-                            />
-                        )}
-
-                        {/* Deviation status indicator */}
-                        {event.hasDeviation && (
-                            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2">
-                                <Label className="text-amber-700 dark:text-amber-400 text-sm font-medium">
-                                    {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
-                                        ? "📅 Moved Instance"
-                                        : "✏️ Modified Instance"}
-                                </Label>
-                                <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
-                                    {(event as CalendarEvent & { isUnanchored?: boolean }).isUnanchored
-                                        ? "This occurrence was moved from its original date in the series."
-                                        : "This occurrence has been modified from the series."}
-                                </p>
+                                {/* Orphaned deviations */}
+                                {event.isRecurring && (
+                                    <OrphanedDeviationsPanel
+                                        eventId={event.id}
+                                        isRecurring={event.isRecurring}
+                                    />
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
-                </div>
+                </SecurePanelWrapper>
             </div>
-        </>
+        </div>
     );
 }
 

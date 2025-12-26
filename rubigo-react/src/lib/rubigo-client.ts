@@ -205,7 +205,12 @@ export interface CalendarEventInput {
     location?: string;
     virtualUrl?: string;
     allDay?: boolean;
-    participantIds?: string[];
+    participantIds?: string[]; // Legacy - deprecated
+    participants?: Array<{
+        type: "personnel" | "team";
+        id: string;
+        role: "organizer" | "required" | "optional";
+    }>;
     organizerId?: string;
 }
 

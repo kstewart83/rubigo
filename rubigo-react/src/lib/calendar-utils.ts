@@ -56,8 +56,11 @@ export interface CalendarEventWithParticipants {
     _descriptionRedacted?: boolean;
     participants: Array<{
         personnelId: string;
+        teamId: string;
         role: string;
     }>;
+    // Resolved roles for the current user (includes team-based participation)
+    userRoles?: string[];
 }
 
 /**

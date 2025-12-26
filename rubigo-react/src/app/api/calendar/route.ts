@@ -51,8 +51,11 @@ export async function GET(request: NextRequest) {
         }
         : undefined;
 
+    // Extract personnel ID for participation filtering
+    const personnelId = request.headers.get("X-Personnel-Id") ?? undefined;
+
     try {
-        const events = await getCalendarEvents(startDate, endDate, sessionContext);
+        const events = await getCalendarEvents(startDate, endDate, sessionContext, personnelId);
 
         // Get deviations for all events
         const deviationsMap = new Map();
