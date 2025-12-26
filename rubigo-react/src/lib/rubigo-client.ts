@@ -721,6 +721,15 @@ export class RubigoClient {
         return this.request<ApiResult>("POST", "/api/calendar/deviations", input);
     }
 
+    async addEventParticipant(input: {
+        eventId: string;
+        personnelId?: string;
+        teamId?: string;
+        role?: "organizer" | "required" | "optional" | "excluded";
+    }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/calendar/participants", input);
+    }
+
     // ========================================================================
     // Chat API
     // ========================================================================

@@ -11,6 +11,7 @@ import {
     calendarEvents,
     calendarParticipants,
     calendarDeviations,
+    personnel,
     type CalendarDeviation,
 } from "@/db/schema";
 import { eq, and, gte, lte, or } from "drizzle-orm";
@@ -111,7 +112,7 @@ export async function createCalendarEvent(
                         id: crypto.randomUUID(),
                         eventId: id,
                         personnelId,
-                        role: "participant",
+                        role: "required",
                     });
                 }
             }
@@ -177,8 +178,8 @@ export async function getCalendarEvents(
         result.push({
             ...event,
             participants: participants.map(p => ({
-                personnelId: p.personnelId,
-                role: p.role ?? "participant",
+                personnelId: p.personnelId ?? "",
+                role: p.role ?? "required",
             })),
         });
     }
@@ -275,8 +276,8 @@ export async function getCalendarEvent(id: string): Promise<CalendarEventWithPar
     return {
         ...event,
         participants: participants.map(p => ({
-            personnelId: p.personnelId,
-            role: p.role ?? "participant",
+            personnelId: p.personnelId ?? "",
+            role: p.role ?? "required",
         })),
     };
 }
@@ -621,5 +622,188 @@ export async function deleteAllOrphanedDeviations(
     } catch (error) {
         console.error("Failed to delete orphaned deviations:", error);
         return { success: false, count: 0, error: "Failed to delete orphaned deviations" };
+    }
+}
+
+// ============================================================================
+// Participant Management
+// ============================================================================
+
+import { teams } from "@/db/schema";
+import type { ParticipantRole } from "@/lib/participant-resolver";
+
+/**
+ * Add a participant (individual or team) to an event
+ */
+export async function addEventParticipant(input: {
+    eventId: string;
+    personnelId?: string;
+    teamId?: string;
+    role?: ParticipantRole;
+    addedBy?: string;
+}): Promise<{ success: boolean; id?: string; error?: string; existed?: boolean }> {
+    try {
+        // Validate: must have exactly one of personnelId or teamId
+        if ((!input.personnelId && !input.teamId) || (input.personnelId && input.teamId)) {
+            return { success: false, error: "Must specify exactly one of personnelId or teamId" };
+        }
+
+        // Check for existing participant (dedup)
+        const conditions = [eq(calendarParticipants.eventId, input.eventId)];
+        if (input.personnelId) {
+            conditions.push(eq(calendarParticipants.personnelId, input.personnelId));
+        } else {
+            conditions.push(eq(calendarParticipants.teamId, input.teamId!));
+        }
+        const existing = await db.select({ id: calendarParticipants.id })
+            .from(calendarParticipants)
+            .where(and(...conditions))
+            .get();
+
+        if (existing) {
+            return { success: true, id: existing.id, existed: true };
+        }
+
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        await db.insert(calendarParticipants).values({
+            id,
+            eventId: input.eventId,
+            personnelId: input.personnelId ?? null,
+            teamId: input.teamId ?? null,
+            role: input.role ?? "required",
+            addedAt: now,
+            addedBy: input.addedBy ?? null,
+        });
+
+        return { success: true, id };
+    } catch (error) {
+        console.error("Failed to add participant:", error);
+        return { success: false, error: "Failed to add participant" };
+    }
+}
+
+/**
+ * Remove a participant from an event
+ */
+export async function removeEventParticipant(
+    eventId: string,
+    participantId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(calendarParticipants)
+            .where(
+                and(
+                    eq(calendarParticipants.eventId, eventId),
+                    eq(calendarParticipants.id, participantId)
+                )
+            );
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to remove participant:", error);
+        return { success: false, error: "Failed to remove participant" };
+    }
+}
+
+/**
+ * Update a participant's role
+ */
+export async function updateParticipantRole(
+    participantId: string,
+    role: ParticipantRole
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .update(calendarParticipants)
+            .set({ role })
+            .where(eq(calendarParticipants.id, participantId));
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update participant role:", error);
+        return { success: false, error: "Failed to update role" };
+    }
+}
+
+/**
+ * Get raw participant records for an event (before resolution)
+ */
+export async function getEventParticipantsRaw(eventId: string): Promise<{
+    success: boolean;
+    data?: Array<{
+        id: string;
+        personnelId: string | null;
+        teamId: string | null;
+        role: string | null;
+        addedAt: string | null;
+        personnelName: string | null;
+        teamName: string | null;
+    }>;
+    error?: string;
+}> {
+    try {
+        const participants = await db
+            .select({
+                id: calendarParticipants.id,
+                personnelId: calendarParticipants.personnelId,
+                teamId: calendarParticipants.teamId,
+                role: calendarParticipants.role,
+                addedAt: calendarParticipants.addedAt,
+                personnelName: personnel.name,
+                teamName: teams.name,
+            })
+            .from(calendarParticipants)
+            .leftJoin(personnel, eq(calendarParticipants.personnelId, personnel.id))
+            .leftJoin(teams, eq(calendarParticipants.teamId, teams.id))
+            .where(eq(calendarParticipants.eventId, eventId));
+
+        return { success: true, data: participants };
+    } catch (error) {
+        console.error("Failed to get participants:", error);
+        return { success: false, error: "Failed to get participants" };
+    }
+}
+
+/**
+ * Set all participants for an event (replaces existing)
+ */
+export async function setEventParticipants(
+    eventId: string,
+    participants: Array<{
+        personnelId?: string;
+        teamId?: string;
+        role: ParticipantRole;
+    }>,
+    addedBy?: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Delete existing participants
+        await db
+            .delete(calendarParticipants)
+            .where(eq(calendarParticipants.eventId, eventId));
+
+        // Add new participants
+        const now = new Date().toISOString();
+        for (const p of participants) {
+            if (!p.personnelId && !p.teamId) continue;
+
+            await db.insert(calendarParticipants).values({
+                id: crypto.randomUUID(),
+                eventId,
+                personnelId: p.personnelId ?? null,
+                teamId: p.teamId ?? null,
+                role: p.role,
+                addedAt: now,
+                addedBy: addedBy ?? null,
+            });
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to set participants:", error);
+        return { success: false, error: "Failed to set participants" };
     }
 }

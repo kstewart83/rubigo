@@ -1173,6 +1173,73 @@ async function main() {
     }
     allStats.teamOwners = { created: toCreated, skipped: toSkipped, failed: toFailed, updated: 0, deleted: 0 };
 
+    // =========================================================================
+    // Calendar Participants Sync (after teams since we need teamNameToId)
+    // =========================================================================
+
+    console.log(`\n📦 Syncing ${data.calendarParticipants.length} calendar participants...`);
+    let participantCreated = 0, participantSkipped = 0, participantFailed = 0;
+
+    // Build event title to remote ID map
+    const eventTitleToId = new Map<string, string>();
+    for (const event of data.calendarEvents) {
+        const remoteId = existingEventsByTitle.get(event.title);
+        if (remoteId) {
+            eventTitleToId.set(event.title, remoteId);
+        }
+    }
+
+    for (const participant of data.calendarParticipants) {
+        // Resolve event by title
+        const remoteEventId = eventTitleToId.get(participant.event_title);
+        if (!remoteEventId) {
+            participantSkipped++;
+            continue;
+        }
+
+        // Resolve personnel or team
+        let personnelId: string | undefined;
+        let teamId: string | undefined;
+
+        if (participant.personnel_email) {
+            personnelId = emailToPersonnelId.get(participant.personnel_email);
+            if (!personnelId) {
+                participantSkipped++;
+                continue;
+            }
+        } else if (participant.team_name) {
+            teamId = teamNameToId.get(participant.team_name);
+            if (!teamId) {
+                participantSkipped++;
+                continue;
+            }
+        } else {
+            participantSkipped++;
+            continue;
+        }
+
+        if (args.dryRun) {
+            participantCreated++;
+        } else {
+            const result = await client.addEventParticipant({
+                eventId: remoteEventId,
+                personnelId,
+                teamId,
+                role: participant.role as "organizer" | "required" | "optional" | "excluded",
+            });
+            if (result.success) {
+                if ((result as { existed?: boolean }).existed) {
+                    participantSkipped++;
+                } else {
+                    participantCreated++;
+                }
+            } else {
+                participantFailed++;
+            }
+        }
+    }
+    allStats.calendarParticipants = { created: participantCreated, skipped: participantSkipped, failed: participantFailed, updated: 0, deleted: 0 };
+
     // Print summary
     console.log("\n" + "=".repeat(60));
     console.log("📊 Sync Summary");

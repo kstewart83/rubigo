@@ -498,13 +498,19 @@ export const calendarEvents = sqliteTable("calendar_events", {
 });
 
 /**
- * Calendar Participants - Event attendees
+ * Calendar Participants - Polymorphic: personnel OR team
+ * Supports hybrid model where groups are first-class participants
  */
 export const calendarParticipants = sqliteTable("calendar_participants", {
     id: text("id").primaryKey(),
     eventId: text("event_id").references(() => calendarEvents.id).notNull(),
-    personnelId: text("personnel_id").references(() => personnel.id).notNull(),
-    role: text("role", { enum: ["organizer", "participant"] }).default("participant"),
+    // Polymorphic: exactly one of personnelId or teamId should be set
+    personnelId: text("personnel_id").references(() => personnel.id),
+    teamId: text("team_id").references(() => teams.id),
+    // Role hierarchy: organizer > required > optional > excluded
+    role: text("role", { enum: ["organizer", "required", "optional", "excluded"] }).default("required"),
+    addedAt: text("added_at").default("2024-01-01T00:00:00Z"),
+    addedBy: text("added_by").references(() => personnel.id),
 });
 
 /**
@@ -528,6 +534,9 @@ export const calendarDeviations = sqliteTable("calendar_deviations", {
     overrideDescription: text("override_description"),
     overrideLocation: text("override_location"),
     overrideTimezone: text("override_timezone"),
+    // Instance-level participant overrides (JSON arrays)
+    participantsAdd: text("participants_add"),     // [{personnelId?, teamId?, role}]
+    participantsRemove: text("participants_remove"), // [personnelId or teamId to exclude]
 });
 
 // ============================================================================

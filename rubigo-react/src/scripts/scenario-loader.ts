@@ -141,6 +141,16 @@ export interface CalendarDeviationRecord {
     override_timezone?: string;
 }
 
+export interface CalendarParticipantRecord {
+    id: string;
+    profile_id: string;
+    event_title: string;
+    personnel_email?: string;
+    team_name?: string;
+    role: string;
+    added_at: string;
+}
+
 export interface ChatChannelRecord {
     id: string;
     profile_id: string;
@@ -305,6 +315,7 @@ export interface ScenarioData {
     teamMembers: TeamMemberRecord[];
     teamTeams: TeamTeamRecord[];
     teamOwners: TeamOwnerRecord[];
+    calendarParticipants: CalendarParticipantRecord[];
 }
 
 // ============================================================================
@@ -374,6 +385,7 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             teamMembers: q("team_members") as TeamMemberRecord[],
             teamTeams: q("team_teams") as TeamTeamRecord[],
             teamOwners: q("team_owners") as TeamOwnerRecord[],
+            calendarParticipants: q("calendar_participants") as CalendarParticipantRecord[],
         };
     } finally {
         db.close();

@@ -121,9 +121,28 @@ export function SecurityLabelPicker({
                     <span className="flex items-center gap-2">
                         <Shield className="size-3.5" />
                         <span>{config.label}</span>
-                        {selectedTenants.length > 0 && (
-                            <span className="text-xs">{selectedTenants.join("")}</span>
-                        )}
+                        {selectedTenants.length > 0 && (() => {
+                            // Parse tenants from "LEVEL:EMOJI" format
+                            const displayParts: React.ReactNode[] = [];
+                            for (const t of selectedTenants) {
+                                if (t.includes(":")) {
+                                    const [levelStr, emoji] = t.split(":");
+                                    const normalizedLevel = levelStr.toLowerCase() as SensitivityLevel;
+                                    // If tenant level differs from base, show abbreviated
+                                    if (normalizedLevel !== value.sensitivity && LEVEL_CONFIG[normalizedLevel]) {
+                                        const abbrev = normalizedLevel === "moderate" ? "MOD" : normalizedLevel.toUpperCase();
+                                        displayParts.push(
+                                            <span key={t} className="text-xs">({abbrev} {emoji})</span>
+                                        );
+                                    } else {
+                                        displayParts.push(<span key={t} className="text-xs">{emoji}</span>);
+                                    }
+                                } else {
+                                    displayParts.push(<span key={t} className="text-xs">{t}</span>);
+                                }
+                            }
+                            return displayParts;
+                        })()}
                     </span>
                     <ChevronDown className="size-3.5 opacity-50" />
                 </Button>

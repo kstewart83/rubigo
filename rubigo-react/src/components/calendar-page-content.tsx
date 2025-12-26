@@ -45,6 +45,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -53,7 +61,11 @@ import {
     Plus,
     Calendar as CalendarIcon,
     X,
+    Users,
+    User,
+    AlertTriangle,
 } from "lucide-react";
+import { ParticipantPicker, type ParticipantItem } from "@/components/participant-picker";
 import {
     eventTypeInfo,
     type EventType,
@@ -77,6 +89,9 @@ import { SecurePanelWrapper } from "@/components/ui/secure-panel-wrapper";
 import { SecurityBadge } from "@/components/ui/security-badge";
 import { SecurityLabelPicker } from "@/components/ui/security-label-picker";
 import { useSecurity } from "@/contexts/security-context";
+import { getPersonnelPage } from "@/lib/personnel-actions";
+import { getTeams } from "@/lib/teams-actions";
+import { getEventParticipantsRaw } from "@/lib/calendar-actions";
 
 // ============================================================================
 // Timezone Constants
@@ -204,6 +219,42 @@ function parseAco(aco: string | undefined): {
     } catch {
         return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
     }
+}
+
+/**
+ * Parse raw tenant array (like ["moderate:apples"]) into display-ready format
+ */
+function parseTenants(rawTenants: string[] | undefined, fallbackLevel: SensitivityLevel = "low"): {
+    tenantNames: string[];
+    tenantLevels: Record<string, SensitivityLevel>;
+} {
+    if (!rawTenants || rawTenants.length === 0) {
+        return { tenantNames: [], tenantLevels: {} };
+    }
+
+    const tenantNames: string[] = [];
+    const tenantLevels: Record<string, SensitivityLevel> = {};
+
+    for (const t of rawTenants) {
+        if (typeof t === "string" && t.includes(":")) {
+            const [level, name] = t.split(":");
+            if (level && name) {
+                const normalizedLevel = level.toLowerCase() as SensitivityLevel;
+                if (["public", "low", "moderate", "high"].includes(normalizedLevel)) {
+                    tenantNames.push(name);
+                    tenantLevels[name] = normalizedLevel;
+                } else {
+                    tenantNames.push(t);
+                    tenantLevels[t] = fallbackLevel;
+                }
+            }
+        } else if (typeof t === "string") {
+            tenantNames.push(t);
+            tenantLevels[t] = fallbackLevel;
+        }
+    }
+
+    return { tenantNames, tenantLevels };
 }
 
 function getMaxSensitivity(events: Array<{ aco?: string }>): SensitivityLevel {
@@ -1860,6 +1911,197 @@ function AllDayEventPill({
 }
 
 // ============================================================================
+// Role Column Component for Personnel Tab
+// ============================================================================
+
+interface RoleColumnProps {
+    role: "organizer" | "required" | "optional";
+    label: string;
+    description: string;
+    color: "purple" | "blue" | "gray";
+    items: ParticipantItem[];
+    allPersonnel: Array<{ id: string; name: string; title?: string | null }>;
+    allTeams: Array<{ id: string; name: string; memberCount?: number }>;
+    selectedPersonnel: ParticipantItem[];
+    onAdd: (item: Omit<ParticipantItem, "role">) => void;
+    onRemove: (id: string) => void;
+}
+
+function RoleColumn({
+    role,
+    label,
+    description,
+    color,
+    items,
+    allPersonnel,
+    allTeams,
+    selectedPersonnel,
+    onAdd,
+    onRemove,
+}: RoleColumnProps) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+
+    // Color configurations
+    const colorConfig = {
+        purple: {
+            header: "text-purple-700 dark:text-purple-400",
+            bg: "bg-purple-50 dark:bg-purple-900/20",
+            border: "border-purple-200 dark:border-purple-800",
+            badge: "bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200",
+            addBtn: "hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400",
+        },
+        blue: {
+            header: "text-blue-700 dark:text-blue-400",
+            bg: "bg-blue-50 dark:bg-blue-900/20",
+            border: "border-blue-200 dark:border-blue-800",
+            badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
+            addBtn: "hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-400",
+        },
+        gray: {
+            header: "text-gray-600 dark:text-gray-400",
+            bg: "bg-gray-50 dark:bg-gray-800/50",
+            border: "border-gray-200 dark:border-gray-700",
+            badge: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+            addBtn: "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400",
+        },
+    };
+    const cfg = colorConfig[color];
+
+    // Filter out already selected personnel/teams
+    const selectedIds = new Set(selectedPersonnel.map(p => p.id));
+    const filteredPersonnel = allPersonnel.filter(p => {
+        if (selectedIds.has(p.id)) return false;
+        if (!search) return true;
+        const s = search.toLowerCase();
+        return p.name.toLowerCase().includes(s) || (p.title?.toLowerCase().includes(s) ?? false);
+    });
+    const filteredTeams = allTeams.filter(t => {
+        if (selectedIds.has(t.id)) return false;
+        if (!search) return true;
+        return t.name.toLowerCase().includes(search.toLowerCase());
+    });
+
+    const handleSelect = (type: "personnel" | "team", item: { id: string; name: string }) => {
+        onAdd({ type, id: item.id, name: item.name });
+        setSearch("");
+        setOpen(false);
+    };
+
+    return (
+        <div className={`rounded-lg border ${cfg.border} ${cfg.bg} min-h-[200px] flex flex-col`}>
+            {/* Column Header */}
+            <div className="p-3 border-b border-inherit">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h4 className={`text-sm font-semibold ${cfg.header}`}>{label}</h4>
+                        <p className="text-xs text-muted-foreground">{description}</p>
+                    </div>
+                    <span className={`text-xs font-medium ${cfg.header}`}>{items.length}</span>
+                </div>
+            </div>
+
+            {/* Column Content */}
+            <div className="flex-1 p-3 space-y-2">
+                {/* Add Button with Popover */}
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`w-full justify-start gap-2 h-8 ${cfg.addBtn}`}
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span className="text-sm">Add...</span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                            <CommandInput
+                                placeholder="Search people or teams..."
+                                value={search}
+                                onValueChange={setSearch}
+                            />
+                            <CommandList>
+                                <CommandEmpty>No results found.</CommandEmpty>
+                                {filteredTeams.length > 0 && (
+                                    <CommandGroup heading="Teams">
+                                        {filteredTeams.slice(0, 5).map(team => (
+                                            <CommandItem
+                                                key={team.id}
+                                                onSelect={() => handleSelect("team", team)}
+                                            >
+                                                <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                                                <span>{team.name}</span>
+                                                {team.memberCount && (
+                                                    <span className="ml-auto text-xs text-muted-foreground">
+                                                        {team.memberCount} members
+                                                    </span>
+                                                )}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                                {filteredPersonnel.length > 0 && (
+                                    <CommandGroup heading="People">
+                                        {filteredPersonnel.slice(0, 8).map(person => (
+                                            <CommandItem
+                                                key={person.id}
+                                                onSelect={() => handleSelect("personnel", person)}
+                                            >
+                                                <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                                                <div className="flex flex-col">
+                                                    <span>{person.name}</span>
+                                                    {person.title && (
+                                                        <span className="text-xs text-muted-foreground">{person.title}</span>
+                                                    )}
+                                                </div>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+
+                {/* Person/Team List */}
+                {items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic text-center py-4">
+                        No {label.toLowerCase()} yet
+                    </p>
+                ) : (
+                    <div className="space-y-1">
+                        {items.map(item => (
+                            <div
+                                key={item.id}
+                                className={`flex items-center justify-between px-2 py-1.5 rounded ${cfg.badge}`}
+                            >
+                                <div className="flex items-center gap-2 min-w-0">
+                                    {item.type === "team" ? (
+                                        <Users className="h-3.5 w-3.5 shrink-0" />
+                                    ) : (
+                                        <User className="h-3.5 w-3.5 shrink-0" />
+                                    )}
+                                    <span className="text-sm truncate">{item.name}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onRemove(item.id)}
+                                    className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded shrink-0"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
 // Event Modal Component
 // ============================================================================
 
@@ -1874,6 +2116,9 @@ function EventModal({
     onSave: (data: CalendarEventInput, eventId?: string) => Promise<void>;
     editingEvent?: CalendarEvent | null;
 }) {
+    // Get current persona for default organizer
+    const { currentPersona } = usePersona();
+
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -1894,6 +2139,14 @@ function EventModal({
     const [activeTab, setActiveTab] = useState<"basic" | "series" | "description" | "participants">("basic");
     const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
     const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
+
+    // Personnel state
+    const [personnelList, setPersonnelList] = useState<Array<{ id: string; name: string; title?: string | null }>>([]);
+    const [teamsList, setTeamsList] = useState<Array<{ id: string; name: string; memberCount?: number }>>([]);
+    const [selectedPersonnel, setSelectedPersonnel] = useState<ParticipantItem[]>([]);
+    const [personnelLoading, setPersonnelLoading] = useState(false);
+    const [addingRole, setAddingRole] = useState<"organizer" | "required" | "optional">("required");
+    const [personnelAco, setPersonnelAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
 
     // Check if we're editing just one instance of a recurring event
     const isEditingInstanceOnly = (editingEvent as CalendarEvent & { _editingInstanceOnly?: boolean })?._editingInstanceOnly === true;
@@ -1954,6 +2207,8 @@ function EventModal({
                 setBasicInfoAco({ sensitivity: parsedAco.sensitivity, tenants: parsedAco.tenants.length > 0 ? parsedAco.tenants : undefined });
                 const parsedDescAco = parseAco(editingEvent.descriptionAco || editingEvent.aco);
                 setDescriptionAco({ sensitivity: parsedDescAco.sensitivity, tenants: parsedDescAco.tenants.length > 0 ? parsedDescAco.tenants : undefined });
+                // Reset selected personnel - will be loaded separately
+                setSelectedPersonnel([]);
             } else {
                 // Reset form for new event
                 setTitle("");
@@ -1971,9 +2226,67 @@ function EventModal({
                 // Reset ACO to null for new events
                 setBasicInfoAco({ sensitivity: null });
                 setDescriptionAco({ sensitivity: null });
+                // Set current user as default organizer and required
+                if (currentPersona) {
+                    setSelectedPersonnel([
+                        { type: "personnel", id: currentPersona.id, name: currentPersona.name, role: "organizer" },
+                        { type: "personnel", id: currentPersona.id, name: currentPersona.name, role: "required" },
+                    ]);
+                } else {
+                    setSelectedPersonnel([]);
+                }
             }
         }
     }, [open, editingEvent]);
+
+    // Load personnel and teams lists when modal opens
+    useEffect(() => {
+        if (!open) return;
+
+        async function loadData() {
+            setPersonnelLoading(true);
+            try {
+                // Load personnel list via server action (max pageSize is 100)
+                const personnelResult = await getPersonnelPage({ page: 1, pageSize: 100 });
+                if (personnelResult.data) {
+                    setPersonnelList(personnelResult.data.map((p) => ({
+                        id: p.id,
+                        name: p.name,
+                        title: p.title
+                    })));
+                }
+
+                // Load teams list via server action
+                const teamsResult = await getTeams();
+                if (teamsResult.success && teamsResult.data) {
+                    setTeamsList(teamsResult.data.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        memberCount: t.memberCount
+                    })));
+                }
+
+                // Load existing participants if editing
+                if (editingEvent?.id) {
+                    const participantsResult = await getEventParticipantsRaw(editingEvent.id);
+                    if (participantsResult.success && participantsResult.data) {
+                        setSelectedPersonnel(participantsResult.data.map((p) => ({
+                            type: p.teamId ? "team" as const : "personnel" as const,
+                            id: (p.personnelId || p.teamId) as string,
+                            name: p.personnelName || p.teamName || "Unknown",
+                            role: p.role as ParticipantItem["role"],
+                        })));
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load personnel data:", error);
+            } finally {
+                setPersonnelLoading(false);
+            }
+        }
+
+        loadData();
+    }, [open, editingEvent?.id]);
 
     const handleSave = async () => {
         if (!title || !selectedDate) return;
@@ -2059,7 +2372,7 @@ function EventModal({
                                 className={`px-3 py-1 text-sm rounded transition-colors ${activeTab === "participants" ? "bg-background shadow-sm" : "hover:bg-background/50"
                                     }`}
                             >
-                                Participants
+                                Personnel
                             </button>
                         </div>
                     </div>
@@ -2361,10 +2674,42 @@ function EventModal({
                                     {/* Classification Picker */}
                                     <div className="flex items-center justify-between pb-3 border-b">
                                         <Label>Classification</Label>
-                                        <SecurityLabelPicker
-                                            value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
-                                            onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
-                                        />
+                                        <div className="flex items-center gap-2">
+                                            {/* Mismatch warning - check sensitivity AND tenants */}
+                                            {(() => {
+                                                const baseSens = basicInfoAco.sensitivity;
+                                                const descSens = descriptionAco.sensitivity;
+                                                const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
+                                                const descTenants = (descriptionAco.tenants || []).sort().join(",");
+                                                const sensMismatch = baseSens && descSens && descSens !== baseSens;
+                                                const tenantMismatch = baseTenants !== descTenants;
+
+                                                if (!sensMismatch && !tenantMismatch) return null;
+
+                                                return (
+                                                    <Tooltip>
+                                                        <TooltipTrigger>
+                                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" showArrow={false} className="max-w-xs bg-popover text-popover-foreground border shadow-md">
+                                                            <p className="font-medium text-foreground">Classification Mismatch</p>
+                                                            <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                                                {sensMismatch && (
+                                                                    <p>Sensitivity: <span className="font-medium text-foreground">{descSens?.toUpperCase()}</span> vs base <span className="font-medium text-foreground">{baseSens?.toUpperCase()}</span></p>
+                                                                )}
+                                                                {tenantMismatch && (
+                                                                    <p>Tenants differ from base event</p>
+                                                                )}
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                );
+                                            })()}
+                                            <SecurityLabelPicker
+                                                value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
+                                                onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div>
@@ -2383,34 +2728,144 @@ function EventModal({
                     </SecurePanelWrapper>
                 )}
 
-                {/* Participants Tab */}
-                {activeTab === "participants" && (
-                    <SecurePanelWrapper
-                        level={basicInfoAco.sensitivity}
-                        tenants={basicInfoAco.tenants || []}
-                        className="border rounded-lg overflow-hidden"
-                    >
-                        <div className="p-4">
-                            <p className="text-muted-foreground text-sm">TBD - Participant management coming soon</p>
-                        </div>
-                    </SecurePanelWrapper>
-                )}
+                {/* Personnel Tab - Three Column Layout */}
+                {activeTab === "participants" && (() => {
+                    const rawTenants = personnelAco.tenants || basicInfoAco.tenants || [];
+                    const level = personnelAco.sensitivity || basicInfoAco.sensitivity;
+                    const { tenantNames, tenantLevels } = parseTenants(rawTenants, level || "low");
+                    return (
+                        <SecurePanelWrapper
+                            level={level}
+                            tenants={tenantNames}
+                            tenantLevels={tenantLevels}
+                            className="border rounded-lg overflow-hidden"
+                        >
+                            <div className="p-4 space-y-4">
+                                {/* Classification Picker */}
+                                <div className="flex items-center justify-between pb-3 border-b">
+                                    <Label className="text-sm font-medium">Personnel List Classification</Label>
+                                    <div className="flex items-center gap-2">
+                                        {/* Mismatch warning - check sensitivity AND tenants */}
+                                        {(() => {
+                                            const baseSens = basicInfoAco.sensitivity;
+                                            const persSens = personnelAco.sensitivity;
+                                            const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
+                                            const persTenants = (personnelAco.tenants || []).sort().join(",");
+                                            const sensMismatch = baseSens && persSens && persSens !== baseSens;
+                                            const tenantMismatch = persTenants !== "" && baseTenants !== persTenants;
+
+                                            if (!sensMismatch && !tenantMismatch) return null;
+
+                                            return (
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" showArrow={false} className="max-w-xs bg-popover text-popover-foreground border shadow-md">
+                                                        <p className="font-medium text-foreground">Classification Mismatch</p>
+                                                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                                            {sensMismatch && (
+                                                                <p>Sensitivity: <span className="font-medium text-foreground">{persSens?.toUpperCase()}</span> vs base <span className="font-medium text-foreground">{baseSens?.toUpperCase()}</span></p>
+                                                            )}
+                                                            {tenantMismatch && (
+                                                                <p>Tenants differ from base event</p>
+                                                            )}
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            );
+                                        })()}
+                                        <SecurityLabelPicker
+                                            value={{
+                                                sensitivity: personnelAco.sensitivity || basicInfoAco.sensitivity || "low",
+                                                tenants: personnelAco.tenants || basicInfoAco.tenants
+                                            }}
+                                            onChange={(aco) => setPersonnelAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Three Column Layout */}
+                                {personnelLoading ? (
+                                    <p className="text-sm text-muted-foreground py-4">Loading personnel...</p>
+                                ) : (
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {/* Organizers Column */}
+                                        <RoleColumn
+                                            role="organizer"
+                                            label="Organizers"
+                                            description="Who can edit this event"
+                                            color="purple"
+                                            items={selectedPersonnel.filter(p => p.role === "organizer")}
+                                            allPersonnel={personnelList}
+                                            allTeams={teamsList}
+                                            selectedPersonnel={selectedPersonnel}
+                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "organizer" }])}
+                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
+                                        />
+
+                                        {/* Required Column */}
+                                        <RoleColumn
+                                            role="required"
+                                            label="Required"
+                                            description="Must attend"
+                                            color="blue"
+                                            items={selectedPersonnel.filter(p => p.role === "required")}
+                                            allPersonnel={personnelList}
+                                            allTeams={teamsList}
+                                            selectedPersonnel={selectedPersonnel}
+                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "required" }])}
+                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
+                                        />
+
+                                        {/* Optional Column */}
+                                        <RoleColumn
+                                            role="optional"
+                                            label="Optional"
+                                            description="Invited but not required"
+                                            color="gray"
+                                            items={selectedPersonnel.filter(p => p.role === "optional")}
+                                            allPersonnel={personnelList}
+                                            allTeams={teamsList}
+                                            selectedPersonnel={selectedPersonnel}
+                                            onAdd={(item) => setSelectedPersonnel(prev => [...prev, { ...item, role: "optional" }])}
+                                            onRemove={(id) => setSelectedPersonnel(prev => prev.filter(p => p.id !== id))}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </SecurePanelWrapper>
+                    );
+                })()}
 
                 {/* Footer with Cancel/Save */}
                 <div className="flex justify-end gap-2 mt-4">
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={saving || !title || (!editingEvent && basicInfoAco.sensitivity === null)}
-                        title={basicInfoAco.sensitivity === null ? "New events must be classified before saving" : undefined}
-                    >
-                        {saving ? "Saving..." : "Save"}
-                    </Button>
+                    {(() => {
+                        const hasOrganizer = selectedPersonnel.some(p => p.role === "organizer");
+                        const canSave = title && (editingEvent || basicInfoAco.sensitivity !== null) && hasOrganizer;
+                        const tooltip = !title
+                            ? "Title is required"
+                            : !hasOrganizer
+                                ? "At least one organizer is required"
+                                : basicInfoAco.sensitivity === null && !editingEvent
+                                    ? "New events must be classified before saving"
+                                    : undefined;
+                        return (
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving || !canSave}
+                                title={tooltip}
+                            >
+                                {saving ? "Saving..." : "Save"}
+                            </Button>
+                        );
+                    })()}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
@@ -2585,6 +3040,9 @@ function EventDetailsPanel({
                             </SecurePanelWrapper>
                         )}
 
+                        {/* Participants Panel */}
+                        <PersonnelSection eventId={event.id} />
+
                         {/* Orphaned Deviations Indicator */}
                         {event.isRecurring && (
                             <OrphanedDeviationsPanel
@@ -2612,6 +3070,116 @@ function EventDetailsPanel({
                 </div>
             </div>
         </>
+    );
+}
+
+// Personnel Section Component
+// ============================================================================
+
+function PersonnelSection({ eventId }: { eventId: string }) {
+    const [participants, setParticipants] = useState<Array<{
+        id: string;
+        personnelId?: string | null;
+        teamId?: string | null;
+        role: string;
+        personnelName?: string | null;
+        teamName?: string | null;
+    }>>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchParticipants() {
+            try {
+                const res = await fetch(`/api/calendar/participants?eventId=${eventId}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setParticipants(data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch participants:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchParticipants();
+    }, [eventId]);
+
+    if (loading) {
+        return (
+            <div className="rounded-lg border p-3">
+                <Label className="text-muted-foreground">Personnel</Label>
+                <p className="text-sm text-muted-foreground mt-1">Loading...</p>
+            </div>
+        );
+    }
+
+    if (participants.length === 0) {
+        return null; // Don't show section if no participants
+    }
+
+    // Group by role
+    const organizers = participants.filter(p => p.role === "organizer");
+    const required = participants.filter(p => p.role === "required");
+    const optional = participants.filter(p => p.role === "optional");
+
+    // Badge for a person or team
+    const PersonnelBadge = ({ p, roleColor }: { p: typeof participants[0]; roleColor: string }) => (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${roleColor}`}>
+            {p.teamId ? <Users className="h-3 w-3" /> : null}
+            {p.teamName || p.personnelName}
+        </span>
+    );
+
+    // Role-based badge colors (dark mode compatible)
+    const roleColors = {
+        organizer: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-700",
+        required: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-700",
+        optional: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 ring-1 ring-gray-200 dark:ring-gray-600",
+    };
+
+    return (
+        <div className="rounded-lg border p-3 space-y-3">
+            <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-muted-foreground">Personnel</Label>
+            </div>
+
+            {/* Organizers */}
+            {organizers.length > 0 && (
+                <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Organizers</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {organizers.map(p => (
+                            <PersonnelBadge key={p.id} p={p} roleColor={roleColors.organizer} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Required */}
+            {required.length > 0 && (
+                <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Required</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {required.map(p => (
+                            <PersonnelBadge key={p.id} p={p} roleColor={roleColors.required} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Optional */}
+            {optional.length > 0 && (
+                <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Optional</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {optional.map(p => (
+                            <PersonnelBadge key={p.id} p={p} roleColor={roleColors.optional} />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 
