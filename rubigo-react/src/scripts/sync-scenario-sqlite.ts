@@ -864,6 +864,14 @@ async function main() {
     }
     allStats.calendarEvents = { created: calendarCreated, skipped: calendarSkipped, failed: calendarFailed, updated: 0, deleted: 0 };
 
+    // Re-fetch event list to include newly created events (needed for participant sync)
+    const refreshedEventsResult = await client.listCalendarEvents("2020-01-01", "2030-12-31") as { success: boolean; events?: Array<{ id: string; title: string }> };
+    if (refreshedEventsResult.success && refreshedEventsResult.events) {
+        for (const event of refreshedEventsResult.events) {
+            existingEventsByTitle.set(event.title, event.id);
+        }
+    }
+
     // Build a mapping from seed calendar event IDs to remote IDs by matching on title
     const seedEventIdToRemote = new Map<string, string>();
     for (const event of data.calendarEvents) {

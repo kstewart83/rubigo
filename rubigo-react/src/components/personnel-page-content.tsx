@@ -10,8 +10,8 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useServerPagination } from "@/hooks/use-server-pagination";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
     Table,
     TableBody,
@@ -20,12 +20,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet";
+import { PersonCard } from "@/components/person-card";
+import { ResponsivePersonnelDetail } from "@/components/responsive-personnel-detail";
+import { MobilePagination } from "@/components/mobile-pagination";
 import {
     Select,
     SelectContent,
@@ -34,6 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -130,6 +128,7 @@ export function PersonnelPageContent({
     const searchParams = useSearchParams();
     const { currentPersona } = usePersona();
     const [isPending, startTransition] = useTransition();
+    const isMobile = useIsMobile();
 
     // Server-side pagination with dynamic measurement
     const {
@@ -153,6 +152,33 @@ export function PersonnelPageContent({
     const [searchInput, setSearchInput] = useState(initialSearch);
     const [selectedPerson, setSelectedPerson] = useState<PersonnelData | null>(null);
     const [personTeams, setPersonTeams] = useState<Array<{ id: string; name: string; description: string | null; isOwner: boolean }>>([]);
+
+    // localStorage key for mobile page size preference
+    const MOBILE_PAGE_SIZE_KEY = "rubigo-mobile-page-size";
+
+    // Restore mobile page size from localStorage on mount
+    useEffect(() => {
+        if (isMobile && typeof window !== "undefined") {
+            const savedSize = localStorage.getItem(MOBILE_PAGE_SIZE_KEY);
+            if (savedSize) {
+                const size = parseInt(savedSize, 10);
+                // Only apply if different from current and valid
+                if (size && size !== pageSize && [10, 25, 50, 100].includes(size)) {
+                    handlePageSizeChange(String(size));
+                }
+            }
+        }
+        // Only run on mount for mobile
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isMobile]);
+
+    // Wrapper to save page size to localStorage when changed on mobile
+    const handleMobilePageSizeChange = (size: number) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem(MOBILE_PAGE_SIZE_KEY, String(size));
+        }
+        handlePageSizeChange(String(size));
+    };
 
     // Fetch teams when a person is selected
     useEffect(() => {
@@ -370,13 +396,13 @@ export function PersonnelPageContent({
     const endIndex = Math.min(page * pageSize, total);
 
     return (
-        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto">
+        <div ref={containerRef} className="flex flex-col flex-1 min-h-0 overflow-auto max-w-[1600px] mx-auto w-full">
             {/* Header and Filters - measured together */}
             <div ref={headerRef}>
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
                     <div>
-                        <h1 className="text-2xl font-semibold">Personnel Directory</h1>
+                        <h1 className="text-xl sm:text-2xl font-semibold">Personnel Directory</h1>
                         <p className="text-sm text-zinc-500 mt-1">
                             {total === 0 ? "No personnel found" : `Showing ${startIndex}-${endIndex} of ${total} people`}
                         </p>
@@ -385,35 +411,43 @@ export function PersonnelPageContent({
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
+                                size={isMobile ? "sm" : "default"}
                                 onClick={() => router.push("/personnel/teams")}
                             >
-                                Manage Teams
+                                {isMobile ? "Teams" : "Manage Teams"}
                             </Button>
                             <Button
+                                size={isMobile ? "sm" : "default"}
                                 onClick={() => router.push("/personnel/new")}
                             >
-                                Add Personnel
+                                {isMobile ? "Add" : "Add Personnel"}
                             </Button>
                         </div>
                     )}
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <div className="flex-1 flex gap-2">
-                        <Input
-                            placeholder="Search by name, title, or email..."
+                        <SearchInput
+                            placeholder={isMobile ? "Search..." : "Search by name, title, or email..."}
                             value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
+                            onChange={setSearchInput}
                             onKeyDown={handleSearchKeyDown}
                             className="flex-1"
                         />
-                        <Button variant="outline" onClick={handleSearch} disabled={isPending}>
+                        {/* Search button hidden on mobile - search is auto-triggered via debounce */}
+                        <Button
+                            variant="outline"
+                            onClick={handleSearch}
+                            disabled={isPending}
+                            className="hidden sm:inline-flex"
+                        >
                             Search
                         </Button>
                     </div>
                     <Select value={initialDepartment} onValueChange={handleDepartmentChange}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="All Departments" />
                         </SelectTrigger>
                         <SelectContent>
@@ -428,88 +462,102 @@ export function PersonnelPageContent({
                 </div>
             </div>
 
-            {/* Table with Classification Header/Footer */}
-            <SecureTableWrapper
-                items={data}
-                getSensitivity={(person) => parseAco(person.aco).sensitivity}
-                getTenants={(person) => parseAco(person.aco).tenants || []}
-                className="border rounded-lg"
-            >
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-12"></TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Department</TableHead>
-                            <TableHead>Email</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody ref={tableBodyRef}>
+            {/* Personnel List - Card grid on mobile, Table on desktop */}
+            {isMobile ? (
+                /* Mobile: Card Grid with Security Header/Footer */
+                <SecureTableWrapper
+                    items={data}
+                    getSensitivity={(person) => parseAco(person.aco).sensitivity}
+                    getTenants={(person) => parseAco(person.aco).tenants || []}
+                    className="border rounded-lg"
+                >
+                    {/* Top Pagination with count and page size selector */}
+                    <MobilePagination
+                        page={page}
+                        totalPages={totalPages}
+                        pageSize={pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handleMobilePageSizeChange}
+                        isPending={isPending}
+                        showCount={true}
+                        showPageSizeSelect={true}
+                        total={total}
+                        startIndex={startIndex}
+                        endIndex={endIndex}
+                    />
+
+                    {/* Card Grid */}
+                    <div className="grid grid-cols-1 gap-3 p-2">
                         {data.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
-                                    No personnel found
-                                </TableCell>
-                            </TableRow>
+                            <p className="text-center py-8 text-zinc-500">No personnel found</p>
                         ) : (
                             data.map((person) => (
-                                <TableRow
+                                <PersonCard
                                     key={person.id}
-                                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                    id={person.id}
+                                    name={person.name}
+                                    email={person.email}
+                                    title={person.title}
+                                    department={person.department}
+                                    photo={person.photo}
+                                    isAgent={person.isAgent}
+                                    cellPhone={person.cellPhone}
+                                    deskPhone={person.deskPhone}
                                     onClick={() => setSelectedPerson(person)}
-                                >
-                                    <TableCell>
-                                        {person.photo ? (
-                                            person.isAgent ? (
-                                                // AI Agent: Scaled-down layered effect
-                                                <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
-                                                    {/* Neon glow */}
-                                                    <div
-                                                        className="absolute rounded-full"
-                                                        style={{
-                                                            width: 28,
-                                                            height: 28,
-                                                            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(124, 58, 237, 0.08) 100%)',
-                                                            boxShadow: '0 0 4px rgba(168, 85, 247, 0.4), 0 0 8px rgba(147, 51, 234, 0.3), 0 0 12px rgba(124, 58, 237, 0.15)',
-                                                            animation: 'neon-pulse 3s ease-in-out infinite',
-                                                        }}
-                                                    />
-                                                    {/* Glassmorphism */}
-                                                    <div
-                                                        className="absolute rounded-full"
-                                                        style={{
-                                                            width: 26,
-                                                            height: 26,
-                                                            background: 'rgba(255, 255, 255, 0.05)',
-                                                            backdropFilter: 'blur(4px)',
-                                                            WebkitBackdropFilter: 'blur(4px)',
-                                                        }}
-                                                    />
-                                                    {/* Avatar */}
-                                                    <div
-                                                        className="rounded-full overflow-hidden relative z-10"
-                                                        style={{
-                                                            width: 28,
-                                                            height: 28,
-                                                            maskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                            WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                        }}
-                                                    >
-                                                        <Image
-                                                            src={person.photo}
-                                                            alt={person.name}
-                                                            width={28}
-                                                            height={28}
-                                                            style={{
-                                                                objectFit: 'cover',
-                                                                transform: 'scale(1.4) translate(1%, 2%)',
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // Human: simple rounded image
+                                />
+                            ))
+                        )}
+                    </div>
+
+                    {/* Bottom Pagination - same as top */}
+                    <MobilePagination
+                        page={page}
+                        totalPages={totalPages}
+                        pageSize={pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handleMobilePageSizeChange}
+                        isPending={isPending}
+                        showCount={true}
+                        showPageSizeSelect={true}
+                        total={total}
+                        startIndex={startIndex}
+                        endIndex={endIndex}
+                    />
+                </SecureTableWrapper>
+            ) : (
+                /* Desktop: Table with Classification Header/Footer */
+                <SecureTableWrapper
+                    items={data}
+                    getSensitivity={(person) => parseAco(person.aco).sensitivity}
+                    getTenants={(person) => parseAco(person.aco).tenants || []}
+                    className="border rounded-lg"
+                >
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-12"></TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Department</TableHead>
+                                <TableHead className="hidden lg:table-cell">Email</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody ref={tableBodyRef}>
+                            {data.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
+                                        No personnel found
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                data.map((person) => (
+                                    <TableRow
+                                        key={person.id}
+                                        className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                        onClick={() => setSelectedPerson(person)}
+                                    >
+                                        <TableCell>
+                                            {person.photo ? (
                                                 <Image
                                                     src={person.photo}
                                                     alt={person.name}
@@ -517,31 +565,31 @@ export function PersonnelPageContent({
                                                     height={32}
                                                     className="rounded-full"
                                                 />
-                                            )
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
-                                                {person.name.split(" ").map((n) => n[0]).join("")}
-                                            </div>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="font-medium">
-                                        <span className="flex items-center gap-2">
-                                            {person.name}
-                                            {person.isAgent && <AgentBadge size="xs" />}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>{person.title || "-"}</TableCell>
-                                    <TableCell>{person.department}</TableCell>
-                                    <TableCell>{person.email}</TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </SecureTableWrapper>
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
+                                                    {person.name.split(" ").map((n) => n[0]).join("")}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            <span className="flex items-center gap-2">
+                                                {person.name}
+                                                {person.isAgent && <AgentBadge size="xs" />}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>{person.title || "-"}</TableCell>
+                                        <TableCell>{person.department}</TableCell>
+                                        <TableCell className="hidden lg:table-cell">{person.email}</TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </SecureTableWrapper>
+            )}
 
-            {/* Pagination */}
-            <div ref={paginationRef} className="flex items-center justify-between mt-4">
+            {/* Desktop Pagination - hidden on mobile */}
+            <div ref={paginationRef} className="hidden md:flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-zinc-500">Rows per page:</span>
                     <Select
@@ -586,218 +634,15 @@ export function PersonnelPageContent({
                 </div>
             </div>
 
-            {/* Detail Sheet */}
-            <Sheet open={!!selectedPerson} onOpenChange={(open) => !open && setSelectedPerson(null)}>
-                <SheetContent>
-                    {selectedPerson && (
-                        <>
-                            <SheetHeader>
-                                <SheetTitle className="flex items-center gap-2">
-                                    {selectedPerson.name}
-                                    {selectedPerson.isAgent && <AgentBadge size="xs" />}
-                                </SheetTitle>
-                            </SheetHeader>
-                            <div className="mt-6 space-y-6 px-4 overflow-y-auto">
-                                {/* Photo */}
-                                <div className="flex justify-center">
-                                    {selectedPerson.photo ? (
-                                        selectedPerson.isAgent ? (
-                                            // AI Agent: Layered neon glow + glassmorphism + avatar
-                                            <div className="relative flex items-center justify-center" style={{ width: 450, height: 450 }}>
-                                                {/* Layer 1: Subtle neon glow orb (no cutoff) */}
-                                                <div
-                                                    className="absolute rounded-full"
-                                                    style={{
-                                                        width: 280,
-                                                        height: 280,
-                                                        background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(124, 58, 237, 0.08) 100%)',
-                                                        boxShadow: `
-                                                            0 0 20px rgba(168, 85, 247, 0.35),
-                                                            0 0 40px rgba(147, 51, 234, 0.25),
-                                                            0 0 70px rgba(124, 58, 237, 0.18),
-                                                            0 0 100px rgba(109, 40, 217, 0.12)
-                                                        `,
-                                                        animation: 'neon-pulse 3s ease-in-out infinite',
-                                                    }}
-                                                />
-                                                {/* Layer 2: Glassmorphism overlay */}
-                                                <div
-                                                    className="absolute rounded-full"
-                                                    style={{
-                                                        width: 260,
-                                                        height: 260,
-                                                        background: 'rgba(255, 255, 255, 0.05)',
-                                                        backdropFilter: 'blur(20px)',
-                                                        WebkitBackdropFilter: 'blur(20px)',
-                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                    }}
-                                                />
-                                                {/* Layer 3: Avatar image - zoomed and clipped */}
-                                                <div
-                                                    className="rounded-full overflow-hidden relative z-10"
-                                                    style={{
-                                                        width: 270,
-                                                        height: 270,
-                                                        maskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                        WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
-                                                    }}
-                                                >
-                                                    <Image
-                                                        src={selectedPerson.photo}
-                                                        alt={selectedPerson.name}
-                                                        width={260}
-                                                        height={260}
-                                                        style={{
-                                                            objectFit: 'cover',
-                                                            transform: 'scale(1.4) translate(1%, 2%)',
-                                                        }}
-                                                    />
-                                                </div>
-                                                <style jsx>{`
-                                                    @keyframes neon-pulse {
-                                                        0%, 100% { 
-                                                            box-shadow: 
-                                                                0 0 20px rgba(168, 85, 247, 0.35),
-                                                                0 0 40px rgba(147, 51, 234, 0.25),
-                                                                0 0 70px rgba(124, 58, 237, 0.18),
-                                                                0 0 100px rgba(109, 40, 217, 0.12);
-                                                        }
-                                                        50% { 
-                                                            box-shadow: 
-                                                                0 0 25px rgba(168, 85, 247, 0.45),
-                                                                0 0 50px rgba(147, 51, 234, 0.35),
-                                                                0 0 85px rgba(124, 58, 237, 0.25),
-                                                                0 0 120px rgba(109, 40, 217, 0.18);
-                                                        }
-                                                    }
-                                                `}</style>
-                                            </div>
-                                        ) : (
-                                            // Human: rounded square, no effects
-                                            <Image
-                                                src={selectedPerson.photo}
-                                                alt={selectedPerson.name}
-                                                width={360}
-                                                height={360}
-                                                className="rounded-lg"
-                                            />
-                                        )
-                                    ) : (
-                                        <div className="w-28 h-28 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl">
-                                            {selectedPerson.name.split(" ").map((n) => n[0]).join("")}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Details */}
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Title</div>
-                                        <div>{selectedPerson.title || "-"}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Department</div>
-                                        <div>{selectedPerson.department}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-500">Email</div>
-                                        <div>{selectedPerson.email}</div>
-                                    </div>
-
-                                    {/* Contact Info */}
-                                    {(selectedPerson.deskPhone || selectedPerson.cellPhone) && (
-                                        <div className="pt-2 border-t">
-                                            <div className="text-sm font-medium mb-2">Contact</div>
-                                            {selectedPerson.deskPhone && (
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="text-zinc-500">Desk:</span>
-                                                    <a href={`tel:${selectedPerson.deskPhone}`} className="text-blue-600 hover:underline">
-                                                        {selectedPerson.deskPhone}
-                                                    </a>
-                                                </div>
-                                            )}
-                                            {selectedPerson.cellPhone && (
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="text-zinc-500">Cell:</span>
-                                                    <a href={`tel:${selectedPerson.cellPhone}`} className="text-blue-600 hover:underline">
-                                                        {selectedPerson.cellPhone}
-                                                    </a>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Location */}
-                                    {(selectedPerson.site || selectedPerson.building) && (
-                                        <div className="pt-2 border-t">
-                                            <div className="text-sm font-medium mb-2">Office Location</div>
-                                            <div className="text-sm">
-                                                {[
-                                                    selectedPerson.site,
-                                                    selectedPerson.building,
-                                                    selectedPerson.level && `Level ${selectedPerson.level}`,
-                                                    selectedPerson.space && `Space ${selectedPerson.space}`,
-                                                ].filter(Boolean).join(", ")}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Manager */}
-                                    {selectedPerson.manager && (
-                                        <div className="pt-2 border-t">
-                                            <div className="text-sm text-zinc-500">Manager</div>
-                                            <div>{selectedPerson.manager}</div>
-                                        </div>
-                                    )}
-
-                                    {selectedPerson.bio && (
-                                        <div className="pt-2 border-t">
-                                            <div className="text-sm text-zinc-500">Bio</div>
-                                            <div className="text-sm">{selectedPerson.bio}</div>
-                                        </div>
-                                    )}
-
-                                    {/* Teams section */}
-                                    <div className="pt-2 border-t">
-                                        <div className="text-sm font-medium mb-2">Teams</div>
-                                        {personTeams.length === 0 ? (
-                                            <div className="text-sm text-zinc-500">Not a member of any teams</div>
-                                        ) : (
-                                            <div className="space-y-1">
-                                                {personTeams.map(team => (
-                                                    <div
-                                                        key={team.id}
-                                                        className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
-                                                        onClick={() => router.push(`/personnel/teams?team=${team.id}`)}
-                                                    >
-                                                        <UsersRound className="h-4 w-4 text-primary" />
-                                                        <span>{team.name}</span>
-                                                        {team.isOwner && (
-                                                            <Crown className="h-3.5 w-3.5 text-amber-500" />
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Admin actions */}
-                                {isAdmin && !selectedPerson.isGlobalAdmin && (
-                                    <div className="flex gap-2 pt-4 border-t">
-                                        <Button variant="outline" onClick={() => router.push(`/personnel/${selectedPerson.id}/edit`)}>
-                                            Edit
-                                        </Button>
-                                        <Button variant="destructive" onClick={() => openDelete(selectedPerson)}>
-                                            Delete
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </SheetContent>
-            </Sheet>
+            {/* Responsive Detail Panel - Drawer on mobile, Sheet on desktop */}
+            <ResponsivePersonnelDetail
+                person={selectedPerson}
+                open={!!selectedPerson}
+                onOpenChange={(open) => !open && setSelectedPerson(null)}
+                teams={personTeams}
+                isAdmin={isAdmin}
+                onDelete={(person) => openDelete(person)}
+            />
 
             {/* Create Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

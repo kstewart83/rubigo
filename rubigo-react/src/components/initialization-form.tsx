@@ -112,14 +112,14 @@ export function InitializationForm({ wordList, onInitialize }: InitializationFor
         <div className="space-y-6">
             {/* Instructions */}
             <div className="text-center space-y-2">
-                <h2 className="text-xl font-semibold text-white">System Initialization</h2>
+                <h2 className="text-lg md:text-xl font-semibold text-white">System Initialization</h2>
                 <p className="text-zinc-400 text-sm max-w-sm mx-auto">
                     Enter the 4-word phrase from the server console log to initialize the system
                 </p>
             </div>
 
             {/* Word inputs */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {words.map((word, index) => {
                     const filtered = getFilteredWords(index);
                     const showDropdown = focusedIndex === index && filtered.length > 0;
@@ -179,7 +179,7 @@ export function InitializationForm({ wordList, onInitialize }: InitializationFor
             <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="w-full py-3 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                     background: "linear-gradient(135deg, rgba(255, 138, 101, 0.9) 0%, rgba(191, 54, 12, 0.9) 100%)",
                     boxShadow: "0 0 40px rgba(255, 138, 101, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
