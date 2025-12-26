@@ -1,6 +1,7 @@
 "use client";
 
 import { usePersona } from "@/contexts/persona-context";
+import { ModuleHeader } from "@/components/module-header";
 
 interface DashboardContentProps {
     personnelCount: number;
@@ -15,15 +16,10 @@ export function DashboardContent({ personnelCount, version }: DashboardContentPr
 
     return (
         <div className="max-w-4xl">
-            <h1
-                className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2"
-                style={{ fontFamily: "var(--font-outfit)" }}
-            >
-                Welcome back, <span className="text-orange-600 dark:text-orange-400">{firstName}</span>!
-            </h1>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-8">
-                {currentPersona?.title} • {currentPersona?.department}
-            </p>
+            <ModuleHeader
+                title={`Welcome back, ${firstName}!`}
+                description={currentPersona ? `${currentPersona.title} • ${currentPersona.department}` : undefined}
+            />
 
             <div className="grid gap-6 sm:grid-cols-2">
                 <a

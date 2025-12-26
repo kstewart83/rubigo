@@ -116,7 +116,7 @@ export async function createPersonnel(
         const id = generateId();
 
         await db.insert(schema.personnel).values({
-            id: id,
+            id,
             name: input.name.trim(),
             email: input.email.trim().toLowerCase(),
             title: input.title?.trim() || null,
@@ -131,8 +131,8 @@ export async function createPersonnel(
             cellPhone: input.cellPhone?.trim() || null,
             bio: input.bio?.trim() || null,
             isGlobalAdmin: false,
-            isAgent: input.isAgent ?? false,
-            clearanceLevel: (input.clearanceLevel || "low") as "public" | "low" | "moderate" | "high",
+            isAgent: input.isAgent ? 1 : 0,
+            clearanceLevel: input.clearanceLevel || "low",
             tenantClearances: input.tenantClearances || "[]",
             accessRoles: input.accessRoles || "[]",
         });
