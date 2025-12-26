@@ -5,11 +5,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { MobileNav } from "@/components/mobile-nav";
 import { PersonaSwitcher } from "@/components/persona-switcher";
 import { InitializationForm } from "@/components/initialization-form";
 import { SecurityProvider } from "@/contexts/security-context";
 import { SecurityBanner } from "@/components/ui/security-banner";
 import { usePersona } from "@/contexts/persona-context";
+import { useIsDesktop } from "@/hooks/use-mobile";
 import type { Person } from "@/types/personnel";
 
 interface AppShellProps {
@@ -29,6 +31,9 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
     const [showSignIn, setShowSignIn] = useState(false);
     const [initStatus, setInitStatus] = useState<InitStatus | null>(null);
     const [initLoading, setInitLoading] = useState(true);
+
+    // Responsive breakpoint hook - must be called before any conditional returns
+    const isDesktop = useIsDesktop();
 
     // Check initialization status on mount
     useEffect(() => {
@@ -332,17 +337,19 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
     }
 
     // Main application layout with new ShadCN sidebar
+    // Sidebar is expanded on desktop (lg+), collapsed (icon-only) on tablet (md-lg)
     return (
         <SecurityProvider persona={currentPersona}>
             <div className="flex flex-col h-screen">
                 <SecurityBanner />
-                <SidebarProvider className="flex-1 min-h-0 flex">
+                <SidebarProvider defaultOpen={isDesktop} className="flex-1 min-h-0 flex">
                     <AppSidebar personnel={personnel} version={version} />
                     <SidebarInset>
-                        <main className="flex-1 h-full p-6 overflow-hidden flex flex-col">
+                        <main className="flex-1 h-full p-6 pb-24 md:pb-6 overflow-auto flex flex-col">
                             {children}
                         </main>
                     </SidebarInset>
+                    <MobileNav />
                 </SidebarProvider>
             </div>
         </SecurityProvider>
