@@ -8,10 +8,50 @@
 import { readdir, stat } from "fs/promises";
 import { join, relative } from "path";
 import { Glob } from "bun";
+import { existsSync, readFileSync } from "fs";
 
 interface CheckResult {
     errors: number;
     warnings: number;
+}
+
+interface SuppressionCategory {
+    description: string;
+    approved_by: string;
+    entries: string[];  // array of "file:line" strings
+}
+
+interface SuppressionConfig {
+    version: string;
+    suppressions: {
+        "console.log"?: SuppressionCategory;
+        localhost?: SuppressionCategory;
+    };
+}
+
+// Load suppressions (exact file:line entries per warning type)
+const suppressionSets: Map<string, Set<string>> = new Map();
+const suppressionPath = ".preflight-suppressions.json";
+if (existsSync(suppressionPath)) {
+    try {
+        const config = JSON.parse(readFileSync(suppressionPath, "utf-8")) as SuppressionConfig;
+        if (config.suppressions) {
+            for (const [type, category] of Object.entries(config.suppressions)) {
+                if (category?.entries) {
+                    suppressionSets.set(type, new Set(category.entries));
+                }
+            }
+        }
+    } catch {
+        console.warn("⚠️  Failed to parse .preflight-suppressions.json");
+    }
+}
+
+function isEntrySuppressed(filePath: string, lineNumber: number, warningType: string): boolean {
+    const relPath = relative(".", filePath);
+    const key = `${relPath}:${lineNumber}`;
+    const typeSet = suppressionSets.get(warningType);
+    return typeSet?.has(key) ?? false;
 }
 
 const EXTENSIONS = ["ts", "tsx", "js", "json"];
@@ -77,8 +117,9 @@ async function checkSecrets(files: string[]): Promise<string[]> {
     return issues;
 }
 
-async function checkDebugStatements(files: string[]): Promise<string[]> {
+async function checkDebugStatements(files: string[]): Promise<{ issues: string[]; suppressed: number }> {
     const issues: string[] = [];
+    let suppressed = 0;
     const pattern = /console\.(log|debug|info)|debugger/;
 
     for (const file of files.filter(f => f.endsWith(".ts") || f.endsWith(".tsx"))) {
@@ -86,12 +127,17 @@ async function checkDebugStatements(files: string[]): Promise<string[]> {
         const lines = content.split("\n");
         lines.forEach((line, index) => {
             if (pattern.test(line)) {
-                issues.push(`${relative(".", file)}:${index + 1}: ${line.trim().substring(0, 80)}`);
+                const lineNumber = index + 1;
+                if (isEntrySuppressed(file, lineNumber, "console.log")) {
+                    suppressed++;
+                } else {
+                    issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
+                }
             }
         });
     }
 
-    return issues;
+    return { issues, suppressed };
 }
 
 async function checkTestOnlyPatterns(files: string[]): Promise<string[]> {
@@ -114,8 +160,9 @@ async function checkTestOnlyPatterns(files: string[]): Promise<string[]> {
     return issues;
 }
 
-async function checkLocalhostUrls(files: string[]): Promise<string[]> {
+async function checkLocalhostUrls(files: string[]): Promise<{ issues: string[]; suppressed: number }> {
     const issues: string[] = [];
+    let suppressed = 0;
     const pattern = /localhost|127\.0\.0\.1/;
 
     for (const file of files.filter(f => f.endsWith(".ts") || f.endsWith(".tsx"))) {
@@ -123,12 +170,17 @@ async function checkLocalhostUrls(files: string[]): Promise<string[]> {
         const lines = content.split("\n");
         lines.forEach((line, index) => {
             if (pattern.test(line) && !line.includes("// allow-localhost")) {
-                issues.push(`${relative(".", file)}:${index + 1}: ${line.trim().substring(0, 80)}`);
+                const lineNumber = index + 1;
+                if (isEntrySuppressed(file, lineNumber, "localhost")) {
+                    suppressed++;
+                } else {
+                    issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
+                }
             }
         });
     }
 
-    return issues;
+    return { issues, suppressed };
 }
 
 async function checkLargeFiles(): Promise<string[]> {
@@ -216,19 +268,18 @@ async function main() {
 
     let errors = 0;
     let warnings = 0;
+    let totalSuppressed = 0;
 
-    // Run checks
-    const checks: Array<{ name: string; fn: () => Promise<string[]>; isError: boolean }> = [
+    // Run standard checks (no suppressions)
+    const standardChecks: Array<{ name: string; fn: () => Promise<string[]>; isError: boolean }> = [
         { name: "local paths", fn: () => checkLocalPaths(srcFiles), isError: true },
         { name: "potential secrets", fn: () => checkSecrets(srcFiles), isError: true },
-        { name: "debug statements", fn: () => checkDebugStatements(srcFiles), isError: false },
         { name: "test-only patterns (.only/.skip)", fn: () => checkTestOnlyPatterns(allFiles), isError: true },
-        { name: "localhost URLs", fn: () => checkLocalhostUrls(srcFiles), isError: false },
         { name: "large files (>1MB)", fn: checkLargeFiles, isError: false },
         { name: ".env files", fn: checkEnvFiles, isError: false },
     ];
 
-    for (const check of checks) {
+    for (const check of standardChecks) {
         const result = await runCheck(check.name, check.fn, check.isError);
         if (!result.passed) {
             if (result.isWarning) {
@@ -239,8 +290,44 @@ async function main() {
         }
     }
 
+    // Run suppression-aware checks
+    console.log("Checking for debug statements...");
+    const debugResult = await checkDebugStatements(srcFiles);
+    if (debugResult.issues.length > 0) {
+        console.log(`⚠️  WARNING: Found debug statements:`);
+        debugResult.issues.forEach(issue => console.log(`   ${issue}`));
+        console.log();
+        warnings++;
+    } else {
+        console.log(`✅ No debug statements found`);
+    }
+    if (debugResult.suppressed > 0) {
+        console.log(`   (${debugResult.suppressed} suppressed in approved files)`);
+    }
+    console.log();
+    totalSuppressed += debugResult.suppressed;
+
+    console.log("Checking for localhost URLs...");
+    const localhostResult = await checkLocalhostUrls(srcFiles);
+    if (localhostResult.issues.length > 0) {
+        console.log(`⚠️  WARNING: Found localhost URLs:`);
+        localhostResult.issues.forEach(issue => console.log(`   ${issue}`));
+        console.log();
+        warnings++;
+    } else {
+        console.log(`✅ No localhost URLs found`);
+    }
+    if (localhostResult.suppressed > 0) {
+        console.log(`   (${localhostResult.suppressed} suppressed in approved files)`);
+    }
+    console.log();
+    totalSuppressed += localhostResult.suppressed;
+
     // Summary
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    if (totalSuppressed > 0) {
+        console.log(`📋 ${totalSuppressed} warning(s) suppressed via .preflight-suppressions.json`);
+    }
     if (errors === 0 && warnings === 0) {
         console.log("✅ All pre-push checks passed!");
         process.exit(0);

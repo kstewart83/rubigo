@@ -1,0 +1,16 @@
+[Unit]
+Description=Rubigo React (Next.js on Bun)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{RUBIGO_DEPLOY_ROOT}}/production/rubigo-react/current
+ExecStart=/usr/local/bin/bun run start -- -p 4430
+Environment=NODE_ENV=production
+Environment=DATABASE_URL={{RUBIGO_DEPLOY_ROOT}}/production/rubigo-react/data/rubigo.db
+Environment=RUBIGO_DEPLOY_ROOT={{RUBIGO_DEPLOY_ROOT}}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

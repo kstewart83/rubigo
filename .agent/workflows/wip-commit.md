@@ -98,4 +98,4 @@ https://github.com/<owner>/<repo>/pull/<pr_number>
 
 - GitHub requires at least one commit before a PR can be created
 - Draft PRs signal work is not ready for review
-- Use `/wip-merge` when ready to finalize and merge
+- Use `/wip-stage` followed by `/wip-deploy` when ready to finalize
