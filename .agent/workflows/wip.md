@@ -80,11 +80,9 @@ created_at = "<ISO 8601 timestamp>"
 base = <allocated_base>
 
 # Reserved ports within the range
-dev = <base>         # Development server
-demo = <base + 10>   # Demo server for showcasing
-e2e = <base + 1>     # E2E test server
-e2e_api = <base + 2> # E2E API server (if separate)
-# Additional ports available: <base + 3> through <base + 999>
+dev = <base>         # Next.js development server
+webrtc = <base + 1>  # Go WebRTC server
+# Additional ports available: <base + 2> through <base + 999>
 
 # Project-specific operational settings
 [projects.rubigo-react]
