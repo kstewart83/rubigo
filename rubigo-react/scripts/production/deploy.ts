@@ -241,7 +241,12 @@ async function startServer(ctx: CommandContext): Promise<void> {
 
     log("🚀", `Starting server on port ${port}...`);
 
-    // Start in background
+    // Create log directory
+    mkdirSync(logsDir, { recursive: true });
+    const stdoutFile = Bun.file(join(logsDir, "stdout.log"));
+    const stderrFile = Bun.file(join(logsDir, "stderr.log"));
+
+    // Start in detached background - process will outlive parent
     const proc = Bun.spawn(["bun", "run", "start"], {
         cwd: dir,
         env: {
@@ -249,9 +254,13 @@ async function startServer(ctx: CommandContext): Promise<void> {
             DATABASE_URL: dbUrl,
             PORT: port,
         },
-        stdout: Bun.file(join(logsDir, "stdout.log")),
-        stderr: Bun.file(join(logsDir, "stderr.log")),
+        detached: true,  // Run in separate process group
+        stdout: stdoutFile,
+        stderr: stderrFile,
     });
+
+    // Allow parent to exit without waiting for child
+    proc.unref();
 
     success(`Server starting (PID: ${proc.pid})`);
 }
