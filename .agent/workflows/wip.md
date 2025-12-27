@@ -23,9 +23,6 @@ Before creating the worktree, determine:
 
 2. **What is a concise slug for this work?** (e.g., `add-personnel-search`, `fix-sidebar-collapse`)
 
-> [!TIP]
-> For `feature/` work, consider using the `/req` workflow first to document requirements before creating the worktree.
-
 ## Step 2: Confirm Plan with User
 
 Present the proposed:
