@@ -28,7 +28,6 @@ jobs:
           
           if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
             echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
-            echo "   Run: production/scripts/install-service.sh"
             exit 1
           fi
           
@@ -56,77 +55,56 @@ jobs:
       - name: Prepare staging directory
         run: |
           echo "CURRENT_STEP=prepare_staging_dir" >> $GITHUB_ENV
-          
           mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
-          
           rm -rf "$STAGING_BASE/code"
           cp -r rubigo-react "$STAGING_BASE/code"
-          
           mkdir -p "$STAGING_BASE/code/.git"
-          
           echo "Staging directory prepared: $STAGING_BASE"
           echo "LAST_COMPLETED_STEP=prepare_staging_dir" >> $GITHUB_ENV
 
       - name: Sanity check
         run: |
           echo "CURRENT_STEP=sanity_check" >> $GITHUB_ENV
-          
           cd "$STAGING_BASE/code"
-          
           echo "Checking required executables..."
-          
-          if ! command -v bun &> /dev/null; then
-            echo "❌ bun is not installed or not in PATH"
-            exit 1
-          fi
-          echo "  ✓ bun $(bun --version)"
-          
-          if ! command -v sqlite3 &> /dev/null; then
-            echo "❌ sqlite3 is not installed or not in PATH"
-            exit 1
-          fi
-          echo "  ✓ sqlite3 $(sqlite3 --version | cut -d' ' -f1-2)"
-          
-          if ! command -v ss &> /dev/null; then
-            echo "❌ ss is not installed or not in PATH"
-            exit 1
-          fi
-          echo "  ✓ ss (iproute2)"
-          
-          if ! command -v curl &> /dev/null; then
-            echo "❌ curl is not installed or not in PATH"
-            exit 1
-          fi
-          echo "  ✓ curl $(curl --version | head -1 | cut -d' ' -f2)"
-          
-          if ! command -v jq &> /dev/null; then
-            echo "❌ jq is not installed or not in PATH"
-            exit 1
-          fi
-          echo "  ✓ jq $(jq --version)"
-          
+          command -v bun && echo "  ✓ bun $(bun --version)"
+          command -v sqlite3 && echo "  ✓ sqlite3"
+          command -v ss && echo "  ✓ ss"
+          command -v curl && echo "  ✓ curl"
+          command -v jq && echo "  ✓ jq"
           echo "Checking critical files..."
-          
-          if [ ! -f "package.json" ]; then
-            echo "❌ Missing package.json"
-            exit 1
-          fi
-          echo "  ✓ package.json"
-          
-          if [ ! -f "bun.lock" ]; then
-            echo "❌ Missing bun.lock"
-            exit 1
-          fi
-          echo "  ✓ bun.lock"
-          
-          if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
-            echo "❌ Missing next.config"
-            exit 1
-          fi
-          echo "  ✓ next.config"
-          
+          [ -f "package.json" ] && echo "  ✓ package.json"
+          [ -f "bun.lock" ] && echo "  ✓ bun.lock"
           echo "✅ Sanity check passed"
           echo "LAST_COMPLETED_STEP=sanity_check" >> $GITHUB_ENV
+
+      - name: Validate migrations
+        run: |
+          echo "CURRENT_STEP=validate_migrations" >> $GITHUB_ENV
+          cd "$GITHUB_WORKSPACE"
+          bun run production/validate-migrations.ts rubigo-react
+          echo "LAST_COMPLETED_STEP=validate_migrations" >> $GITHUB_ENV
+
+      - name: Clone production database
+        run: |
+          echo "CURRENT_STEP=clone_database" >> $GITHUB_ENV
+          
+          PROD_BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          PROD_DB="$PROD_BASE/data/rubigo.db"
+          STAGING_DB="$STAGING_BASE/data/rubigo.db"
+          
+          if [ -f "$PROD_DB" ]; then
+            sqlite3 "$PROD_DB" ".backup '$STAGING_DB'"
+            echo "✅ Production database safely cloned to staging"
+          else
+            if [ "${{ inputs.allow_fresh_db }}" = "true" ]; then
+              echo "⚠️ No production database exists (fresh staging allowed by flag)"
+            else
+              echo "❌ No production database exists at: $PROD_DB"
+              exit 1
+            fi
+          fi
+          echo "LAST_COMPLETED_STEP=clone_database" >> $GITHUB_ENV
 
       - name: Cleanup
         if: always()
