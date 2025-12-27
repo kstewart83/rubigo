@@ -47,24 +47,24 @@ cd rubigo-react
 bun run pre-push-check
 ```
 
-## Step 4: Version Bump
+## Step 4: Validate Version Bump
 
 > [!IMPORTANT]
 > Version bump is required for `feature/` and `bugfix/` branches.
 > Version bump is optional for `chore/` branches.
 
-Read version from `rubigo-react/rubigo.toml` and bump according to change type:
-
-| Change Type | Bump (Pre-1.0) | Bump (Post-1.0) |
-|-------------|----------------|-----------------|
-| Breaking changes | Minor | Major |
-| New features | Minor | Minor |
-| Bug fixes, deps | Patch | Patch |
-| Chores | None (optional) | None (optional) |
-
-If version bump is needed:
+Run the validation script:
 ```bash
-# Edit rubigo-react/rubigo.toml
+cd rubigo-react
+bun run scripts/validate-version-bump.ts
+```
+
+If validation fails, bump the version in `rubigo-react/rubigo.toml`:
+- **Patch** (bug fix): increment third number (0.20.0 → 0.20.1)
+- **Minor** (new feature): increment second number, reset patch (0.20.0 → 0.21.0)
+
+Then amend your commit:
+```bash
 git add rubigo-react/rubigo.toml
 git commit --amend --no-edit
 ```
