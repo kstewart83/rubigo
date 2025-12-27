@@ -84,6 +84,7 @@ base = <allocated_base>
 
 # Reserved ports within the range
 dev = <base>         # Development server
+demo = <base + 10>   # Demo server for showcasing
 e2e = <base + 1>     # E2E test server
 e2e_api = <base + 2> # E2E API server (if separate)
 # Additional ports available: <base + 3> through <base + 999>
@@ -119,8 +120,11 @@ Work continues in `../wip/<slug>/` using absolute paths. The main checkout remai
 | Workflow | Purpose |
 |----------|---------|
 | `/wip-commit` | Checkpoint commit, push, create/update PR |
-| `/wip-stage` | Stage on runner, validate, generate report |
-| `/wip-deploy` | Deploy after staging passes |
+| `/wip-preflight` | Quick local validation |
+| `/wip-stage` | Remote staging validation |
+| `/wip-merge` | Version bump, merge, cleanup |
+| `/wip-deploy` | Full pipeline: preflight → stage → merge → monitor |
+| `/wip-monitor` | Production deployment monitoring |
 | `/wip-delete` | Abandon work, close PR, cleanup worktree |
 | `/pir` | Post-implementation review |
 

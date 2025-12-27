@@ -1,145 +1,95 @@
 ---
-description: Deploy staged WIP branch to production
+description: Full deployment pipeline: preflight → stage → merge → monitor
 ---
 
 # WIP Deploy
 
-Deploy a staged WIP branch to production after successful staging validation.
+Complete deployment pipeline from local validation to production monitoring.
+
+## Overview
+
+This is a high-level orchestrator that runs the full WIP deployment sequence:
+
+```
+/wip-preflight → /wip-stage → /wip-merge → /wip-monitor
+```
 
 ## Prerequisites
 
 - Active WIP worktree at `../wip/<slug>/`
-- PR exists on GitHub (created via `/wip-commit`)
-- **Staging passed** (`/wip-stage` completed successfully)
-- `[staging]` section exists in `wip.toml` with `passed = true`
+- At least one commit pushed (PR exists)
+- Clean working directory
 
-## Step 1: Verify Staging Report
+## Step 1: Run Preflight
+
+```
+/wip-preflight
+```
+
+This performs quick local checks:
+- Pre-push validation
+- Migration validation
+- Uncommitted changes check
+- Branch push verification
 
 > [!IMPORTANT]
-> Do NOT proceed if staging has not passed.
+> If preflight fails, fix issues before proceeding.
 
-Read `wip.toml` and verify:
-1. `[staging]` section exists
-2. `staging.passed = true`
-3. `staging.commit` matches current HEAD
+## Step 2: Run Staging
 
-If staging commit doesn't match current HEAD:
-```bash
-echo "⚠️ Code has changed since staging. Re-run /wip-stage first."
+```
+/wip-stage
 ```
 
-## Step 2: Get Context
-
-From the WIP worktree, read `wip.toml`:
-- `worktree.branch` - Branch name
-- `worktree.slug` - Worktree slug
-- `pr_number` - GitHub PR number
-- `staging.workflow_run_id` - Staging run for reference
-
-Get repo info:
-```bash
-git remote get-url origin
-```
-
-## Step 3: Version Bump
+This triggers remote staging validation:
+- Clones production database
+- Applies migrations
+- Runs E2E tests
+- Generates staging report
 
 > [!IMPORTANT]
-> Version must be bumped before merging.
+> If staging fails, check the report and fix issues before proceeding.
+> Staging is skipped for workflow-only changes (chicken-and-egg).
 
-Read version from `rubigo.toml` and bump according to change type:
-
-| Change Type | Bump (Pre-1.0) | Bump (Post-1.0) |
-|-------------|----------------|-----------------|
-| Breaking changes | Minor | Major |
-| New features | Minor | Minor |
-| Bug fixes, deps | Patch | Patch |
-
-Commit the version bump:
-```bash
-git add rubigo.toml
-git commit -m "chore: bump version to <new_version>"
-git push
-```
-
-## Step 4: Mark PR Ready
+## Step 3: Run Merge
 
 ```
-mcp_github-mcp-server_update_pull_request
-  owner: <owner>
-  repo: <repo>
-  pullNumber: <pr_number>
-  draft: false
+/wip-merge
 ```
 
-## Step 5: Merge PR
+This handles the merge process:
+- Sync with main
+- Version bump (if required)
+- Push and merge PR
+- Cleanup worktree
+
+## Step 4: Run Monitor
 
 ```
-mcp_github-mcp-server_merge_pull_request
-  owner: <owner>
-  repo: <repo>
-  pullNumber: <pr_number>
-  merge_method: squash
+/wip-monitor
 ```
 
-This triggers the `deploy-react.yml` workflow automatically.
+This monitors the production deployment:
+- Watch GitHub Actions deploy workflow
+- Tail production service logs
+- Health check validation
 
-## Step 6: Monitor Deployment
+## Quick Deploy (All Steps)
 
-Watch the deployment workflow:
-
-```bash
-gh run watch
-```
-
-Verify health check passes.
-
-## Step 7: Cleanup
-
-From the main repo checkout (not the worktree):
-```bash
-# Remove the worktree
-git worktree remove ../wip/<slug>
-
-# Delete local branch
-git branch -D <branch>
-
-# Delete remote branch (if not auto-deleted)
-git push origin --delete <branch>
-
-# Prune stale remote tracking refs
-git fetch --prune
-```
-
-## Step 8: Sync Main
-
-Update the main checkout with merged changes:
-```bash
-git checkout main
-git pull
-```
-
-## Step 9: Post Implementation Review
-
-Prompt user to run `/pir` for post-implementation review.
-
-## Checklist Summary
-
-Before deploying, ensure:
-- [ ] Staging passed (check `wip.toml`)
-- [ ] Staging commit matches current HEAD
-- [ ] Version bumped
-- [ ] Commit message follows conventional format
+For a smooth deployment, run each step in sequence and verify success before proceeding to the next.
 
 ## Related Workflows
 
 | Workflow | Purpose |
 |----------|---------|
-| `/wip-stage` | Must be run first to validate changes |
-| `/pir` | Run after successful deploy |
-| `/wip-delete` | Abandon work instead of deploying |
+| `/wip-preflight` | Step 1: Local validation |
+| `/wip-stage` | Step 2: Remote staging |
+| `/wip-merge` | Step 3: Merge to main |
+| `/wip-monitor` | Step 4: Production monitoring |
+| `/pir` | Post Implementation Review (after deploy) |
 
 ## Notes
 
-- Merge triggers automatic production deployment
-- GitHub may auto-delete the remote branch on merge
-- If deployment fails, check GitHub Actions logs
+- Each step can be run independently
+- Stop at any failure and address before continuing
+- Monitor step is optional but recommended for production verification
