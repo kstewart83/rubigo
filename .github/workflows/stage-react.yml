@@ -227,8 +227,8 @@ jobs:
         run: |
           echo "CURRENT_STEP=find_port" >> $GITHUB_ENV
           
-          # Find an available port in range 4431-4530 (100 ports)
-          for port in {4431..4530}; do
+          # Find an available port in range 4530-4630 (100 ports)
+          for port in {4530..4630}; do
             if ! ss -tuln | grep -q ":$port "; then
               echo "STAGING_PORT=$port" >> $GITHUB_ENV
               echo "✅ Found available port: $port"
@@ -236,7 +236,7 @@ jobs:
               exit 0
             fi
           done
-          echo "❌ No available port found in range 4431-4530"
+          echo "❌ No available port found in range 4530-4630"
           exit 1
 
       - name: Start staging server
