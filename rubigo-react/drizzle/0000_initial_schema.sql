@@ -1,3 +1,41 @@
+CREATE TABLE `aco_objects` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`hash` text NOT NULL,
+	`sensitivity` text NOT NULL,
+	`tenants` text DEFAULT '[]' NOT NULL,
+	`roles` text DEFAULT '[]' NOT NULL,
+	`created_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `aco_objects_hash_unique` ON `aco_objects` (`hash`);--> statement-breakpoint
+CREATE TABLE `action_logs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`timestamp` text NOT NULL,
+	`operation_id` text NOT NULL,
+	`entity_type` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`action` text NOT NULL,
+	`actor_id` text NOT NULL,
+	`actor_name` text NOT NULL,
+	`request_id` text,
+	`changes` text,
+	`metadata` text,
+	`source` text
+);
+--> statement-breakpoint
+CREATE TABLE `activities` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`parent_id` text,
+	`initiative_id` text,
+	`blocked_by` text,
+	`status` text DEFAULT 'backlog',
+	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`sco` text,
+	FOREIGN KEY (`initiative_id`) REFERENCES `initiatives`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `agent_events` (
 	`id` text PRIMARY KEY NOT NULL,
 	`personnel_id` text NOT NULL,
@@ -36,6 +74,33 @@ CREATE TABLE `agent_sessions` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `agent_sessions_token_unique` ON `agent_sessions` (`token`);--> statement-breakpoint
+CREATE TABLE `allocations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`assignment_id` text NOT NULL,
+	`person_id` text NOT NULL,
+	`quantity_contributed` real NOT NULL,
+	`start_date` text,
+	`end_date` text,
+	FOREIGN KEY (`assignment_id`) REFERENCES `assignments`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `app_settings` (
+	`key` text PRIMARY KEY NOT NULL,
+	`value` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `assignments` (
+	`id` text PRIMARY KEY NOT NULL,
+	`activity_id` text NOT NULL,
+	`role_id` text NOT NULL,
+	`quantity` real NOT NULL,
+	`unit` text DEFAULT 'fte',
+	`raci_type` text DEFAULT 'responsible',
+	FOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `calendar_deviations` (
 	`id` text PRIMARY KEY NOT NULL,
 	`event_id` text NOT NULL,
@@ -48,6 +113,8 @@ CREATE TABLE `calendar_deviations` (
 	`override_description` text,
 	`override_location` text,
 	`override_timezone` text,
+	`participants_add` text,
+	`participants_remove` text,
 	FOREIGN KEY (`event_id`) REFERENCES `calendar_events`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -70,18 +137,26 @@ CREATE TABLE `calendar_events` (
 	`deleted` integer DEFAULT false,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL,
+	`aco_id` integer,
 	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`description_aco` text DEFAULT '{"sensitivity":"low"}',
 	`sco` text,
-	FOREIGN KEY (`organizer_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`organizer_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`aco_id`) REFERENCES `aco_objects`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `calendar_participants` (
 	`id` text PRIMARY KEY NOT NULL,
 	`event_id` text NOT NULL,
-	`personnel_id` text NOT NULL,
-	`role` text DEFAULT 'participant',
+	`personnel_id` text,
+	`team_id` text,
+	`role` text DEFAULT 'required',
+	`added_at` text DEFAULT '2024-01-01T00:00:00Z',
+	`added_by` text,
 	FOREIGN KEY (`event_id`) REFERENCES `calendar_events`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`personnel_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`personnel_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`added_by`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `chat_channels` (
@@ -203,6 +278,63 @@ CREATE TABLE `evidences` (
 	FOREIGN KEY (`specification_id`) REFERENCES `specifications`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `features` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`objective_id` text,
+	`status` text DEFAULT 'planned',
+	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`sco` text,
+	FOREIGN KEY (`objective_id`) REFERENCES `objectives`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `initiatives` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`kpi_id` text,
+	`status` text DEFAULT 'planned',
+	`start_date` text,
+	`end_date` text,
+	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`sco` text,
+	FOREIGN KEY (`kpi_id`) REFERENCES `kpis`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `kpis` (
+	`id` text PRIMARY KEY NOT NULL,
+	`metric_id` text NOT NULL,
+	`objective_id` text,
+	`target_value` real NOT NULL,
+	`direction` text NOT NULL,
+	`threshold_warning` real,
+	`threshold_critical` real,
+	FOREIGN KEY (`metric_id`) REFERENCES `metrics`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`objective_id`) REFERENCES `objectives`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `metrics` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`unit` text NOT NULL,
+	`current_value` real,
+	`source` text
+);
+--> statement-breakpoint
+CREATE TABLE `objectives` (
+	`id` text PRIMARY KEY NOT NULL,
+	`title` text NOT NULL,
+	`description` text,
+	`project_id` text,
+	`parent_id` text,
+	`status` text DEFAULT 'draft',
+	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`sco` text,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `personnel` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -271,6 +403,19 @@ CREATE TABLE `products` (
 	FOREIGN KEY (`solution_id`) REFERENCES `solutions`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `projects` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`solution_id` text,
+	`status` text DEFAULT 'planning',
+	`start_date` text,
+	`end_date` text,
+	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
+	`sco` text,
+	FOREIGN KEY (`solution_id`) REFERENCES `solutions`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `releases` (
 	`id` text PRIMARY KEY NOT NULL,
 	`product_id` text NOT NULL,
@@ -279,6 +424,12 @@ CREATE TABLE `releases` (
 	`notes` text,
 	`status` text DEFAULT 'planned',
 	FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `roles` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text
 );
 --> statement-breakpoint
 CREATE TABLE `rules` (
@@ -308,6 +459,35 @@ CREATE TABLE `screen_share_sessions` (
 	`ended_at` text,
 	FOREIGN KEY (`host_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`chat_channel_id`) REFERENCES `chat_channels`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `secure_descriptions` (
+	`parent_type` text NOT NULL,
+	`parent_id` text NOT NULL,
+	`aco_id` integer NOT NULL,
+	`content` text NOT NULL,
+	PRIMARY KEY(`parent_type`, `parent_id`),
+	FOREIGN KEY (`aco_id`) REFERENCES `aco_objects`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `security_sessions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`personnel_id` text,
+	`session_level` text NOT NULL,
+	`active_tenants` text DEFAULT '[]' NOT NULL,
+	`validated_aco_ids` text DEFAULT '[]' NOT NULL,
+	`highest_aco_id` integer DEFAULT 0 NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`personnel_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `services` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`solution_id` text NOT NULL,
+	`service_level` text,
+	FOREIGN KEY (`solution_id`) REFERENCES `solutions`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `slide_files` (
@@ -371,36 +551,39 @@ CREATE TABLE `sync_contexts` (
 	`ended_at` text
 );
 --> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
-CREATE TABLE `__new_projects` (
+CREATE TABLE `team_members` (
+	`id` text PRIMARY KEY NOT NULL,
+	`team_id` text NOT NULL,
+	`personnel_id` text NOT NULL,
+	`joined_at` text NOT NULL,
+	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`personnel_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `team_owners` (
+	`id` text PRIMARY KEY NOT NULL,
+	`team_id` text NOT NULL,
+	`personnel_id` text NOT NULL,
+	`added_at` text NOT NULL,
+	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`personnel_id`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `team_teams` (
+	`id` text PRIMARY KEY NOT NULL,
+	`parent_team_id` text NOT NULL,
+	`child_team_id` text NOT NULL,
+	`added_at` text NOT NULL,
+	FOREIGN KEY (`parent_team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`child_team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `teams` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
-	`solution_id` text,
-	`status` text DEFAULT 'planning',
-	`start_date` text,
-	`end_date` text,
+	`created_by` text,
+	`created_at` text NOT NULL,
 	`aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL,
-	`sco` text,
-	FOREIGN KEY (`solution_id`) REFERENCES `solutions`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`created_by`) REFERENCES `personnel`(`id`) ON UPDATE no action ON DELETE no action
 );
---> statement-breakpoint
-INSERT INTO `__new_projects`("id", "name", "description", "solution_id", "status", "start_date", "end_date", "aco", "sco") SELECT "id", "name", "description", "solution_id", "status", "start_date", "end_date", "aco", "sco" FROM `projects`;--> statement-breakpoint
-DROP TABLE `projects`;--> statement-breakpoint
-ALTER TABLE `__new_projects` RENAME TO `projects`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
-ALTER TABLE `action_logs` ADD `source` text;--> statement-breakpoint
-ALTER TABLE `activities` ADD `aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL;--> statement-breakpoint
-ALTER TABLE `activities` ADD `sco` text;--> statement-breakpoint
-ALTER TABLE `features` ADD `aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL;--> statement-breakpoint
-ALTER TABLE `features` ADD `sco` text;--> statement-breakpoint
-ALTER TABLE `initiatives` ADD `aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL;--> statement-breakpoint
-ALTER TABLE `initiatives` ADD `sco` text;--> statement-breakpoint
-ALTER TABLE `objectives` ADD `aco` text DEFAULT '{"sensitivity":"low"}' NOT NULL;--> statement-breakpoint
-ALTER TABLE `objectives` ADD `sco` text;--> statement-breakpoint
-ALTER TABLE `services` ADD `solution_id` text NOT NULL REFERENCES solutions(id);--> statement-breakpoint
-ALTER TABLE `services` ADD `service_level` text;--> statement-breakpoint
-ALTER TABLE `services` DROP COLUMN `description`;--> statement-breakpoint
-ALTER TABLE `services` DROP COLUMN `status`;--> statement-breakpoint
-ALTER TABLE `services` DROP COLUMN `is_product`;--> statement-breakpoint
-ALTER TABLE `services` DROP COLUMN `is_service`;
