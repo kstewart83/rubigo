@@ -51,7 +51,22 @@ git log origin/<branch>..HEAD
 
 If there are unpushed commits, push them first.
 
-## Step 5: User Approval Gate
+## Step 5: Check Rebase Status
+
+Verify the branch is rebased on latest main:
+
+```bash
+git fetch origin
+git merge-base --is-ancestor origin/main HEAD
+```
+
+If the command fails (exit code 1), the branch is not rebased on main. Run:
+```bash
+git rebase origin/main
+git push --force-with-lease
+```
+
+## Step 6: User Approval Gate
 
 > [!CAUTION]
 > Before updating wip.toml, **the agent MUST use notify_user** to report:
@@ -61,7 +76,7 @@ If there are unpushed commits, push them first.
 >
 > Do NOT auto-approve preflight. Wait for user confirmation.
 
-## Step 6: Update wip.toml
+## Step 7: Update wip.toml
 
 Only after user confirms, update `wip.toml`:
 
