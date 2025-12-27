@@ -39,12 +39,16 @@ jobs:
           echo "BASE_DIR=$(echo "$OUTPUT" | grep '^BASE_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
           echo "DATA_DIR=$(echo "$OUTPUT" | grep '^DATA_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
 
+      - name: Sanity check
+        run: bun run rubigo-react/scripts/production/deploy.ts sanity-check --dir "$BUILD_DIR"
+
+      - name: Install dependencies
+        run: bun run rubigo-react/scripts/production/deploy.ts install-deps --dir "$BUILD_DIR"
+
       - name: Debug info
         run: |
-          echo "✅ Phase 3 complete"
+          echo "✅ Phase 4 complete - sanity + install deps"
           echo "BUILD_DIR: $BUILD_DIR"
-          echo "BASE_DIR: $BASE_DIR"
-          echo "DATA_DIR: $DATA_DIR"
           sleep 3
 
       - name: Cleanup
