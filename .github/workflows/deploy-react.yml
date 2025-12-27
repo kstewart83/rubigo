@@ -17,13 +17,13 @@ jobs:
       RUN_ID: ${{ github.run_id }}
     
     steps:
-      - name: Validate environment
-        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           clean: false
+
+      - name: Validate environment
+        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
 
       - name: Validate migrations
         run: bun run rubigo-react/scripts/production/validate-migrations.ts rubigo-react
