@@ -36,7 +36,7 @@ jobs:
           echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
           
           # Export paths for use in workflow outputs
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
           echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
 
       - name: Checkout PR branch
@@ -47,7 +47,7 @@ jobs:
 
       - name: Prepare staging directory
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
           
           # Copy app source to staging
@@ -61,13 +61,13 @@ jobs:
 
       - name: Validate migrations
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           bun run production/validate-migrations.ts .
 
       - name: Sanity check
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
           # Verify critical files exist
@@ -91,7 +91,7 @@ jobs:
       - name: Clone production database
         run: |
           PROD_BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           PROD_DB="$PROD_BASE/data/rubigo.db"
           STAGING_DB="$STAGING_BASE/data/rubigo.db"
           
@@ -106,21 +106,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           bun install --frozen-lockfile
           echo "✅ Dependencies installed"
 
       - name: Apply database schema
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           DATABASE_URL="$STAGING_BASE/data/rubigo.db" bun run db:push --force
           echo "✅ Database schema applied"
 
       - name: Build application
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
           export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
@@ -130,7 +130,7 @@ jobs:
 
       - name: Start staging server
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
           # Stop any existing staging server
@@ -146,7 +146,7 @@ jobs:
 
       - name: Health check
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           for i in {1..15}; do
             if curl -sf http://localhost:$STAGING_PORT > /dev/null; then
               echo "✅ Staging health check passed"
@@ -163,7 +163,7 @@ jobs:
         id: e2e_tests
         continue-on-error: true
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
           export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
@@ -173,7 +173,7 @@ jobs:
 
       - name: Generate staging report
         run: |
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
           REPORT="$STAGING_BASE/staging-report.json"
           
           cat > "$REPORT" << EOF
@@ -218,3 +218,9 @@ jobs:
         with:
           name: staging-logs
           path: ${{ env.STAGING_BASE }}/logs/
+
+      - name: Cleanup staging directory
+        if: always()
+        run: |
+          rm -rf "$STAGING_BASE"
+          echo "✅ Staging directory cleaned up"
