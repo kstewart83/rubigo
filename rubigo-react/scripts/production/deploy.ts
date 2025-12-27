@@ -24,6 +24,9 @@ import { $ } from "bun";
 import { existsSync, mkdirSync, cpSync, rmSync } from "fs";
 import { join, dirname } from "path";
 
+// Ensure Bun shell inherits process.env (including PATH from GitHub Actions)
+$.env(process.env);
+
 // ============================================================================
 // Types
 // ============================================================================
