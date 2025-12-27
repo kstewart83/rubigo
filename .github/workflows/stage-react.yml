@@ -1,0 +1,376 @@
+name: Stage PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to stage'
+        required: true
+        type: number
+      branch:
+        description: 'Branch name to checkout'
+        required: true
+        type: string
+      allow_fresh_db:
+        description: 'Allow staging without production database (first-time deployment)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  stage:
+    runs-on: [self-hosted, NUC]
+    # Note: RUBIGO_DEPLOY_ROOT must be set in the runner's systemd service
+    # STAGING_PORT is set dynamically by Find available port step
+    
+    steps:
+      - name: Validate environment
+        run: |
+          if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
+            echo "   Run: production/scripts/install-service.sh"
+            exit 1
+          fi
+          
+          if [ ! -d "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT does not exist: $RUBIGO_DEPLOY_ROOT"
+            exit 1
+          fi
+          
+          echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
+          
+          # Export paths for use in workflow outputs
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
+          echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          clean: true
+
+      - name: Prepare staging directory
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
+          
+          # Copy app source to staging
+          rm -rf "$STAGING_BASE/code"
+          cp -r rubigo-react "$STAGING_BASE/code"
+          
+          # Create .git marker for Tailwind v4
+          mkdir -p "$STAGING_BASE/code/.git"
+          
+          echo "Staging directory prepared: $STAGING_BASE"
+
+      - name: Sanity check
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          
+          # Verify required executables
+          echo "Checking required executables..."
+          
+          if ! command -v bun &> /dev/null; then
+            echo "❌ bun is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ bun $(bun --version)"
+          
+          if ! command -v sqlite3 &> /dev/null; then
+            echo "❌ sqlite3 is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ sqlite3 $(sqlite3 --version | cut -d' ' -f1-2)"
+          
+          if ! command -v ss &> /dev/null; then
+            echo "❌ ss is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ ss (iproute2)"
+          
+          if ! command -v curl &> /dev/null; then
+            echo "❌ curl is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ curl $(curl --version | head -1 | cut -d' ' -f2)"
+          
+          if ! command -v jq &> /dev/null; then
+            echo "❌ jq is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ jq $(jq --version)"
+          
+          # Verify critical files exist
+          echo "Checking critical files..."
+          
+          if [ ! -f "package.json" ]; then
+            echo "❌ Missing package.json"
+            exit 1
+          fi
+          echo "  ✓ package.json"
+          
+          if [ ! -f "bun.lock" ]; then
+            echo "❌ Missing bun.lock"
+            exit 1
+          fi
+          echo "  ✓ bun.lock"
+          
+          if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
+            echo "❌ Missing next.config"
+            exit 1
+          fi
+          echo "  ✓ next.config"
+          
+          echo "✅ Sanity check passed"
+
+      - name: Validate migrations
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          bun run production/validate-migrations.ts .
+
+      - name: Clone production database
+        run: |
+          PROD_BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          # STAGING_BASE from GITHUB_ENV
+          PROD_DB="$PROD_BASE/data/rubigo.db"
+          STAGING_DB="$STAGING_BASE/data/rubigo.db"
+          
+          if [ -f "$PROD_DB" ]; then
+            # Use sqlite3 backup for safe, consistent copy while production is running
+            sqlite3 "$PROD_DB" ".backup '$STAGING_DB'"
+            echo "✅ Production database safely cloned to staging"
+          else
+            if [ "${{ inputs.allow_fresh_db }}" = "true" ]; then
+              echo "⚠️ No production database exists (fresh staging allowed by flag)"
+            else
+              echo "❌ No production database exists at: $PROD_DB"
+              echo "   If this is a first-time deployment, re-run with allow_fresh_db=true"
+              exit 1
+            fi
+          fi
+
+      - name: Install dependencies
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          bun install --frozen-lockfile
+          echo "✅ Dependencies installed"
+
+      - name: Backup staging DB before migration
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          STAGING_DB="$STAGING_BASE/data/rubigo.db"
+          BACKUP_DB="$STAGING_BASE/data/rubigo-pre-migrate.db"
+          
+          if [ -f "$STAGING_DB" ]; then
+            sqlite3 "$STAGING_DB" ".backup '$BACKUP_DB'"
+            echo "✅ Pre-migration backup created"
+          else
+            echo "ℹ️ No existing database to backup (fresh deployment)"
+          fi
+
+      - name: Apply database migrations
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          
+          # Run actual migration files (same as production deployment)
+          bun run db:migrate
+          
+          echo "✅ Database migrations applied"
+
+      - name: Build application
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          bun run build
+          
+          echo "✅ Build complete"
+
+      - name: Find available port
+        run: |
+          # Find an available port in range 4431-4530 (100 ports)
+          for port in {4431..4530}; do
+            if ! ss -tuln | grep -q ":$port "; then
+              echo "STAGING_PORT=$port" >> $GITHUB_ENV
+              echo "✅ Found available port: $port"
+              exit 0
+            fi
+          done
+          echo "❌ No available port found in range 4431-4530"
+          exit 1
+
+      - name: Start staging server
+        run: |
+          # STAGING_BASE and STAGING_PORT from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          
+          # Start staging server in background on dynamically allocated port
+          DATABASE_URL="$STAGING_BASE/data/rubigo.db" \
+          PORT=$STAGING_PORT \
+          bun run start > "$STAGING_BASE/logs/stdout.log" 2> "$STAGING_BASE/logs/stderr.log" &
+          
+          echo "Staging server starting on port $STAGING_PORT (PID: $!)"
+
+      - name: Initialize and capture API token
+        run: |
+          # STAGING_BASE and STAGING_PORT from GITHUB_ENV
+          BASE_URL="http://localhost:$STAGING_PORT"
+          
+          echo "Waiting for server to start..."
+          for i in {1..15}; do
+            if curl -sf "$BASE_URL/api/init" > /dev/null 2>&1; then
+              break
+            fi
+            echo "  Waiting... ($i/15)"
+            sleep 2
+          done
+          
+          # Check initialization status
+          INIT_STATUS=$(curl -sf "$BASE_URL/api/init" | jq -r '.initialized')
+          
+          if [ "$INIT_STATUS" = "false" ]; then
+            echo "Fresh database detected - initializing via phrase..."
+            
+            # Capture init token from stdout (format: "   INIT TOKEN: word1 word2 word3 word4")
+            INIT_WORDS=$(grep -oP 'INIT TOKEN: \K.*' "$STAGING_BASE/logs/stdout.log" | head -1)
+            
+            if [ -z "$INIT_WORDS" ]; then
+              echo "❌ Could not find INIT TOKEN in server logs"
+              cat "$STAGING_BASE/logs/stdout.log"
+              exit 1
+            fi
+            
+            echo "  Found init phrase: $INIT_WORDS"
+            
+            # Convert space-separated words to JSON array and POST to /api/init
+            JSON_WORDS=$(echo "$INIT_WORDS" | jq -R 'split(" ")')
+            INIT_RESPONSE=$(curl -sf -X POST "$BASE_URL/api/init" \
+              -H "Content-Type: application/json" \
+              -d "{\"words\": $JSON_WORDS}")
+            
+            if [ "$(echo "$INIT_RESPONSE" | jq -r '.success')" != "true" ]; then
+              echo "❌ Initialization failed: $INIT_RESPONSE"
+              exit 1
+            fi
+            
+            echo "✅ System initialized successfully"
+          else
+            echo "✅ Database already initialized (copied from production)"
+          fi
+          
+          # Wait for API token to be logged (happens after init completes)
+          sleep 2
+          
+          # Capture API token from stdout
+          API_TOKEN=$(grep -oP 'API Token: \K[a-f0-9]+' "$STAGING_BASE/logs/stdout.log" | head -1)
+          
+          if [ -n "$API_TOKEN" ]; then
+            echo "STAGING_API_TOKEN=$API_TOKEN" >> $GITHUB_ENV
+            echo "✅ API token captured (${#API_TOKEN} chars)"
+          else
+            echo "⚠️ Could not capture API token from logs"
+          fi
+
+      - name: Health check
+        run: |
+          # STAGING_BASE, STAGING_PORT, STAGING_API_TOKEN from GITHUB_ENV
+          echo "Checking health at http://localhost:$STAGING_PORT/api/health"
+          
+          if [ -z "$STAGING_API_TOKEN" ]; then
+            echo "❌ No API token available for health check"
+            exit 1
+          fi
+          
+          for i in {1..10}; do
+            RESPONSE=$(curl -sf http://localhost:$STAGING_PORT/api/health \
+              -H "Authorization: Bearer $STAGING_API_TOKEN" 2>/dev/null || echo "")
+            
+            if [ -n "$RESPONSE" ]; then
+              STATUS=$(echo "$RESPONSE" | jq -r '.status' 2>/dev/null || echo "")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ Staging health check passed"
+                echo "$RESPONSE" | jq .
+                exit 0
+              fi
+            fi
+            
+            echo "Waiting for healthy status... ($i/10)"
+            sleep 2
+          done
+          
+          echo "❌ Staging health check failed"
+          echo "Last response: $RESPONSE"
+          cat "$STAGING_BASE/logs/stderr.log" || true
+          exit 1
+
+      - name: Run E2E tests
+        id: e2e_tests
+        continue-on-error: true
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          
+          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          
+          bun run test:e2e 2>&1 | tee "$STAGING_BASE/logs/e2e-output.log"
+
+      - name: Generate staging report
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          REPORT="$STAGING_BASE/staging-report.json"
+          
+          cat > "$REPORT" << EOF
+          {
+            "version": "1.0",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "pr_number": ${{ inputs.pr_number }},
+            "branch": "${{ inputs.branch }}",
+            "commit": "${{ github.sha }}",
+            "workflow_run_id": ${{ github.run_id }},
+            "passed": ${{ steps.e2e_tests.outcome == 'success' }},
+            "steps": {
+              "sanity_check": { "status": "success" },
+              "clone_database": { "status": "success" },
+              "install_deps": { "status": "success" },
+              "db_migration": { "status": "success" },
+              "build": { "status": "success" },
+              "health_check": { "status": "success" },
+              "e2e_tests": { "status": "${{ steps.e2e_tests.outcome }}" }
+            }
+          }
+          EOF
+          
+          echo "Staging report generated:"
+          cat "$REPORT"
+
+      - name: Stop staging server
+        if: always()
+        run: |
+          pkill -f "bun.*$STAGING_PORT" 2>/dev/null || true
+          echo "Staging server stopped"
+
+      - name: Upload staging report
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-report
+          path: ${{ env.STAGING_BASE }}/staging-report.json
+
+      - name: Upload staging logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-logs
+          path: ${{ env.STAGING_BASE }}/logs/
+
+      - name: Cleanup staging directory
+        if: always()
+        run: |
+          rm -rf "$STAGING_BASE"
+          echo "✅ Staging directory cleaned up"

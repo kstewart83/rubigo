@@ -119,8 +119,10 @@ Work continues in `../wip/<slug>/` using absolute paths. The main checkout remai
 | Workflow | Purpose |
 |----------|---------|
 | `/wip-commit` | Checkpoint commit, push, create/update PR |
-| `/wip-merge` | Sync, validate, merge PR into main, cleanup |
+| `/wip-stage` | Stage on runner, validate, generate report |
+| `/wip-deploy` | Deploy after staging passes |
 | `/wip-delete` | Abandon work, close PR, cleanup worktree |
+| `/pir` | Post-implementation review |
 
 ## Notes
 
