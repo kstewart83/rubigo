@@ -23,13 +23,11 @@ jobs:
           ref: ${{ inputs.branch }}
           clean: true
 
+      - name: Validate environment
+        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
+
       - name: Debug info
         run: |
-          echo "✅ Checkout complete"
+          echo "✅ Phase 2 complete - checkout + validate-env"
           echo "Branch: ${{ inputs.branch }}"
-          echo "PR: ${{ inputs.pr_number }}"
-          echo "Run ID: ${{ github.run_id }}"
-          echo "PWD: $(pwd)"
-          ls -la rubigo-react/scripts/production/ || echo "Scripts dir not found"
-          sleep 5
-          echo "✅ Phase 1 complete - minimal checkout only"
+          sleep 3
