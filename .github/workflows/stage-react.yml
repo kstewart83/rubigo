@@ -30,6 +30,12 @@ jobs:
           ref: ${{ inputs.branch }}
           clean: true
 
+      - name: Cleanup stale processes
+        run: |
+          pkill -f "playwright.*test-server" 2>/dev/null || true
+          pkill -f "bun.*4530" 2>/dev/null || true
+          echo "✅ Cleaned up stale processes"
+
       - name: Validate environment
         run: bun run rubigo-react/scripts/production/deploy.ts validate-env
 
