@@ -15,29 +15,43 @@ interface CheckResult {
     warnings: number;
 }
 
-interface SuppressionConfig {
-    version: string;
+interface SuppressionCategory {
+    description: string;
+    approved_by: string;
     entries: string[];  // array of "file:line" strings
 }
 
-// Load suppressions (exact file:line entries)
-let suppressedEntries: Set<string> = new Set();
+interface SuppressionConfig {
+    version: string;
+    suppressions: {
+        "console.log"?: SuppressionCategory;
+        localhost?: SuppressionCategory;
+    };
+}
+
+// Load suppressions (exact file:line entries per warning type)
+const suppressionSets: Map<string, Set<string>> = new Map();
 const suppressionPath = ".preflight-suppressions.json";
 if (existsSync(suppressionPath)) {
     try {
         const config = JSON.parse(readFileSync(suppressionPath, "utf-8")) as SuppressionConfig;
-        if (config.entries) {
-            suppressedEntries = new Set(config.entries);
+        if (config.suppressions) {
+            for (const [type, category] of Object.entries(config.suppressions)) {
+                if (category?.entries) {
+                    suppressionSets.set(type, new Set(category.entries));
+                }
+            }
         }
     } catch {
         console.warn("⚠️  Failed to parse .preflight-suppressions.json");
     }
 }
 
-function isEntrySuppressed(filePath: string, lineNumber: number): boolean {
+function isEntrySuppressed(filePath: string, lineNumber: number, warningType: string): boolean {
     const relPath = relative(".", filePath);
     const key = `${relPath}:${lineNumber}`;
-    return suppressedEntries.has(key);
+    const typeSet = suppressionSets.get(warningType);
+    return typeSet?.has(key) ?? false;
 }
 
 const EXTENSIONS = ["ts", "tsx", "js", "json"];
@@ -114,7 +128,7 @@ async function checkDebugStatements(files: string[]): Promise<{ issues: string[]
         lines.forEach((line, index) => {
             if (pattern.test(line)) {
                 const lineNumber = index + 1;
-                if (isEntrySuppressed(file, lineNumber)) {
+                if (isEntrySuppressed(file, lineNumber, "console.log")) {
                     suppressed++;
                 } else {
                     issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
@@ -157,7 +171,7 @@ async function checkLocalhostUrls(files: string[]): Promise<{ issues: string[]; 
         lines.forEach((line, index) => {
             if (pattern.test(line) && !line.includes("// allow-localhost")) {
                 const lineNumber = index + 1;
-                if (isEntrySuppressed(file, lineNumber)) {
+                if (isEntrySuppressed(file, lineNumber, "localhost")) {
                     suppressed++;
                 } else {
                     issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
