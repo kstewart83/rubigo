@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { validateApiToken } from "@/lib/initialization";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Health check endpoint for staging and monitoring.
+ * Requires API token authentication.
  * Validates:
- * - API is responding
+ * - API token is valid
  * - Database connection works
  */
-export async function GET() {
+export async function GET(request: Request) {
+    // Extract API token from Authorization header
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
+    // Validate token
+    const authResult = await validateApiToken(token ?? null);
+    if (!authResult.valid) {
+        return NextResponse.json(
+            {
+                status: "unauthorized",
+                error: authResult.error || "Invalid or missing API token",
+            },
+            { status: 401 }
+        );
+    }
+
     try {
         // Quick database connectivity check
         const db = getDb();
@@ -18,8 +36,10 @@ export async function GET() {
         return NextResponse.json({
             status: "healthy",
             timestamp: new Date().toISOString(),
+            actor: authResult.actorName,
             checks: {
                 api: "ok",
+                auth: "ok",
                 database: result ? "ok" : "error",
             },
         });
@@ -30,6 +50,7 @@ export async function GET() {
                 timestamp: new Date().toISOString(),
                 checks: {
                     api: "ok",
+                    auth: "ok",
                     database: "error",
                 },
                 error: error instanceof Error ? error.message : "Unknown error",
