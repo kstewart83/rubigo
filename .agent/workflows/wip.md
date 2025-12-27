@@ -23,9 +23,6 @@ Before creating the worktree, determine:
 
 2. **What is a concise slug for this work?** (e.g., `add-personnel-search`, `fix-sidebar-collapse`)
 
-> [!TIP]
-> For `feature/` work, consider using the `/req` workflow first to document requirements before creating the worktree.
-
 ## Step 2: Confirm Plan with User
 
 Present the proposed:
@@ -83,10 +80,9 @@ created_at = "<ISO 8601 timestamp>"
 base = <allocated_base>
 
 # Reserved ports within the range
-dev = <base>         # Development server
-e2e = <base + 1>     # E2E test server
-e2e_api = <base + 2> # E2E API server (if separate)
-# Additional ports available: <base + 3> through <base + 999>
+dev = <base>         # Next.js development server
+webrtc = <base + 1>  # Go WebRTC server
+# Additional ports available: <base + 2> through <base + 999>
 
 # Project-specific operational settings
 [projects.rubigo-react]
@@ -99,6 +95,12 @@ version_file = "rubigo.toml"
 [projects.blender-agent]
 validation_cmd = "bun run lint"
 test_cmd = "bun run test"
+
+# API tokens (updated by /wip-restart after each server restart)
+# [tokens]
+# init_phrase = "alpha bravo charlie delta"
+# api_token = "abc123..."
+# updated_at = "<ISO 8601 timestamp>"
 ```
 
 ## Step 6: Begin Work
@@ -119,8 +121,12 @@ Work continues in `../wip/<slug>/` using absolute paths. The main checkout remai
 | Workflow | Purpose |
 |----------|---------|
 | `/wip-commit` | Checkpoint commit, push, create/update PR |
-| `/wip-stage` | Stage on runner, validate, generate report |
-| `/wip-deploy` | Deploy after staging passes |
+| `/wip-restart` | Restart dev server and capture API token |
+| `/wip-preflight` | Quick local validation |
+| `/wip-stage` | Remote staging validation |
+| `/wip-merge` | Version bump, merge, cleanup |
+| `/wip-deploy` | Full pipeline: preflight → stage → merge → monitor |
+| `/wip-monitor` | Production deployment monitoring |
 | `/wip-delete` | Abandon work, close PR, cleanup worktree |
 | `/pir` | Post-implementation review |
 
