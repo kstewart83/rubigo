@@ -428,6 +428,7 @@ jobs:
           echo "Staging server stopped"
 
       - name: Upload staging report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: staging-report
