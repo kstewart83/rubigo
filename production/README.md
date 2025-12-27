@@ -167,10 +167,64 @@ journalctl --user -u rubigo-react.service -f
 systemctl --user show github-actions-runner.service | grep RUBIGO_DEPLOY_ROOT
 ```
 
+## Migration Guidelines
+
+When creating or modifying database migrations, follow these rules to avoid deployment failures:
+
+### Statement Breakpoint Format
+
+Always use the correct breakpoint format with a **space** after `-->`:
+
+```sql
+-- ✅ Correct
+--> statement-breakpoint
+
+-- ❌ Incorrect (will fail validation)
+-->statement-breakpoint
+```
+
+### Creating Migrations
+
+1. **Always use drizzle-kit** to generate migrations:
+   ```bash
+   cd rubigo-react
+   bun run db:generate
+   ```
+
+2. **Manual migrations** must copy the exact format from auto-generated files.
+
+3. **Check for conflicts** before committing:
+   ```bash
+   ls drizzle/*.sql | sort
+   ```
+   Ensure no duplicate prefixes (e.g., two `0006_*.sql` files).
+
+### Validation
+
+The `validate-migrations.ts` script checks:
+- Statement breakpoint format (space after `-->`)
+- No duplicate migration numbers
+- Journal consistency (all referenced migrations exist)
+- Sequential numbering
+
+Run validation:
+```bash
+bun run production/validate-migrations.ts rubigo-react
+```
+
+### Common Issues
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "Invalid breakpoint format" | Missing space after `-->` | Edit SQL file to add space |
+| "Duplicate migration number" | Parallel PRs created same number | Renumber and regenerate journal |
+| "Migration not in journal" | File added manually | Run `bun run db:generate` |
+
 ## Files in This Folder
 
 | File | Purpose |
 |------|---------|
 | `install-service.ts` | Installs rubigo-react systemd service |
 | `rubigo-react.service.template` | Service template with `{{RUBIGO_DEPLOY_ROOT}}` placeholder |
+| `validate-migrations.ts` | Validates Drizzle migrations before deployment |
 | `SOP.md` | Standard Operating Procedures |
