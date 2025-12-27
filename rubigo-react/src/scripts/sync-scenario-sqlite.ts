@@ -413,6 +413,7 @@ async function main() {
             deskPhone: p.desk_phone,
             cellPhone: p.cell_phone,
             bio: p.bio,
+            isAgent: p.is_agent === 1,
         }),
         deleteFn: (id) => client.deletePersonnel(id),
         getSeedId: (p) => p.id,

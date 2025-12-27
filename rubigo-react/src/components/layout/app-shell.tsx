@@ -349,7 +349,7 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
                             {children}
                         </main>
                     </SidebarInset>
-                    <MobileNav />
+                    <MobileNav personnel={personnel} />
                 </SidebarProvider>
             </div>
         </SecurityProvider>
