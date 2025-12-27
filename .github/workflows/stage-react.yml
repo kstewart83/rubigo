@@ -11,17 +11,50 @@ on:
         description: 'Branch name to checkout'
         required: true
         type: string
+      allow_fresh_db:
+        description: 'Allow staging without production database (first-time deployment)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   stage:
     runs-on: [self-hosted, NUC]
     
     steps:
-      - name: Hello world
+      - name: Validate environment
         run: |
-          echo "Hello from staging workflow"
-          echo "PR: ${{ inputs.pr_number }}"
-          echo "Branch: ${{ inputs.branch }}"
-          echo "Sleeping for 5 seconds..."
-          sleep 5
-          echo "Done!"
+          echo "CURRENT_STEP=validate_environment" >> $GITHUB_ENV
+          
+          if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
+            echo "   Run: production/scripts/install-service.sh"
+            exit 1
+          fi
+          
+          if [ ! -d "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT does not exist: $RUBIGO_DEPLOY_ROOT"
+            exit 1
+          fi
+          
+          echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
+          
+          # Export paths for use in workflow outputs
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
+          echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
+          echo "LAST_COMPLETED_STEP=validate_environment" >> $GITHUB_ENV
+
+      - name: Checkout PR branch
+        run: echo "CURRENT_STEP=checkout" >> $GITHUB_ENV
+      - name: Checkout PR branch (action)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          clean: true
+      - name: Mark checkout complete
+        run: echo "LAST_COMPLETED_STEP=checkout" >> $GITHUB_ENV
+
+      - name: Done
+        run: |
+          echo "Phase 1 complete!"
+          echo "STAGING_BASE: $STAGING_BASE"
