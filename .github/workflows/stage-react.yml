@@ -313,11 +313,23 @@ jobs:
         id: e2e_tests
         continue-on-error: true
         run: |
-          # STAGING_BASE from GITHUB_ENV
+          # STAGING_BASE, STAGING_PORT, STAGING_API_TOKEN from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
+          # Browser-based tests use PLAYWRIGHT_BASE_URL
           export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
+          
+          # API tests use RUBIGO_* variables
+          export RUBIGO_API_URL="http://localhost:$STAGING_PORT"
+          export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
+          
+          # Database access for any direct queries in tests
           export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          
+          echo "Running E2E tests against staging:"
+          echo "  PLAYWRIGHT_BASE_URL: $PLAYWRIGHT_BASE_URL"
+          echo "  RUBIGO_API_URL: $RUBIGO_API_URL"
+          echo "  RUBIGO_API_TOKEN: (${#RUBIGO_API_TOKEN} chars)"
           
           bun run test:e2e 2>&1 | tee "$STAGING_BASE/logs/e2e-output.log"
 
