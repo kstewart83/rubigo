@@ -36,6 +36,7 @@ async function initWorktree(worktreePath: string) {
     console.log(`\nTo start development:`);
     console.log(`  cd ${projectPath}`);
     console.log(`  bun run dev`);
+    console.log("new console line");
 }
 
 async function main() {
