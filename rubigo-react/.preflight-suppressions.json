@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "Approved suppressions for pre-push-check warnings",
+    "version": "1.0",
+    "suppressions": {
+        "console.log": {
+            "description": "Script and dev files with expected console output",
+            "approved_by": "User review on 2025-12-27",
+            "patterns": [
+                "src/scripts/**",
+                "src/app/api/agents/tick/route.ts",
+                "src/app/(modules)/agents/agent-simulation-content.tsx",
+                "src/components/calendar-page-content.tsx",
+                "src/components/presentations/presentation-view-content.tsx",
+                "src/components/screen-share/ScreenShareProvider.tsx"
+            ]
+        },
+        "localhost": {
+            "description": "Fallback defaults with environment variable overrides",
+            "approved_by": "User review on 2025-12-27",
+            "patterns": [
+                "src/lib/rubigo-client.ts",
+                "src/lib/agents/**",
+                "src/lib/agent-worker-manager.ts",
+                "src/scripts/**",
+                "src/app/api/agents/**",
+                "src/app/api/files/*/share/route.ts",
+                "src/app/api/screen-share/**",
+                "src/workers/agent-loop-worker.ts"
+            ]
+        }
+    }
+}
