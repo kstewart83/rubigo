@@ -83,6 +83,12 @@ jobs:
           fi
           echo "  ✓ sqlite3 $(sqlite3 --version | cut -d' ' -f1-2)"
           
+          if ! command -v ss &> /dev/null; then
+            echo "❌ ss is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ ss (iproute2)"
+          
           # Verify critical files exist
           echo "Checking critical files..."
           
