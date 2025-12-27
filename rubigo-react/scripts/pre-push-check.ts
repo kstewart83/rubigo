@@ -15,41 +15,29 @@ interface CheckResult {
     warnings: number;
 }
 
-interface Suppression {
-    description: string;
-    approved_by: string;
-    patterns: string[];
-}
-
 interface SuppressionConfig {
-    suppressions: {
-        "console.log"?: Suppression;
-        localhost?: Suppression;
-    };
+    version: string;
+    entries: string[];  // array of "file:line" strings
 }
 
-// Load suppressions
-let suppressions: SuppressionConfig["suppressions"] = {};
+// Load suppressions (exact file:line entries)
+let suppressedEntries: Set<string> = new Set();
 const suppressionPath = ".preflight-suppressions.json";
 if (existsSync(suppressionPath)) {
     try {
         const config = JSON.parse(readFileSync(suppressionPath, "utf-8")) as SuppressionConfig;
-        suppressions = config.suppressions || {};
+        if (config.entries) {
+            suppressedEntries = new Set(config.entries);
+        }
     } catch {
         console.warn("⚠️  Failed to parse .preflight-suppressions.json");
     }
 }
 
-function isFileSuppressed(filePath: string, suppressionKey: keyof typeof suppressions): boolean {
-    const suppression = suppressions[suppressionKey];
-    if (!suppression) return false;
-
+function isEntrySuppressed(filePath: string, lineNumber: number): boolean {
     const relPath = relative(".", filePath);
-    return suppression.patterns.some(pattern => {
-        // Simple glob matching
-        const regex = new RegExp("^" + pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*") + "$");
-        return regex.test(relPath);
-    });
+    const key = `${relPath}:${lineNumber}`;
+    return suppressedEntries.has(key);
 }
 
 const EXTENSIONS = ["ts", "tsx", "js", "json"];
@@ -121,18 +109,16 @@ async function checkDebugStatements(files: string[]): Promise<{ issues: string[]
     const pattern = /console\.(log|debug|info)|debugger/;
 
     for (const file of files.filter(f => f.endsWith(".ts") || f.endsWith(".tsx"))) {
-        if (isFileSuppressed(file, "console.log")) {
-            // Count how many matches would have been found
-            const content = await Bun.file(file).text();
-            const matches = content.split("\n").filter(line => pattern.test(line)).length;
-            suppressed += matches;
-            continue;
-        }
         const content = await Bun.file(file).text();
         const lines = content.split("\n");
         lines.forEach((line, index) => {
             if (pattern.test(line)) {
-                issues.push(`${relative(".", file)}:${index + 1}: ${line.trim().substring(0, 80)}`);
+                const lineNumber = index + 1;
+                if (isEntrySuppressed(file, lineNumber)) {
+                    suppressed++;
+                } else {
+                    issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
+                }
             }
         });
     }
@@ -166,18 +152,16 @@ async function checkLocalhostUrls(files: string[]): Promise<{ issues: string[]; 
     const pattern = /localhost|127\.0\.0\.1/;
 
     for (const file of files.filter(f => f.endsWith(".ts") || f.endsWith(".tsx"))) {
-        if (isFileSuppressed(file, "localhost")) {
-            // Count how many matches would have been found
-            const content = await Bun.file(file).text();
-            const matches = content.split("\n").filter(line => pattern.test(line) && !line.includes("// allow-localhost")).length;
-            suppressed += matches;
-            continue;
-        }
         const content = await Bun.file(file).text();
         const lines = content.split("\n");
         lines.forEach((line, index) => {
             if (pattern.test(line) && !line.includes("// allow-localhost")) {
-                issues.push(`${relative(".", file)}:${index + 1}: ${line.trim().substring(0, 80)}`);
+                const lineNumber = index + 1;
+                if (isEntrySuppressed(file, lineNumber)) {
+                    suppressed++;
+                } else {
+                    issues.push(`${relative(".", file)}:${lineNumber}: ${line.trim().substring(0, 80)}`);
+                }
             }
         });
     }
