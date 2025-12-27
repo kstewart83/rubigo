@@ -24,14 +24,14 @@ jobs:
       RUN_ID: ${{ github.run_id }}
     
     steps:
-      - name: Validate environment
-        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
-
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           clean: true
+
+      - name: Validate environment
+        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
 
       - name: Validate migrations
         run: bun run rubigo-react/scripts/production/validate-migrations.ts rubigo-react
