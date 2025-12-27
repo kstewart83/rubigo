@@ -11,6 +11,11 @@ on:
         description: 'Branch name to checkout'
         required: true
         type: string
+      allow_fresh_db:
+        description: 'Allow staging without production database'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   stage:
@@ -45,13 +50,30 @@ jobs:
           which sqlite3 || echo "which sqlite3 failed"
           bun run rubigo-react/scripts/production/deploy.ts sanity-check --dir "$BUILD_DIR"
 
+      - name: Clone production database
+        run: |
+          PROD_DB="$RUBIGO_DEPLOY_ROOT/production/rubigo-react/data/rubigo.db"
+          STAGING_DB="$DATA_DIR/rubigo.db"
+          ALLOW_FRESH="${{ inputs.allow_fresh_db }}"
+          bun run rubigo-react/scripts/production/deploy.ts clone-db --source "$PROD_DB" --target "$STAGING_DB" --allow-fresh "$ALLOW_FRESH"
+
       - name: Install dependencies
         run: bun run rubigo-react/scripts/production/deploy.ts install-deps --dir "$BUILD_DIR"
 
+      - name: Backup staging DB before schema changes
+        run: bun run rubigo-react/scripts/production/deploy.ts backup-db --db "$DATA_DIR/rubigo.db" --backup-dir "$BASE_DIR/backups" --run-id $RUN_ID
+
+      - name: Apply database schema
+        run: bun run rubigo-react/scripts/production/deploy.ts db-schema --dir "$BUILD_DIR" --db-url "$DATA_DIR/rubigo.db"
+
+      - name: Build application
+        run: bun run rubigo-react/scripts/production/deploy.ts build --dir "$BUILD_DIR" --db-url "$DATA_DIR/rubigo.db"
+
       - name: Debug info
         run: |
-          echo "✅ Phase 4 complete - sanity + install deps"
+          echo "✅ Phase 5 complete - clone DB, install, backup, schema, build"
           echo "BUILD_DIR: $BUILD_DIR"
+          ls -la "$BUILD_DIR/.next" 2>/dev/null || echo "No .next directory"
           sleep 3
 
       - name: Cleanup
