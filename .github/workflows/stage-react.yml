@@ -260,8 +260,10 @@ jobs:
             fi
             
             echo "✅ System initialized successfully"
+            echo "DB_INITIALIZED=true" >> $GITHUB_ENV
           else
             echo "✅ Database already initialized (copied from production)"
+            echo "DB_INITIALIZED=true" >> $GITHUB_ENV
           fi
           
           # Wait for API token to be logged (happens after init completes)
@@ -334,10 +336,12 @@ jobs:
           bun run test:e2e 2>&1 | tee "$STAGING_BASE/logs/e2e-output.log"
 
       - name: Generate staging report
+        if: always()
         run: |
-          # STAGING_BASE from GITHUB_ENV
+          # STAGING_BASE and STAGING_PORT from GITHUB_ENV
           REPORT="$STAGING_BASE/staging-report.json"
           
+          # Schema: rubigo-react/src/lib/schemas/staging-report.ts (v1.0)
           cat > "$REPORT" << EOF
           {
             "version": "1.0",
@@ -346,6 +350,8 @@ jobs:
             "branch": "${{ inputs.branch }}",
             "commit": "${{ github.sha }}",
             "workflow_run_id": ${{ github.run_id }},
+            "staging_port": ${STAGING_PORT:-0},
+            "db_initialized": ${DB_INITIALIZED:-false},
             "passed": ${{ steps.e2e_tests.outcome == 'success' }},
             "steps": {
               "sanity_check": { "status": "success" },
@@ -353,6 +359,7 @@ jobs:
               "install_deps": { "status": "success" },
               "db_migration": { "status": "success" },
               "build": { "status": "success" },
+              "initialization": { "status": "success" },
               "health_check": { "status": "success" },
               "e2e_tests": { "status": "${{ steps.e2e_tests.outcome }}" }
             }
