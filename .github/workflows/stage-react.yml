@@ -21,8 +21,7 @@ jobs:
   stage:
     runs-on: [self-hosted, NUC]
     # Note: RUBIGO_DEPLOY_ROOT must be set in the runner's systemd service
-    env:
-      STAGING_PORT: 4431
+    # STAGING_PORT is set dynamically by Find available port step
     
     steps:
       - name: Validate environment
@@ -175,21 +174,30 @@ jobs:
           
           echo "✅ Build complete"
 
+      - name: Find available port
+        run: |
+          # Find an available port in range 4431-4530 (100 ports)
+          for port in {4431..4530}; do
+            if ! ss -tuln | grep -q ":$port "; then
+              echo "STAGING_PORT=$port" >> $GITHUB_ENV
+              echo "✅ Found available port: $port"
+              exit 0
+            fi
+          done
+          echo "❌ No available port found in range 4431-4530"
+          exit 1
+
       - name: Start staging server
         run: |
-          # STAGING_BASE from GITHUB_ENV
+          # STAGING_BASE and STAGING_PORT from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
-          # Stop any existing staging server
-          pkill -f "bun.*$STAGING_PORT" 2>/dev/null || true
-          sleep 1
-          
-          # Start staging server in background
+          # Start staging server in background on dynamically allocated port
           DATABASE_URL="$STAGING_BASE/data/rubigo.db" \
           PORT=$STAGING_PORT \
           bun run start > "$STAGING_BASE/logs/stdout.log" 2> "$STAGING_BASE/logs/stderr.log" &
           
-          echo "Staging server starting on port $STAGING_PORT"
+          echo "Staging server starting on port $STAGING_PORT (PID: $!)"
 
       - name: Health check
         run: |
