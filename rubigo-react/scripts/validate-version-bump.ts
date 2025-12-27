@@ -49,7 +49,7 @@ function readVersionFromFile(filePath: string): string {
 
 async function getVersionFromMain(): Promise<string> {
     try {
-        const result = await $`git show origin/main:${VERSION_FILE}`.text();
+        const result = await $`git show origin/main:rubigo-react/${VERSION_FILE}`.text();
         const match = result.match(/version\s*=\s*"([^"]+)"/);
         if (!match) {
             throw new Error(`Could not find version in origin/main:${VERSION_FILE}`);
