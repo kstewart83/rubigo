@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiToken } from "@/lib/initialization";
 import { tools, handleToolCall, type McpActorContext } from "@/lib/mcp-tools";
+import { mcpRateLimiter } from "@/lib/rate-limiter";
 
 // ============================================================================
 // MCP Protocol Types
@@ -188,6 +189,17 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    // Rate limiting
+    if (token) {
+        const rateLimit = mcpRateLimiter.check(token);
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { jsonrpc: "2.0", error: { code: -32000, message: "Rate limit exceeded" } },
+                { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.retryAfterMs || 1000) / 1000)) } }
+            );
+        }
+    }
+
     // Parse JSON-RPC request
     let rpcRequest: JsonRpcRequest;
     try {
@@ -275,6 +287,17 @@ export async function GET(request: NextRequest) {
             { error: auth.error },
             { status: 401 }
         );
+    }
+
+    // Rate limiting
+    if (token) {
+        const rateLimit = mcpRateLimiter.check(token);
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { error: "Rate limit exceeded" },
+                { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.retryAfterMs || 1000) / 1000)) } }
+            );
+        }
     }
 
     // Check if client wants SSE
