@@ -51,6 +51,13 @@ jobs:
           
           echo "Build directory prepared: $BUILD_DIR"
 
+      - name: Validate migrations
+        run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          cd "$BUILD_DIR"
+          bun run production/validate-migrations.ts .
+
       - name: Sanity check
         run: |
           BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"

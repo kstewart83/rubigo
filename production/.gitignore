@@ -7,3 +7,4 @@
 !SOP.md
 !*.template
 !install-service.ts
+!validate-migrations.ts

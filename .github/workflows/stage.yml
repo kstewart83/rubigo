@@ -59,6 +59,12 @@ jobs:
           
           echo "Staging directory prepared: $STAGING_BASE"
 
+      - name: Validate migrations
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          bun run production/validate-migrations.ts .
+
       - name: Sanity check
         run: |
           STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
