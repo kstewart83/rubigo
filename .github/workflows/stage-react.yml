@@ -207,16 +207,27 @@ jobs:
 
       - name: Health check
         run: |
-          # STAGING_BASE from GITHUB_ENV
+          # STAGING_BASE and STAGING_PORT from GITHUB_ENV
+          echo "Checking health at http://localhost:$STAGING_PORT/api/health"
+          
           for i in {1..15}; do
-            if curl -sf http://localhost:$STAGING_PORT > /dev/null; then
-              echo "✅ Staging health check passed"
-              exit 0
+            RESPONSE=$(curl -sf http://localhost:$STAGING_PORT/api/health 2>/dev/null || echo "")
+            
+            if [ -n "$RESPONSE" ]; then
+              STATUS=$(echo "$RESPONSE" | jq -r '.status' 2>/dev/null || echo "")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ Staging health check passed"
+                echo "$RESPONSE" | jq .
+                exit 0
+              fi
             fi
+            
             echo "Waiting for staging server... ($i/15)"
             sleep 2
           done
+          
           echo "❌ Staging health check failed"
+          echo "Last response: $RESPONSE"
           cat "$STAGING_BASE/logs/stderr.log" || true
           exit 1
 
