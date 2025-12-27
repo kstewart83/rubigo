@@ -141,12 +141,29 @@ jobs:
           bun install --frozen-lockfile
           echo "✅ Dependencies installed"
 
-      - name: Apply database schema
+      - name: Backup staging DB before migration
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          STAGING_DB="$STAGING_BASE/data/rubigo.db"
+          BACKUP_DB="$STAGING_BASE/data/rubigo-pre-migrate.db"
+          
+          if [ -f "$STAGING_DB" ]; then
+            sqlite3 "$STAGING_DB" ".backup '$BACKUP_DB'"
+            echo "✅ Pre-migration backup created"
+          else
+            echo "ℹ️ No existing database to backup (fresh deployment)"
+          fi
+
+      - name: Apply database migrations
         run: |
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
-          DATABASE_URL="$STAGING_BASE/data/rubigo.db" bun run db:push --force
-          echo "✅ Database schema applied"
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          
+          # Run actual migration files (same as production deployment)
+          bun run db:migrate
+          
+          echo "✅ Database migrations applied"
 
       - name: Build application
         run: |
