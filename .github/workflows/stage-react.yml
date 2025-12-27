@@ -146,9 +146,10 @@ jobs:
       - name: Run E2E tests
         id: e2e_tests
         continue-on-error: true
+        timeout-minutes: 10
         run: |
           cd "$BUILD_DIR"
-          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
+          export E2E_BASE_URL="http://localhost:$STAGING_PORT"
           export RUBIGO_API_URL="http://localhost:$STAGING_PORT"
           export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
           export DATABASE_URL="$DATA_DIR/rubigo.db"
