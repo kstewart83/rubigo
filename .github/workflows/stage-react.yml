@@ -20,95 +20,190 @@ on:
 jobs:
   stage:
     runs-on: [self-hosted, NUC]
+    env:
+      RUN_ID: ${{ github.run_id }}
     
     steps:
       - name: Validate environment
-        run: |
-          echo "CURRENT_STEP=validate_environment" >> $GITHUB_ENV
-          if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then exit 1; fi
-          if [ ! -d "$RUBIGO_DEPLOY_ROOT" ]; then exit 1; fi
-          echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
-          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
-          echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
-          echo "LAST_COMPLETED_STEP=validate_environment" >> $GITHUB_ENV
+        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
 
       - name: Checkout PR branch
-        run: echo "CURRENT_STEP=checkout" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           clean: true
-      - run: echo "LAST_COMPLETED_STEP=checkout" >> $GITHUB_ENV
-
-      - name: Prepare staging directory
-        run: |
-          echo "CURRENT_STEP=prepare_staging_dir" >> $GITHUB_ENV
-          mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
-          rm -rf "$STAGING_BASE/code"
-          cp -r rubigo-react "$STAGING_BASE/code"
-          mkdir -p "$STAGING_BASE/code/.git"
-          echo "LAST_COMPLETED_STEP=prepare_staging_dir" >> $GITHUB_ENV
-
-      - name: Sanity check
-        run: |
-          echo "CURRENT_STEP=sanity_check" >> $GITHUB_ENV
-          cd "$STAGING_BASE/code"
-          command -v bun && command -v sqlite3 && command -v ss && command -v curl && command -v jq
-          [ -f "package.json" ] && [ -f "bun.lock" ]
-          echo "✅ Sanity check passed"
-          echo "LAST_COMPLETED_STEP=sanity_check" >> $GITHUB_ENV
 
       - name: Validate migrations
+        run: bun run rubigo-react/scripts/production/validate-migrations.ts rubigo-react
+
+      - name: Prepare staging directory
+        id: prepare
         run: |
-          echo "CURRENT_STEP=validate_migrations" >> $GITHUB_ENV
-          cd "$GITHUB_WORKSPACE"
-          bun run production/validate-migrations.ts rubigo-react
-          echo "LAST_COMPLETED_STEP=validate_migrations" >> $GITHUB_ENV
+          OUTPUT=$(bun run rubigo-react/scripts/production/deploy.ts prepare --target staging --run-id $RUN_ID --source rubigo-react)
+          echo "$OUTPUT"
+          # Extract paths from output
+          echo "BUILD_DIR=$(echo "$OUTPUT" | grep '^BUILD_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
+          echo "BASE_DIR=$(echo "$OUTPUT" | grep '^BASE_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
+          echo "DATA_DIR=$(echo "$OUTPUT" | grep '^DATA_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
+
+      - name: Sanity check
+        run: bun run rubigo-react/scripts/production/deploy.ts sanity-check --dir "$BUILD_DIR"
 
       - name: Clone production database
         run: |
-          echo "CURRENT_STEP=clone_database" >> $GITHUB_ENV
           PROD_DB="$RUBIGO_DEPLOY_ROOT/production/rubigo-react/data/rubigo.db"
-          STAGING_DB="$STAGING_BASE/data/rubigo.db"
-          if [ -f "$PROD_DB" ]; then
-            sqlite3 "$PROD_DB" ".backup '$STAGING_DB'"
-            echo "✅ Database cloned"
-          elif [ "${{ inputs.allow_fresh_db }}" = "true" ]; then
-            echo "⚠️ Fresh DB allowed"
-          else
-            exit 1
-          fi
-          echo "LAST_COMPLETED_STEP=clone_database" >> $GITHUB_ENV
+          STAGING_DB="$DATA_DIR/rubigo.db"
+          ALLOW_FRESH="${{ inputs.allow_fresh_db }}"
+          bun run rubigo-react/scripts/production/deploy.ts clone-db --source "$PROD_DB" --target "$STAGING_DB" --allow-fresh "$ALLOW_FRESH"
 
       - name: Install dependencies
-        run: |
-          echo "CURRENT_STEP=install_deps" >> $GITHUB_ENV
-          cd "$STAGING_BASE/code"
-          bun install --frozen-lockfile
-          echo "✅ Dependencies installed"
-          echo "LAST_COMPLETED_STEP=install_deps" >> $GITHUB_ENV
+        run: bun run rubigo-react/scripts/production/deploy.ts install-deps --dir "$BUILD_DIR"
 
-      - name: Backup staging DB before migration
+      - name: Backup staging DB before schema changes
+        run: bun run rubigo-react/scripts/production/deploy.ts backup-db --db "$DATA_DIR/rubigo.db" --backup-dir "$BASE_DIR/backups" --run-id $RUN_ID
+
+      - name: Apply database schema
+        run: bun run rubigo-react/scripts/production/deploy.ts db-schema --dir "$BUILD_DIR" --db-url "$DATA_DIR/rubigo.db"
+
+      - name: Build application
+        run: bun run rubigo-react/scripts/production/deploy.ts build --dir "$BUILD_DIR" --db-url "$DATA_DIR/rubigo.db"
+
+      - name: Find available port
         run: |
-          echo "CURRENT_STEP=backup_db" >> $GITHUB_ENV
-          STAGING_DB="$STAGING_BASE/data/rubigo.db"
-          if [ -f "$STAGING_DB" ]; then
-            sqlite3 "$STAGING_DB" ".backup '$STAGING_BASE/data/rubigo-pre-migrate.db'"
-            echo "✅ Pre-migration backup created"
+          for port in {4530..4630}; do
+            if ! ss -tuln | grep -q ":$port "; then
+              echo "STAGING_PORT=$port" >> $GITHUB_ENV
+              echo "✅ Found available port: $port"
+              exit 0
+            fi
+          done
+          echo "❌ No available port found in range 4530-4630"
+          exit 1
+
+      - name: Start staging server
+        run: bun run rubigo-react/scripts/production/deploy.ts start-server --dir "$BUILD_DIR" --port $STAGING_PORT --db-url "$DATA_DIR/rubigo.db" --logs-dir "$BASE_DIR/logs"
+
+      - name: Initialize and capture API token
+        run: |
+          BASE_URL="http://localhost:$STAGING_PORT"
+          
+          echo "Waiting for server to start..."
+          for i in {1..15}; do
+            if curl -sf "$BASE_URL/api/init" > /dev/null 2>&1; then
+              break
+            fi
+            echo "  Waiting... ($i/15)"
+            sleep 2
+          done
+          
+          # Check initialization status
+          INIT_STATUS=$(curl -sf "$BASE_URL/api/init" | jq -r '.initialized')
+          
+          if [ "$INIT_STATUS" = "false" ]; then
+            echo "Fresh database detected - initializing via phrase..."
+            
+            INIT_WORDS=$(grep -oP 'INIT TOKEN: \K.*' "$BASE_DIR/logs/stdout.log" | head -1)
+            
+            if [ -z "$INIT_WORDS" ]; then
+              echo "❌ Could not find INIT TOKEN in server logs"
+              cat "$BASE_DIR/logs/stdout.log"
+              exit 1
+            fi
+            
+            echo "  Found init phrase: $INIT_WORDS"
+            
+            JSON_WORDS=$(echo "$INIT_WORDS" | jq -R 'split(" ")')
+            INIT_RESPONSE=$(curl -sf -X POST "$BASE_URL/api/init" \
+              -H "Content-Type: application/json" \
+              -d "{\"words\": $JSON_WORDS}")
+            
+            if [ "$(echo "$INIT_RESPONSE" | jq -r '.success')" != "true" ]; then
+              echo "❌ Initialization failed: $INIT_RESPONSE"
+              exit 1
+            fi
+            
+            echo "✅ System initialized successfully"
+            echo "DB_INITIALIZED=true" >> $GITHUB_ENV
+          else
+            echo "✅ Database already initialized (copied from production)"
+            echo "DB_INITIALIZED=true" >> $GITHUB_ENV
           fi
-          echo "LAST_COMPLETED_STEP=backup_db" >> $GITHUB_ENV
+          
+          sleep 2
+          
+          API_TOKEN=$(grep -oP 'API Token: \K[a-f0-9]+' "$BASE_DIR/logs/stdout.log" | head -1)
+          
+          if [ -n "$API_TOKEN" ]; then
+            echo "STAGING_API_TOKEN=$API_TOKEN" >> $GITHUB_ENV
+            echo "✅ API token captured (${#API_TOKEN} chars)"
+          else
+            echo "⚠️ Could not capture API token from logs"
+          fi
 
-      - name: Apply database migrations
+      - name: Health check
+        run: bun run rubigo-react/scripts/production/deploy.ts health-check --port $STAGING_PORT --token "$STAGING_API_TOKEN" --attempts 10
+
+      - name: Run E2E tests
+        id: e2e_tests
+        continue-on-error: true
         run: |
-          echo "CURRENT_STEP=apply_migrations" >> $GITHUB_ENV
-          cd "$STAGING_BASE/code"
-          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
-          bun run db:migrate
-          echo "✅ Migrations applied"
-          echo "LAST_COMPLETED_STEP=apply_migrations" >> $GITHUB_ENV
+          cd "$BUILD_DIR"
+          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
+          export RUBIGO_API_URL="http://localhost:$STAGING_PORT"
+          export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
+          export DATABASE_URL="$DATA_DIR/rubigo.db"
+          
+          echo "Running E2E tests against staging:"
+          echo "  PLAYWRIGHT_BASE_URL: $PLAYWRIGHT_BASE_URL"
+          echo "  RUBIGO_API_URL: $RUBIGO_API_URL"
+          
+          bun run test:e2e 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
 
-      - name: Cleanup
+      - name: Generate staging report
         if: always()
         run: |
-          rm -rf "$STAGING_BASE"
-          echo "✅ Cleaned up"
+          REPORT="$BASE_DIR/staging-report.json"
+          
+          cat > "$REPORT" << EOF
+          {
+            "version": "1.0",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "pr_number": ${{ inputs.pr_number }},
+            "branch": "${{ inputs.branch }}",
+            "commit": "${{ github.sha }}",
+            "workflow_run_id": ${{ github.run_id }},
+            "staging_port": ${STAGING_PORT:-0},
+            "db_initialized": ${DB_INITIALIZED:-false},
+            "passed": ${{ steps.e2e_tests.outcome == 'success' }},
+            "e2e_tests": {
+              "outcome": "${{ steps.e2e_tests.outcome }}"
+            }
+          }
+          EOF
+          
+          echo "Staging report generated:"
+          cat "$REPORT"
+
+      - name: Stop staging server
+        if: always()
+        run: |
+          pkill -f "bun.*$STAGING_PORT" 2>/dev/null || true
+          echo "Staging server stopped"
+
+      - name: Upload staging report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-report
+          path: ${{ env.BASE_DIR }}/staging-report.json
+
+      - name: Upload staging logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-logs
+          path: ${{ env.BASE_DIR }}/logs/
+
+      - name: Cleanup staging directory
+        if: always()
+        run: bun run rubigo-react/scripts/production/deploy.ts cleanup --dir "$BASE_DIR"
