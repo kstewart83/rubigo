@@ -88,12 +88,93 @@ function DetailContent({
         <div className={`space-y-6 overflow-y-auto ${isMobile ? "px-4 pb-4" : "px-4"}`}>
             {/* Photo */}
             <div className="flex justify-center">
-                <Avatar className="h-24 w-24 md:h-28 md:w-28">
-                    {person.photo && <AvatarImage src={person.photo} alt={person.name} />}
-                    <AvatarFallback className="text-2xl">
+                {person.photo ? (
+                    person.isAgent ? (
+                        // AI Agent: Layered neon glow + glassmorphism + avatar
+                        <div className="relative flex items-center justify-center" style={{ width: 320, height: 320 }}>
+                            {/* Layer 1: Subtle neon glow orb */}
+                            <div
+                                className="absolute rounded-full"
+                                style={{
+                                    width: 200,
+                                    height: 200,
+                                    background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(124, 58, 237, 0.08) 100%)',
+                                    boxShadow: `
+                                        0 0 20px rgba(168, 85, 247, 0.35),
+                                        0 0 40px rgba(147, 51, 234, 0.25),
+                                        0 0 70px rgba(124, 58, 237, 0.18),
+                                        0 0 100px rgba(109, 40, 217, 0.12)
+                                    `,
+                                    animation: 'neon-pulse 3s ease-in-out infinite',
+                                }}
+                            />
+                            {/* Layer 2: Glassmorphism overlay */}
+                            <div
+                                className="absolute rounded-full"
+                                style={{
+                                    width: 180,
+                                    height: 180,
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    backdropFilter: 'blur(20px)',
+                                    WebkitBackdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                }}
+                            />
+                            {/* Layer 3: Avatar image - zoomed and clipped */}
+                            <div
+                                className="rounded-full overflow-hidden relative z-10"
+                                style={{
+                                    width: 190,
+                                    height: 190,
+                                    maskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
+                                    WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 45%, transparent 75%)',
+                                }}
+                            >
+                                <Image
+                                    src={person.photo}
+                                    alt={person.name}
+                                    width={180}
+                                    height={180}
+                                    style={{
+                                        objectFit: 'cover',
+                                        transform: 'scale(1.4) translate(1%, 2%)',
+                                    }}
+                                />
+                            </div>
+                            <style jsx>{`
+                                @keyframes neon-pulse {
+                                    0%, 100% { 
+                                        box-shadow: 
+                                            0 0 20px rgba(168, 85, 247, 0.35),
+                                            0 0 40px rgba(147, 51, 234, 0.25),
+                                            0 0 70px rgba(124, 58, 237, 0.18),
+                                            0 0 100px rgba(109, 40, 217, 0.12);
+                                    }
+                                    50% { 
+                                        box-shadow: 
+                                            0 0 25px rgba(168, 85, 247, 0.45),
+                                            0 0 50px rgba(147, 51, 234, 0.35),
+                                            0 0 85px rgba(124, 58, 237, 0.25),
+                                            0 0 120px rgba(109, 40, 217, 0.18);
+                                    }
+                                }
+                            `}</style>
+                        </div>
+                    ) : (
+                        // Human: rounded square, larger image
+                        <Image
+                            src={person.photo}
+                            alt={person.name}
+                            width={240}
+                            height={240}
+                            className="rounded-lg"
+                        />
+                    )
+                ) : (
+                    <div className="w-28 h-28 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl">
                         {getInitials(person.name)}
-                    </AvatarFallback>
-                </Avatar>
+                    </div>
+                )}
             </div>
 
             {/* Details */}
