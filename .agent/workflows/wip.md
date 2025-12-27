@@ -95,6 +95,12 @@ version_file = "rubigo.toml"
 [projects.blender-agent]
 validation_cmd = "bun run lint"
 test_cmd = "bun run test"
+
+# API tokens (updated by /wip-restart after each server restart)
+# [tokens]
+# init_phrase = "alpha bravo charlie delta"
+# api_token = "abc123..."
+# updated_at = "<ISO 8601 timestamp>"
 ```
 
 ## Step 6: Begin Work
@@ -115,6 +121,7 @@ Work continues in `../wip/<slug>/` using absolute paths. The main checkout remai
 | Workflow | Purpose |
 |----------|---------|
 | `/wip-commit` | Checkpoint commit, push, create/update PR |
+| `/wip-restart` | Restart dev server and capture API token |
 | `/wip-preflight` | Quick local validation |
 | `/wip-stage` | Remote staging validation |
 | `/wip-merge` | Version bump, merge, cleanup |
