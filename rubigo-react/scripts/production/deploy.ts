@@ -137,12 +137,26 @@ async function prepare(ctx: CommandContext): Promise<void> {
 async function sanityCheck(ctx: CommandContext): Promise<void> {
     const dir = requireArg(ctx.args, "dir");
 
-    // Check executables using Bun.which (uses process.env.PATH)
+    // Check executables using Bun.which with fallback to known paths
     log("🔍", "Checking required executables...");
 
+    const knownPaths = ["/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin", "/usr/bin"];
     const executables = ["sqlite3", "curl", "jq", "ss"];
+
     for (const exe of executables) {
-        const path = Bun.which(exe);
+        let path = Bun.which(exe);
+
+        // Fallback: check known paths if Bun.which doesn't find it
+        if (!path) {
+            for (const dir of knownPaths) {
+                const fullPath = join(dir, exe);
+                if (existsSync(fullPath)) {
+                    path = fullPath;
+                    break;
+                }
+            }
+        }
+
         if (path) {
             log("  ✓", `${exe} (${path})`);
         } else {
