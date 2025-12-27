@@ -11,6 +11,11 @@ on:
         description: 'Branch name to checkout'
         required: true
         type: string
+      allow_fresh_db:
+        description: 'Allow staging without production database (first-time deployment)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   stage:
@@ -120,7 +125,13 @@ jobs:
             sqlite3 "$PROD_DB" ".backup '$STAGING_DB'"
             echo "✅ Production database safely cloned to staging"
           else
-            echo "⚠️ No production database exists (fresh staging)"
+            if [ "${{ inputs.allow_fresh_db }}" = "true" ]; then
+              echo "⚠️ No production database exists (fresh staging allowed by flag)"
+            else
+              echo "❌ No production database exists at: $PROD_DB"
+              echo "   If this is a first-time deployment, re-run with allow_fresh_db=true"
+              exit 1
+            fi
           fi
 
       - name: Install dependencies
