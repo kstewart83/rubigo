@@ -39,7 +39,6 @@ jobs:
           
           echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
           
-          # Export paths for use in workflow outputs
           STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
           echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
           echo "LAST_COMPLETED_STEP=validate_environment" >> $GITHUB_ENV
@@ -54,7 +53,83 @@ jobs:
       - name: Mark checkout complete
         run: echo "LAST_COMPLETED_STEP=checkout" >> $GITHUB_ENV
 
-      - name: Done
+      - name: Prepare staging directory
         run: |
-          echo "Phase 1 complete!"
-          echo "STAGING_BASE: $STAGING_BASE"
+          echo "CURRENT_STEP=prepare_staging_dir" >> $GITHUB_ENV
+          
+          mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
+          
+          rm -rf "$STAGING_BASE/code"
+          cp -r rubigo-react "$STAGING_BASE/code"
+          
+          mkdir -p "$STAGING_BASE/code/.git"
+          
+          echo "Staging directory prepared: $STAGING_BASE"
+          echo "LAST_COMPLETED_STEP=prepare_staging_dir" >> $GITHUB_ENV
+
+      - name: Sanity check
+        run: |
+          echo "CURRENT_STEP=sanity_check" >> $GITHUB_ENV
+          
+          cd "$STAGING_BASE/code"
+          
+          echo "Checking required executables..."
+          
+          if ! command -v bun &> /dev/null; then
+            echo "❌ bun is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ bun $(bun --version)"
+          
+          if ! command -v sqlite3 &> /dev/null; then
+            echo "❌ sqlite3 is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ sqlite3 $(sqlite3 --version | cut -d' ' -f1-2)"
+          
+          if ! command -v ss &> /dev/null; then
+            echo "❌ ss is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ ss (iproute2)"
+          
+          if ! command -v curl &> /dev/null; then
+            echo "❌ curl is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ curl $(curl --version | head -1 | cut -d' ' -f2)"
+          
+          if ! command -v jq &> /dev/null; then
+            echo "❌ jq is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ jq $(jq --version)"
+          
+          echo "Checking critical files..."
+          
+          if [ ! -f "package.json" ]; then
+            echo "❌ Missing package.json"
+            exit 1
+          fi
+          echo "  ✓ package.json"
+          
+          if [ ! -f "bun.lock" ]; then
+            echo "❌ Missing bun.lock"
+            exit 1
+          fi
+          echo "  ✓ bun.lock"
+          
+          if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
+            echo "❌ Missing next.config"
+            exit 1
+          fi
+          echo "  ✓ next.config"
+          
+          echo "✅ Sanity check passed"
+          echo "LAST_COMPLETED_STEP=sanity_check" >> $GITHUB_ENV
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf "$STAGING_BASE"
+          echo "✅ Cleaned up staging directory"
