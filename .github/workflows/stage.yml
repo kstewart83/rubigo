@@ -1,0 +1,214 @@
+name: Stage PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to stage'
+        required: true
+        type: number
+      branch:
+        description: 'Branch name to checkout'
+        required: true
+        type: string
+
+jobs:
+  stage:
+    runs-on: [self-hosted, NUC]
+    # Note: RUBIGO_DEPLOY_ROOT must be set in the runner's systemd service
+    env:
+      STAGING_PORT: 4431
+    
+    steps:
+      - name: Validate environment
+        run: |
+          if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
+            echo "   Run: production/scripts/install-service.sh"
+            exit 1
+          fi
+          
+          if [ ! -d "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT does not exist: $RUBIGO_DEPLOY_ROOT"
+            exit 1
+          fi
+          
+          echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
+          
+          # Export paths for use in workflow outputs
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          clean: true
+
+      - name: Prepare staging directory
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
+          
+          # Copy app source to staging
+          rm -rf "$STAGING_BASE/code"
+          cp -r rubigo-react "$STAGING_BASE/code"
+          
+          # Create .git marker for Tailwind v4
+          mkdir -p "$STAGING_BASE/code/.git"
+          
+          echo "Staging directory prepared: $STAGING_BASE"
+
+      - name: Sanity check
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          
+          # Verify critical files exist
+          if [ ! -f "package.json" ]; then
+            echo "❌ Missing package.json"
+            exit 1
+          fi
+          
+          if [ ! -f "bun.lock" ]; then
+            echo "❌ Missing bun.lock"
+            exit 1
+          fi
+          
+          if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
+            echo "❌ Missing next.config"
+            exit 1
+          fi
+          
+          echo "✅ Sanity check passed"
+
+      - name: Clone production database
+        run: |
+          PROD_BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          PROD_DB="$PROD_BASE/data/rubigo.db"
+          STAGING_DB="$STAGING_BASE/data/rubigo.db"
+          
+          if [ -f "$PROD_DB" ]; then
+            cp "$PROD_DB" "$STAGING_DB"
+            cp "$PROD_DB-wal" "$STAGING_DB-wal" 2>/dev/null || true
+            cp "$PROD_DB-shm" "$STAGING_DB-shm" 2>/dev/null || true
+            echo "✅ Production database cloned to staging"
+          else
+            echo "⚠️ No production database exists (fresh staging)"
+          fi
+
+      - name: Install dependencies
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          bun install --frozen-lockfile
+          echo "✅ Dependencies installed"
+
+      - name: Apply database schema
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          DATABASE_URL="$STAGING_BASE/data/rubigo.db" bun run db:push --force
+          echo "✅ Database schema applied"
+
+      - name: Build application
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          bun run build
+          
+          echo "✅ Build complete"
+
+      - name: Start staging server
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          
+          # Stop any existing staging server
+          pkill -f "bun.*$STAGING_PORT" 2>/dev/null || true
+          sleep 1
+          
+          # Start staging server in background
+          DATABASE_URL="$STAGING_BASE/data/rubigo.db" \
+          PORT=$STAGING_PORT \
+          bun run start > "$STAGING_BASE/logs/stdout.log" 2> "$STAGING_BASE/logs/stderr.log" &
+          
+          echo "Staging server starting on port $STAGING_PORT"
+
+      - name: Health check
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          for i in {1..15}; do
+            if curl -sf http://localhost:$STAGING_PORT > /dev/null; then
+              echo "✅ Staging health check passed"
+              exit 0
+            fi
+            echo "Waiting for staging server... ($i/15)"
+            sleep 2
+          done
+          echo "❌ Staging health check failed"
+          cat "$STAGING_BASE/logs/stderr.log" || true
+          exit 1
+
+      - name: Run E2E tests
+        id: e2e_tests
+        continue-on-error: true
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          cd "$STAGING_BASE/code"
+          
+          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
+          export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
+          
+          bun run test:e2e 2>&1 | tee "$STAGING_BASE/logs/e2e-output.log"
+
+      - name: Generate staging report
+        run: |
+          STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react"
+          REPORT="$STAGING_BASE/staging-report.json"
+          
+          cat > "$REPORT" << EOF
+          {
+            "version": "1.0",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "pr_number": ${{ inputs.pr_number }},
+            "branch": "${{ inputs.branch }}",
+            "commit": "${{ github.sha }}",
+            "workflow_run_id": ${{ github.run_id }},
+            "passed": ${{ steps.e2e_tests.outcome == 'success' }},
+            "steps": {
+              "sanity_check": { "status": "success" },
+              "clone_database": { "status": "success" },
+              "install_deps": { "status": "success" },
+              "db_migration": { "status": "success" },
+              "build": { "status": "success" },
+              "health_check": { "status": "success" },
+              "e2e_tests": { "status": "${{ steps.e2e_tests.outcome }}" }
+            }
+          }
+          EOF
+          
+          echo "Staging report generated:"
+          cat "$REPORT"
+
+      - name: Stop staging server
+        if: always()
+        run: |
+          pkill -f "bun.*$STAGING_PORT" 2>/dev/null || true
+          echo "Staging server stopped"
+
+      - name: Upload staging report
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-report
+          path: ${{ env.STAGING_BASE }}/staging-report.json
+
+      - name: Upload staging logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-logs
+          path: ${{ env.STAGING_BASE }}/logs/

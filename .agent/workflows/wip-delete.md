@@ -72,5 +72,5 @@ Both commands should show no results for the deleted branch/worktree.
 ## Notes
 
 - This workflow is for abandoning work, not completing it
-- Use `/wip-merge` to complete and merge work
+- Use `/wip-stage` and `/wip-deploy` to complete and deploy work
 - Uncommitted changes will be lost when using `--force`

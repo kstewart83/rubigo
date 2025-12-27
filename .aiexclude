@@ -1,6 +1,9 @@
 # Override .gitignore - allow AI access to production configs
 !production/
 
+# Allow AI access to WIP config (still gitignored, but AI needs to read it)
+!wip.toml
+
 # Exclude runtime/sensitive data from AI access
 production/rubigo-react/builds/
 production/rubigo-react/data/

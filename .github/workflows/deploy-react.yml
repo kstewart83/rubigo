@@ -12,36 +12,76 @@ on:
 jobs:
   deploy:
     runs-on: [self-hosted, NUC]
-    env:
-      BASE: ${{ github.workspace }}/production/rubigo-react
-      DATABASE_URL: ${{ github.workspace }}/production/rubigo-react/data/rubigo.db
+    # Note: RUBIGO_DEPLOY_ROOT must be set in the runner's systemd service
+    # env vars BASE and DATABASE_URL are computed in each step using shell variables
     
     steps:
+      - name: Validate environment
+        run: |
+          if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
+            echo "   Run: production/scripts/install-service.sh"
+            exit 1
+          fi
+          
+          if [ ! -d "$RUBIGO_DEPLOY_ROOT" ]; then
+            echo "❌ RUBIGO_DEPLOY_ROOT does not exist: $RUBIGO_DEPLOY_ROOT"
+            exit 1
+          fi
+          
+          echo "✅ RUBIGO_DEPLOY_ROOT: $RUBIGO_DEPLOY_ROOT"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Preserve gitignored files (like production/rubigo-react/data/rubigo.db)
-          # between deployments. Default 'clean: true' runs git clean -ffdx which
-          # deletes untracked files, causing the production database to be wiped.
+          # Preserve gitignored files between deployments
           clean: false
 
       - name: Prepare build directory
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          mkdir -p "$BUILD_DIR" "$BASE/data"
+          mkdir -p "$BUILD_DIR" "$BASE/data" "$BASE/logs" "$BASE/backups"
           
           # Copy app source
           cp -r rubigo-react/* "$BUILD_DIR/"
           
           # Create .git marker for Tailwind v4 content auto-detection
-          # Without this, Tailwind can't find the project root and generates incomplete CSS
           mkdir -p "$BUILD_DIR/.git"
           
-          # Install dependencies
+          echo "Build directory prepared: $BUILD_DIR"
+
+      - name: Sanity check
+        run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
+          cd "$BUILD_DIR"
+          
+          # Verify critical files exist
+          if [ ! -f "package.json" ]; then
+            echo "❌ Missing package.json"
+            exit 1
+          fi
+          
+          if [ ! -f "bun.lock" ]; then
+            echo "❌ Missing bun.lock"
+            exit 1
+          fi
+          
+          if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
+            echo "❌ Missing next.config"
+            exit 1
+          fi
+          
+          echo "✅ Sanity check passed"
+
+      - name: Install dependencies
+        run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           bun install --frozen-lockfile
-          
-          echo "Dependencies installed in $BUILD_DIR"
+          echo "✅ Dependencies installed"
 
       - name: Stop current service
         run: |
@@ -53,6 +93,7 @@ jobs:
 
       - name: Backup database
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
           DB_FILE="$BASE/data/rubigo.db"
           if [ -f "$DB_FILE" ]; then
             BACKUP_DIR="$BASE/backups"
@@ -68,31 +109,30 @@ jobs:
 
       - name: Apply database schema
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          DATABASE_URL="$BASE/data/rubigo.db"
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
-          # Use db:push --force instead of migrations
-          # This is idempotent - safe to run on existing tables
-          # Proper migrations will be implemented with separate dev/staging/prod environments
+          # Use db:push --force - idempotent and safe on existing tables
           DATABASE_URL="$DATABASE_URL" bun run db:push --force
           
           echo "✅ Database schema applied"
 
       - name: Build application
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
+          DATABASE_URL="$BASE/data/rubigo.db"
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           cd "$BUILD_DIR"
           
           # Create isolated build database copy
-          # Using cp since sqlite3 CLI may not be installed
           BUILD_DB="$BUILD_DIR/rubigo.db"
           cp "$DATABASE_URL" "$BUILD_DB"
-          # Also copy WAL files if they exist (for consistency)
           cp "$DATABASE_URL-wal" "$BUILD_DIR/rubigo.db-wal" 2>/dev/null || true
           cp "$DATABASE_URL-shm" "$BUILD_DIR/rubigo.db-shm" 2>/dev/null || true
           
-          # Override DATABASE_URL to use isolated build database
-          # Using export ensures all subprocesses (Next.js workers) use it
+          # Use isolated build database
           export DATABASE_URL="$BUILD_DB"
           bun run build
           
@@ -100,12 +140,13 @@ jobs:
 
       - name: Deploy (swap symlink and start)
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
           BUILD_DIR="$BASE/builds/${{ github.run_id }}"
           
           # Swap symlink to new build
           ln -sfn "$BUILD_DIR" "$BASE/current"
           
-          # Start service via systemd (Linux/Ubuntu)
+          # Start service via systemd
           systemctl --user start rubigo-react.service
           sleep 3
           
@@ -126,6 +167,7 @@ jobs:
 
       - name: Cleanup old builds
         run: |
+          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
           # Keep last 3 builds
           cd "$BASE/builds"
           ls -dt */ 2>/dev/null | tail -n +4 | xargs rm -rf || true
