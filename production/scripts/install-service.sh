@@ -10,13 +10,15 @@
 
 set -euo pipefail
 
+# Get script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 # Determine RUBIGO_DEPLOY_ROOT
 if [ -n "${1:-}" ]; then
     RUBIGO_DEPLOY_ROOT="$1"
 else
     # Default: parent of the repo directory
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
     RUBIGO_DEPLOY_ROOT="$(dirname "$REPO_ROOT")"
 fi
 
