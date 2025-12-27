@@ -141,9 +141,9 @@ jobs:
         run: |
           echo "CURRENT_STEP=validate_migrations" >> $GITHUB_ENV
           
-          # STAGING_BASE from GITHUB_ENV
-          cd "$STAGING_BASE/code"
-          bun run production/validate-migrations.ts .
+          # Run from repo root where production/validate-migrations.ts exists
+          cd "$GITHUB_WORKSPACE"
+          bun run production/validate-migrations.ts rubigo-react
           echo "LAST_COMPLETED_STEP=validate_migrations" >> $GITHUB_ENV
 
       - name: Clone production database
