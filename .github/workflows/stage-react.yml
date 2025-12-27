@@ -17,7 +17,6 @@ jobs:
     runs-on: [self-hosted, NUC]
     env:
       RUN_ID: ${{ github.run_id }}
-      PATH: /home/kstewart/.bun/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
     
     steps:
       - name: Checkout PR branch

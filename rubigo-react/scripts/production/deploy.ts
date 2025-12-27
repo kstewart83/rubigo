@@ -137,16 +137,22 @@ async function prepare(ctx: CommandContext): Promise<void> {
 async function sanityCheck(ctx: CommandContext): Promise<void> {
     const dir = requireArg(ctx.args, "dir");
 
-    // Check executables
+    // Check executables by running them with version flags
     log("🔍", "Checking required executables...");
 
-    const executables = ["sqlite3", "curl", "jq", "ss"];
-    for (const exe of executables) {
+    const checks = [
+        { name: "sqlite3", cmd: "sqlite3 --version" },
+        { name: "curl", cmd: "curl --version" },
+        { name: "jq", cmd: "jq --version" },
+        { name: "ss", cmd: "ss --version" },
+    ];
+
+    for (const { name, cmd } of checks) {
         try {
-            await $`command -v ${exe}`.quiet();
-            log("  ✓", exe);
+            await $`${cmd.split(" ")[0]} ${cmd.split(" ").slice(1)}`.quiet();
+            log("  ✓", name);
         } catch {
-            fail(`${exe} is not installed or not in PATH`);
+            fail(`${name} is not installed or not in PATH`);
         }
     }
 
