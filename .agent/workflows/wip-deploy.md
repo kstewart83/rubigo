@@ -74,6 +74,26 @@ This monitors the production deployment:
 - Tail production service logs
 - Health check validation
 
+## Step 5: Cleanup (After Monitor Succeeds)
+
+> [!IMPORTANT]
+> Only run cleanup after confirming production is healthy.
+
+From the main repo checkout (not the worktree):
+```bash
+# Remove the worktree
+git worktree remove ../wip/<slug> --force
+
+# Clean up any remaining files
+rm -rf ../wip/<slug>
+
+# Delete local branch (if exists)
+git branch -D <branch> 2>/dev/null || true
+
+# Prune stale refs
+git fetch --prune
+```
+
 ## Quick Deploy (All Steps)
 
 For a smooth deployment, run each step in sequence and verify success before proceeding to the next.
@@ -92,4 +112,4 @@ For a smooth deployment, run each step in sequence and verify success before pro
 
 - Each step can be run independently
 - Stop at any failure and address before continuing
-- Monitor step is optional but recommended for production verification
+- Cleanup only runs after successful monitoring

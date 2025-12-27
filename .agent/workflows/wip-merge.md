@@ -82,29 +82,16 @@ gh pr ready <pr_number>
 gh pr merge <pr_number> --squash --delete-branch
 ```
 
-## Step 7: Cleanup
-
-From the main repo checkout (not the worktree):
-```bash
-# Remove the worktree
-git worktree remove ../wip/<slug> --force
-
-# Clean up any remaining files
-rm -rf ../wip/<slug>
-
-# Delete local branch (if exists)
-git branch -D <branch> 2>/dev/null || true
-
-# Prune stale refs
-git fetch --prune
-```
-
-## Step 8: Sync Main
+## Step 7: Sync Main
 
 ```bash
 git checkout main
 git pull
 ```
+
+> [!NOTE]
+> Cleanup (worktree removal) is handled by `/wip-deploy` after monitoring succeeds.
+> If running `/wip-merge` standalone, manually run cleanup from main checkout.
 
 ## Related Workflows
 
@@ -112,7 +99,7 @@ git pull
 |----------|---------|
 | `/wip-preflight` | Local validation before merge |
 | `/wip-stage` | Remote staging validation |
-| `/wip-deploy` | Full pipeline: preflight → stage → merge → monitor |
+| `/wip-deploy` | Full pipeline: preflight → stage → merge → monitor → cleanup |
 
 ## Notes
 
