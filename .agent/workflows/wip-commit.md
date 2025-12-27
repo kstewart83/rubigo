@@ -13,7 +13,7 @@ Create a checkpoint commit, push to remote, and create/update the pull request.
 
 ## Prerequisites
 
-- Active WIP worktree at `wip/<slug>/`
+- Active WIP worktree at `../wip/<slug>/`
 - Changes staged or ready to stage
 
 ## Step 1: Get Context

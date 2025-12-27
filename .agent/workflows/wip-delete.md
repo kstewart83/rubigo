@@ -8,7 +8,7 @@ Abandon a WIP branch, close any associated PR, and cleanup resources.
 
 ## Prerequisites
 
-- Active WIP worktree at `wip/<slug>/`
+- Active WIP worktree at `../wip/<slug>/`
 - Draft or open PR may exist on GitHub
 
 ## Step 1: Get Context
@@ -39,12 +39,12 @@ mcp_github-mcp-server_update_pull_request
 
 From the main repo checkout (not the worktree):
 ```bash
-git worktree remove wip/<slug>
+git worktree remove ../wip/<slug>
 ```
 
 If there are uncommitted changes, force removal:
 ```bash
-git worktree remove --force wip/<slug>
+git worktree remove --force ../wip/<slug>
 ```
 
 ## Step 4: Delete Local Branch
