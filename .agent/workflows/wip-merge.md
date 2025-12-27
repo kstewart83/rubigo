@@ -8,7 +8,7 @@ Complete a WIP branch by rebasing, validating, merging, and cleaning up.
 
 ## Prerequisites
 
-- Active WIP worktree at `wip/<slug>/`
+- Active WIP worktree at `../wip/<slug>/`
 - At least one commit pushed to the branch
 - PR exists on GitHub (created via `/wip-commit`)
 
@@ -127,7 +127,7 @@ mcp_github-mcp-server_merge_pull_request
 From the main repo checkout (not the worktree):
 ```bash
 # Remove the worktree
-git worktree remove wip/<slug>
+git worktree remove ../wip/<slug>
 
 # Delete local branch
 git branch -D <branch>
