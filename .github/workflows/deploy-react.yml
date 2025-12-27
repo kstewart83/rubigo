@@ -53,10 +53,9 @@ jobs:
 
       - name: Validate migrations
         run: |
-          BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
-          BUILD_DIR="$BASE/builds/${{ github.run_id }}"
-          cd "$BUILD_DIR"
-          bun run production/validate-migrations.ts .
+          # Validate migrations from repo root (script is at production/validate-migrations.ts)
+          cd "$GITHUB_WORKSPACE"
+          bun run production/validate-migrations.ts rubigo-react
 
       - name: Sanity check
         run: |
