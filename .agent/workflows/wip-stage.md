@@ -29,7 +29,7 @@ git remote get-url origin
 Use GitHub CLI to trigger the staging workflow:
 
 ```bash
-gh workflow run stage.yml \
+gh workflow run stage-react.yml \
   --field pr_number=<pr_number> \
   --field branch=<branch>
 ```
@@ -45,7 +45,7 @@ gh run watch
 Or check the latest run:
 
 ```bash
-gh run list --workflow=stage.yml --limit=1
+gh run list --workflow=stage-react.yml --limit=1
 ```
 
 ## Step 4: Download Staging Report
