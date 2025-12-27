@@ -13,17 +13,17 @@ INSERT INTO personnel (profile_id, id, name, email, title, department, site, bui
 -- IT DEPARTMENT - Moderate to high clearance, security role for network admin
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', '1ea074', 'Mike Chen', 'mchen@mmc.com', 'IT Director', 'IT', 'MMC Headquarters', 'HQ Main Building', 1, '102', 'Richard Nakamura', 'headshots/mike_chen_1ea074.png', '614-555-2001', '614-555-8201', 'Mike manages the IT infrastructure across all MMC locations. With 12 years at the company, he led the network modernization project. Certified in Cisco and Microsoft technologies.', 'high', '["high:🍎", "moderate:🍌"]', '["manager", "administrator", "security"]');
 
-INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, is_agent, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', '7aa0d4', 'Sarah Kim', 'skim@mmc.com', 'Network Administrator', 'IT', 'MMC Headquarters', 'HQ Main Building', 1, '102', 'Mike Chen', 'headshots/sarah_kim_7aa0d4.png', '614-555-2002', '614-555-8202', 'Sarah maintains the company''s network infrastructure and security systems. She joined MMC after graduating from Purdue and is passionate about cybersecurity.', 1, 'moderate', '["moderate:🍎"]', '["employee", "security"]');
+INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', '7aa0d4', 'Sarah Kim', 'skim@mmc.com', 'Network Administrator', 'IT', 'MMC Headquarters', 'HQ Main Building', 1, '102', 'Mike Chen', 'headshots/sarah_kim_7aa0d4.png', '614-555-2002', '614-555-8202', 'Sarah maintains the company''s network infrastructure and security systems. She joined MMC after graduating from Purdue and is passionate about cybersecurity.', 'moderate', '["moderate:🍎"]', '["employee", "security"]');
 
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'd62d4d', 'Jason Wright', 'jwright@mmc.com', 'Systems Administrator', 'IT', 'MMC Headquarters', 'HQ Main Building', 1, '102', 'Mike Chen', 'headshots/jason_wright_d62d4d.png', '614-555-2003', '614-555-8203', 'Jason handles server management and cloud operations with expertise in Windows Server, VMware, and Azure. He''s working toward his CISSP certification.', 'moderate', '["moderate:🍎", "low:🍌"]', '["employee", "security"]');
 
 -- HR DEPARTMENT - Moderate clearance (handles sensitive employee info)
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', '4f6f43', 'Patricia Martinez', 'pmartinez@mmc.com', 'HR Director', 'HR', 'MMC Headquarters', 'HQ Main Building', 1, '101', 'Thomas Anderson', 'headshots/patricia_martinez_4f6f43.png', '614-555-3001', '614-555-8301', 'Patricia leads all human resources functions including talent acquisition and employee development. With 18 years in HR, she implemented MMC''s apprenticeship program.', 'moderate', '["moderate:🍎", "moderate:🍌"]', '["manager", "administrator"]');
 
-INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, is_agent, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'f73c1c', 'James Wilson', 'jwilson@mmc.com', 'HR Specialist', 'HR', 'MMC Headquarters', 'HQ Main Building', 1, '101', 'Patricia Martinez', 'headshots/james_wilson_f73c1c.png', '614-555-3002', NULL, 'James focuses on employee relations and benefits administration. He''s been with MMC for 5 years and is known for his approachable manner.', 1, 'low', '["low:🍎"]', '["employee"]');
+INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'f73c1c', 'James Wilson', 'jwilson@mmc.com', 'HR Specialist', 'HR', 'MMC Headquarters', 'HQ Main Building', 1, '101', 'Patricia Martinez', 'headshots/james_wilson_f73c1c.png', '614-555-3002', NULL, 'James focuses on employee relations and benefits administration. He''s been with MMC for 5 years and is known for his approachable manner.', 'low', '["low:🍎"]', '["employee"]');
 
 -- ENGINEERING DEPARTMENT - Moderate clearance for R&D work
-INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, is_agent, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'd827cb', 'David Park', 'dpark@mmc.com', 'Engineering Manager', 'Engineering', 'MMC Headquarters', 'HQ Main Building', 2, '201-OP', 'Richard Nakamura', 'headshots/david_park_d827cb.png', '614-555-4001', '614-555-8401', 'David leads the mechanical engineering team developing HVAC systems. A licensed PE with 15 years of experience, he holds multiple patents.', 1, 'moderate', '["moderate:🍇", "moderate:🍓"]', '["manager"]');
+INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'd827cb', 'David Park', 'dpark@mmc.com', 'Engineering Manager', 'Engineering', 'MMC Headquarters', 'HQ Main Building', 2, '201-OP', 'Richard Nakamura', 'headshots/david_park_d827cb.png', '614-555-4001', '614-555-8401', 'David leads the mechanical engineering team developing HVAC systems. A licensed PE with 15 years of experience, he holds multiple patents.', 'moderate', '["moderate:🍇", "moderate:🍓"]', '["manager"]');
 
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'f9c8d7', 'Jennifer Adams', 'jadams@mmc.com', 'Senior Mechanical Engineer', 'Engineering', 'MMC Headquarters', 'HQ Main Building', 2, '201-OP', 'David Park', 'headshots/jennifer_adams_f9c8d7.png', '614-555-4002', '614-555-8402', 'Jennifer specializes in thermal systems and energy efficiency. She''s led several product development projects that reduced energy consumption by 30%.', 'moderate', '["moderate:🍇"]', '["employee"]');
 
@@ -174,3 +174,130 @@ INSERT INTO personnel (profile_id, id, name, email, title, department, site, bui
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, is_agent, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'agent02', 'SAGE', 'sage@mmc.com', 'AI Sales Guide', 'Sales', 'MMC Headquarters', 'HQ Main Building', 1, '103-AI', 'Thomas Anderson', NULL, NULL, NULL, 'SAGE (Sales Automation & Guidance Engine) supports the sales team with customer insights, proposal generation, and market analysis. Specializes in helping sales representatives prepare for client meetings.', 1, 'low', '["low:🍌"]', '["employee"]');
 
 INSERT INTO personnel (profile_id, id, name, email, title, department, site, building, level, space, manager, photo, desk_phone, cell_phone, bio, is_agent, clearance_level, tenant_clearances, access_roles) VALUES ('mmc', 'agent03', 'OTTO', 'otto@mmc.com', 'AI Operations Optimizer', 'Operations', 'MMC Headquarters', 'Manufacturing Plant', 1, 'MP-AI', 'Jennifer Walsh', NULL, NULL, NULL, 'OTTO (Operations & Task Tracking Orchestrator) monitors production schedules, tracks inventory levels, and coordinates logistics. Helps the operations team optimize workflows and identify bottlenecks.', 1, 'low', '["low:🍇"]', '["employee"]');
+
+-- Auto-generated headshot path updates for missing personnel photos
+-- File: alice_vance_fin008.png
+UPDATE personnel SET photo = 'headshots/alice_vance_fin008.png' WHERE profile_id = 'mmc' AND id = 'fin008';
+-- File: amanda_white_eng015.png
+UPDATE personnel SET photo = 'headshots/amanda_white_eng015.png' WHERE profile_id = 'mmc' AND id = 'eng015';
+-- File: aria_agent01.png
+UPDATE personnel SET photo = 'headshots/aria_agent01.png' WHERE profile_id = 'mmc' AND id = 'agent01';
+-- File: bob_ross_fin009.png
+UPDATE personnel SET photo = 'headshots/bob_ross_fin009.png' WHERE profile_id = 'mmc' AND id = 'fin009';
+-- File: carol_danvers_fin010.png
+UPDATE personnel SET photo = 'headshots/carol_danvers_fin010.png' WHERE profile_id = 'mmc' AND id = 'fin010';
+-- File: daniel_larusso_sales07.png
+UPDATE personnel SET photo = 'headshots/daniel_larusso_sales07.png' WHERE profile_id = 'mmc' AND id = 'sales07';
+-- File: david_kim_it007.png
+UPDATE personnel SET photo = 'headshots/david_kim_it007.png' WHERE profile_id = 'mmc' AND id = 'it007';
+-- File: diana_prince_exec06.png
+UPDATE personnel SET photo = 'headshots/diana_prince_exec06.png' WHERE profile_id = 'mmc' AND id = 'exec06';
+-- File: eleanor_rigby_sales08.png
+UPDATE personnel SET photo = 'headshots/eleanor_rigby_sales08.png' WHERE profile_id = 'mmc' AND id = 'sales08';
+-- File: elena_rodriguez_it008.png
+UPDATE personnel SET photo = 'headshots/elena_rodriguez_it008.png' WHERE profile_id = 'mmc' AND id = 'it008';
+-- File: elena_vasquez_eng011.png
+UPDATE personnel SET photo = 'headshots/elena_vasquez_eng011.png' WHERE profile_id = 'mmc' AND id = 'eng011';
+-- File: fatima_alsayed_eng013.png
+UPDATE personnel SET photo = 'headshots/fatima_alsayed_eng013.png' WHERE profile_id = 'mmc' AND id = 'eng013';
+-- File: frank_castle_sales09.png
+UPDATE personnel SET photo = 'headshots/frank_castle_sales09.png' WHERE profile_id = 'mmc' AND id = 'sales09';
+-- File: frank_wright_it009.png
+UPDATE personnel SET photo = 'headshots/frank_wright_it009.png' WHERE profile_id = 'mmc' AND id = 'it009';
+-- File: gina_torres_sales10.png
+UPDATE personnel SET photo = 'headshots/gina_torres_sales10.png' WHERE profile_id = 'mmc' AND id = 'sales10';
+-- File: grace_lee_it010.png
+UPDATE personnel SET photo = 'headshots/grace_lee_it010.png' WHERE profile_id = 'mmc' AND id = 'it010';
+-- File: hannah_jordan_cs004.png
+UPDATE personnel SET photo = 'headshots/hannah_jordan_cs004.png' WHERE profile_id = 'mmc' AND id = 'cs004';
+-- File: harry_kim_sales11.png
+UPDATE personnel SET photo = 'headshots/harry_kim_sales11.png' WHERE profile_id = 'mmc' AND id = 'sales11';
+-- File: holly_scott_hr003.png
+UPDATE personnel SET photo = 'headshots/holly_scott_hr003.png' WHERE profile_id = 'mmc' AND id = 'hr003';
+-- File: ian_vance_cs005.png
+UPDATE personnel SET photo = 'headshots/ian_vance_cs005.png' WHERE profile_id = 'mmc' AND id = 'cs005';
+-- File: iris_west_sales12.png
+UPDATE personnel SET photo = 'headshots/iris_west_sales12.png' WHERE profile_id = 'mmc' AND id = 'sales12';
+-- File: isaac_vance_hr004.png
+UPDATE personnel SET photo = 'headshots/isaac_vance_hr004.png' WHERE profile_id = 'mmc' AND id = 'hr004';
+-- File: jack_ryan_ops004.png
+UPDATE personnel SET photo = 'headshots/jack_ryan_ops004.png' WHERE profile_id = 'mmc' AND id = 'ops004';
+-- File: james_oconnell_eng012.png
+UPDATE personnel SET photo = 'headshots/james_oconnell_eng012.png' WHERE profile_id = 'mmc' AND id = 'eng012';
+-- File: jessica_jones_cs006.png
+UPDATE personnel SET photo = 'headshots/jessica_jones_cs006.png' WHERE profile_id = 'mmc' AND id = 'cs006';
+-- File: julia_patel_hr005.png
+UPDATE personnel SET photo = 'headshots/julia_patel_hr005.png' WHERE profile_id = 'mmc' AND id = 'hr005';
+-- File: kara_danvers_ops005.png
+UPDATE personnel SET photo = 'headshots/kara_danvers_ops005.png' WHERE profile_id = 'mmc' AND id = 'ops005';
+-- File: kate_bishop_cs007.png
+UPDATE personnel SET photo = 'headshots/kate_bishop_cs007.png' WHERE profile_id = 'mmc' AND id = 'cs007';
+-- File: kevin_duran_hr006.png
+UPDATE personnel SET photo = 'headshots/kevin_duran_hr006.png' WHERE profile_id = 'mmc' AND id = 'hr006';
+-- File: kevin_zhang_eng008.png
+UPDATE personnel SET photo = 'headshots/kevin_zhang_eng008.png' WHERE profile_id = 'mmc' AND id = 'eng008';
+-- File: laura_miles_hr007.png
+UPDATE personnel SET photo = 'headshots/laura_miles_hr007.png' WHERE profile_id = 'mmc' AND id = 'hr007';
+-- File: liam_neeson_cs008.png
+UPDATE personnel SET photo = 'headshots/liam_neeson_cs008.png' WHERE profile_id = 'mmc' AND id = 'cs008';
+-- File: linda_chen_op002.png
+UPDATE personnel SET photo = 'headshots/linda_chen_op002.png' WHERE profile_id = 'mmc' AND id = 'op002';
+-- File: luke_cage_ops006.png
+UPDATE personnel SET photo = 'headshots/luke_cage_ops006.png' WHERE profile_id = 'mmc' AND id = 'ops006';
+-- File: marcus_williams_eng010.png
+UPDATE personnel SET photo = 'headshots/marcus_williams_eng010.png' WHERE profile_id = 'mmc' AND id = 'eng010';
+-- File: mark_olson_hr008.png
+UPDATE personnel SET photo = 'headshots/mark_olson_hr008.png' WHERE profile_id = 'mmc' AND id = 'hr008';
+-- File: mary_jane_cs009.png
+UPDATE personnel SET photo = 'headshots/mary_jane_cs009.png' WHERE profile_id = 'mmc' AND id = 'cs009';
+-- File: matt_murdock_ops007.png
+UPDATE personnel SET photo = 'headshots/matt_murdock_ops007.png' WHERE profile_id = 'mmc' AND id = 'ops007';
+-- File: michael_torres_eng006.png
+UPDATE personnel SET photo = 'headshots/michael_torres_eng006.png' WHERE profile_id = 'mmc' AND id = 'eng006';
+-- File: natasha_roman_ops008.png
+UPDATE personnel SET photo = 'headshots/natasha_roman_ops008.png' WHERE profile_id = 'mmc' AND id = 'ops008';
+-- File: nick_fury_cs010.png
+UPDATE personnel SET photo = 'headshots/nick_fury_cs010.png' WHERE profile_id = 'mmc' AND id = 'cs010';
+-- File: oliver_queen_ops009.png
+UPDATE personnel SET photo = 'headshots/oliver_queen_ops009.png' WHERE profile_id = 'mmc' AND id = 'ops009';
+-- File: otto_agent03.png
+UPDATE personnel SET photo = 'headshots/otto_agent03.png' WHERE profile_id = 'mmc' AND id = 'agent03';
+-- File: paul_miller_mfg005.png
+UPDATE personnel SET photo = 'headshots/paul_miller_mfg005.png' WHERE profile_id = 'mmc' AND id = 'mfg005';
+-- File: priya_sharma_eng007.png
+UPDATE personnel SET photo = 'headshots/priya_sharma_eng007.png' WHERE profile_id = 'mmc' AND id = 'eng007';
+-- File: quentin_baker_mfg006.png
+UPDATE personnel SET photo = 'headshots/quentin_baker_mfg006.png' WHERE profile_id = 'mmc' AND id = 'mfg006';
+-- File: rachel_scott_mfg007.png
+UPDATE personnel SET photo = 'headshots/rachel_scott_mfg007.png' WHERE profile_id = 'mmc' AND id = 'mfg007';
+-- File: robert_chang_eng014.png
+UPDATE personnel SET photo = 'headshots/robert_chang_eng014.png' WHERE profile_id = 'mmc' AND id = 'eng014';
+-- File: sage_agent02.png
+UPDATE personnel SET photo = 'headshots/sage_agent02.png' WHERE profile_id = 'mmc' AND id = 'agent02';
+-- File: samuel_green_mfg008.png
+UPDATE personnel SET photo = 'headshots/samuel_green_mfg008.png' WHERE profile_id = 'mmc' AND id = 'mfg008';
+-- File: sarah_johnson_eng009.png
+UPDATE personnel SET photo = 'headshots/sarah_johnson_eng009.png' WHERE profile_id = 'mmc' AND id = 'eng009';
+-- File: steve_harris_op003.png
+UPDATE personnel SET photo = 'headshots/steve_harris_op003.png' WHERE profile_id = 'mmc' AND id = 'op003';
+-- File: tina_turner_mfg009.png
+UPDATE personnel SET photo = 'headshots/tina_turner_mfg009.png' WHERE profile_id = 'mmc' AND id = 'mfg009';
+-- File: umar_khan_mfg010.png
+UPDATE personnel SET photo = 'headshots/umar_khan_mfg010.png' WHERE profile_id = 'mmc' AND id = 'mfg010';
+-- File: victor_hugo_mfg011.png
+UPDATE personnel SET photo = 'headshots/victor_hugo_mfg011.png' WHERE profile_id = 'mmc' AND id = 'mfg011';
+-- File: wendy_li_mfg012.png
+UPDATE personnel SET photo = 'headshots/wendy_li_mfg012.png' WHERE profile_id = 'mmc' AND id = 'mfg012';
+-- File: xavier_gray_fin005.png
+UPDATE personnel SET photo = 'headshots/xavier_gray_fin005.png' WHERE profile_id = 'mmc' AND id = 'fin005';
+-- File: xavier_rhodes_mfg013.png
+UPDATE personnel SET photo = 'headshots/xavier_rhodes_mfg013.png' WHERE profile_id = 'mmc' AND id = 'mfg013';
+-- File: yara_shah_mfg014.png
+UPDATE personnel SET photo = 'headshots/yara_shah_mfg014.png' WHERE profile_id = 'mmc' AND id = 'mfg014';
+-- File: yvonne_cole_fin006.png
+UPDATE personnel SET photo = 'headshots/yvonne_cole_fin006.png' WHERE profile_id = 'mmc' AND id = 'fin006';
+-- File: zachary_king_fin007.png
+UPDATE personnel SET photo = 'headshots/zachary_king_fin007.png' WHERE profile_id = 'mmc' AND id = 'fin007';
+-- File: zachary_stone_mfg015.png
+UPDATE personnel SET photo = 'headshots/zachary_stone_mfg015.png' WHERE profile_id = 'mmc' AND id = 'mfg015';
+

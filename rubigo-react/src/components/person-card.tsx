@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AgentBadge } from "@/components/ui/agent-badge";
+import { AgentGlowAvatar } from "@/components/ui/agent-glow-avatar";
 import { MessageCircle, Smartphone, Phone, Mail } from "lucide-react";
 import type { AccessControlObject } from "@/lib/access-control/types";
 import { ClassificationCell } from "@/components/ui/secure-table-wrapper";
@@ -70,13 +71,23 @@ export function PersonCard({
                 <div className="grid grid-cols-[2fr_3fr] gap-3">
                     {/* Left column - Photo with classification badge */}
                     <div className="flex flex-col gap-1">
-                        <div className="aspect-[4/3] w-full">
-                            <Avatar className="h-full w-full rounded-lg">
-                                {photo && <AvatarImage src={photo} alt={name} className="rounded-lg object-cover h-full w-full" />}
-                                <AvatarFallback className="text-xl rounded-lg bg-primary/10 text-primary font-semibold h-full w-full">
-                                    {getInitials(name)}
-                                </AvatarFallback>
-                            </Avatar>
+                        <div className="aspect-[4/3] w-full flex items-center justify-center">
+                            {isAgent ? (
+                                /* AI Agent: Use reusable glow component */
+                                <AgentGlowAvatar
+                                    size={64}
+                                    src={photo}
+                                    alt={name}
+                                />
+                            ) : (
+                                /* Human: Regular avatar */
+                                <Avatar className="h-full w-full rounded-lg">
+                                    {photo && <AvatarImage src={photo} alt={name} className="rounded-lg object-cover h-full w-full" />}
+                                    <AvatarFallback className="text-xl rounded-lg bg-primary/10 text-primary font-semibold h-full w-full">
+                                        {getInitials(name)}
+                                    </AvatarFallback>
+                                </Avatar>
+                            )}
                         </div>
                         {/* Classification badge using ClassificationCell */}
                         <ClassificationCell aco={aco} />
