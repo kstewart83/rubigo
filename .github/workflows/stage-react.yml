@@ -342,6 +342,8 @@ jobs:
           REPORT="$STAGING_BASE/staging-report.json"
           
           # Schema: rubigo-react/src/lib/schemas/staging-report.ts (v1.0)
+          # Note: If this report exists, all prerequisite steps passed.
+          # Only E2E test outcome is tracked as it uses continue-on-error.
           cat > "$REPORT" << EOF
           {
             "version": "1.0",
@@ -353,15 +355,8 @@ jobs:
             "staging_port": ${STAGING_PORT:-0},
             "db_initialized": ${DB_INITIALIZED:-false},
             "passed": ${{ steps.e2e_tests.outcome == 'success' }},
-            "steps": {
-              "sanity_check": { "status": "success" },
-              "clone_database": { "status": "success" },
-              "install_deps": { "status": "success" },
-              "db_migration": { "status": "success" },
-              "build": { "status": "success" },
-              "initialization": { "status": "success" },
-              "health_check": { "status": "success" },
-              "e2e_tests": { "status": "${{ steps.e2e_tests.outcome }}" }
+            "e2e_tests": {
+              "outcome": "${{ steps.e2e_tests.outcome }}"
             }
           }
           EOF
