@@ -102,7 +102,10 @@ export function InitializationForm({ wordList, onInitialize }: InitializationFor
 
         const success = await onInitialize(trimmedWords);
 
-        if (!success) {
+        if (success) {
+            // Reload page to show authenticated state
+            window.location.reload();
+        } else {
             setError("Invalid initialization phrase. Please check the server logs for the correct words.");
             setIsSubmitting(false);
         }
