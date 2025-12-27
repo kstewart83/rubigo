@@ -40,7 +40,10 @@ jobs:
           echo "DATA_DIR=$(echo "$OUTPUT" | grep '^DATA_DIR=' | cut -d= -f2)" >> $GITHUB_ENV
 
       - name: Sanity check
-        run: bun run rubigo-react/scripts/production/deploy.ts sanity-check --dir "$BUILD_DIR"
+        run: |
+          echo "PATH=$PATH"
+          which sqlite3 || echo "which sqlite3 failed"
+          bun run rubigo-react/scripts/production/deploy.ts sanity-check --dir "$BUILD_DIR"
 
       - name: Install dependencies
         run: bun run rubigo-react/scripts/production/deploy.ts install-deps --dir "$BUILD_DIR"
