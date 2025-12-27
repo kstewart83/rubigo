@@ -59,34 +59,54 @@ jobs:
           
           echo "Staging directory prepared: $STAGING_BASE"
 
-      - name: Validate migrations
-        run: |
-          # STAGING_BASE from GITHUB_ENV
-          cd "$STAGING_BASE/code"
-          bun run production/validate-migrations.ts .
-
       - name: Sanity check
         run: |
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
+          # Verify required executables
+          echo "Checking required executables..."
+          
+          if ! command -v bun &> /dev/null; then
+            echo "❌ bun is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ bun $(bun --version)"
+          
+          if ! command -v sqlite3 &> /dev/null; then
+            echo "❌ sqlite3 is not installed or not in PATH"
+            exit 1
+          fi
+          echo "  ✓ sqlite3 $(sqlite3 --version | cut -d' ' -f1-2)"
+          
           # Verify critical files exist
+          echo "Checking critical files..."
+          
           if [ ! -f "package.json" ]; then
             echo "❌ Missing package.json"
             exit 1
           fi
+          echo "  ✓ package.json"
           
           if [ ! -f "bun.lock" ]; then
             echo "❌ Missing bun.lock"
             exit 1
           fi
+          echo "  ✓ bun.lock"
           
           if [ ! -f "next.config.ts" ] && [ ! -f "next.config.js" ]; then
             echo "❌ Missing next.config"
             exit 1
           fi
+          echo "  ✓ next.config"
           
           echo "✅ Sanity check passed"
+
+      - name: Validate migrations
+        run: |
+          # STAGING_BASE from GITHUB_ENV
+          cd "$STAGING_BASE/code"
+          bun run production/validate-migrations.ts .
 
       - name: Clone production database
         run: |
@@ -96,10 +116,9 @@ jobs:
           STAGING_DB="$STAGING_BASE/data/rubigo.db"
           
           if [ -f "$PROD_DB" ]; then
-            cp "$PROD_DB" "$STAGING_DB"
-            cp "$PROD_DB-wal" "$STAGING_DB-wal" 2>/dev/null || true
-            cp "$PROD_DB-shm" "$STAGING_DB-shm" 2>/dev/null || true
-            echo "✅ Production database cloned to staging"
+            # Use sqlite3 backup for safe, consistent copy while production is running
+            sqlite3 "$PROD_DB" ".backup '$STAGING_DB'"
+            echo "✅ Production database safely cloned to staging"
           else
             echo "⚠️ No production database exists (fresh staging)"
           fi
