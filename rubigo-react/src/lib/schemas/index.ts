@@ -10,4 +10,5 @@ export {
     safeParseStagingReport,
     type StagingReport,
     type StepOutcomeType,
+    type WorkflowStepType,
 } from "./staging-report";

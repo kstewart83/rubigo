@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Validate environment
         run: |
+          echo "CURRENT_STEP=validate_environment" >> $GITHUB_ENV
+          
           if [ -z "$RUBIGO_DEPLOY_ROOT" ]; then
             echo "❌ RUBIGO_DEPLOY_ROOT environment variable is not set."
             echo "   Run: production/scripts/install-service.sh"
@@ -42,15 +44,22 @@ jobs:
           # Export paths for use in workflow outputs
           STAGING_BASE="$RUBIGO_DEPLOY_ROOT/staging/rubigo-react/runs/${{ github.run_id }}"
           echo "STAGING_BASE=$STAGING_BASE" >> $GITHUB_ENV
+          echo "LAST_COMPLETED_STEP=validate_environment" >> $GITHUB_ENV
 
       - name: Checkout PR branch
+        run: echo "CURRENT_STEP=checkout" >> $GITHUB_ENV
+      - name: Checkout PR branch (action)
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           clean: true
+      - name: Mark checkout complete
+        run: echo "LAST_COMPLETED_STEP=checkout" >> $GITHUB_ENV
 
       - name: Prepare staging directory
         run: |
+          echo "CURRENT_STEP=prepare_staging_dir" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           mkdir -p "$STAGING_BASE/data" "$STAGING_BASE/logs"
           
@@ -62,9 +71,12 @@ jobs:
           mkdir -p "$STAGING_BASE/code/.git"
           
           echo "Staging directory prepared: $STAGING_BASE"
+          echo "LAST_COMPLETED_STEP=prepare_staging_dir" >> $GITHUB_ENV
 
       - name: Sanity check
         run: |
+          echo "CURRENT_STEP=sanity_check" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
@@ -123,15 +135,21 @@ jobs:
           echo "  ✓ next.config"
           
           echo "✅ Sanity check passed"
+          echo "LAST_COMPLETED_STEP=sanity_check" >> $GITHUB_ENV
 
       - name: Validate migrations
         run: |
+          echo "CURRENT_STEP=validate_migrations" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           bun run production/validate-migrations.ts .
+          echo "LAST_COMPLETED_STEP=validate_migrations" >> $GITHUB_ENV
 
       - name: Clone production database
         run: |
+          echo "CURRENT_STEP=clone_database" >> $GITHUB_ENV
+          
           PROD_BASE="$RUBIGO_DEPLOY_ROOT/production/rubigo-react"
           # STAGING_BASE from GITHUB_ENV
           PROD_DB="$PROD_BASE/data/rubigo.db"
@@ -150,16 +168,22 @@ jobs:
               exit 1
             fi
           fi
+          echo "LAST_COMPLETED_STEP=clone_database" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
+          echo "CURRENT_STEP=install_deps" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           bun install --frozen-lockfile
           echo "✅ Dependencies installed"
+          echo "LAST_COMPLETED_STEP=install_deps" >> $GITHUB_ENV
 
       - name: Backup staging DB before migration
         run: |
+          echo "CURRENT_STEP=backup_db" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           STAGING_DB="$STAGING_BASE/data/rubigo.db"
           BACKUP_DB="$STAGING_BASE/data/rubigo-pre-migrate.db"
@@ -170,9 +194,12 @@ jobs:
           else
             echo "ℹ️ No existing database to backup (fresh deployment)"
           fi
+          echo "LAST_COMPLETED_STEP=backup_db" >> $GITHUB_ENV
 
       - name: Apply database migrations
         run: |
+          echo "CURRENT_STEP=apply_migrations" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           export DATABASE_URL="$STAGING_BASE/data/rubigo.db"
@@ -181,9 +208,12 @@ jobs:
           bun run db:migrate
           
           echo "✅ Database migrations applied"
+          echo "LAST_COMPLETED_STEP=apply_migrations" >> $GITHUB_ENV
 
       - name: Build application
         run: |
+          echo "CURRENT_STEP=build" >> $GITHUB_ENV
+          
           # STAGING_BASE from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
@@ -191,14 +221,18 @@ jobs:
           bun run build
           
           echo "✅ Build complete"
+          echo "LAST_COMPLETED_STEP=build" >> $GITHUB_ENV
 
       - name: Find available port
         run: |
+          echo "CURRENT_STEP=find_port" >> $GITHUB_ENV
+          
           # Find an available port in range 4431-4530 (100 ports)
           for port in {4431..4530}; do
             if ! ss -tuln | grep -q ":$port "; then
               echo "STAGING_PORT=$port" >> $GITHUB_ENV
               echo "✅ Found available port: $port"
+              echo "LAST_COMPLETED_STEP=find_port" >> $GITHUB_ENV
               exit 0
             fi
           done
@@ -207,6 +241,8 @@ jobs:
 
       - name: Start staging server
         run: |
+          echo "CURRENT_STEP=start_server" >> $GITHUB_ENV
+          
           # STAGING_BASE and STAGING_PORT from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
@@ -216,9 +252,12 @@ jobs:
           bun run start > "$STAGING_BASE/logs/stdout.log" 2> "$STAGING_BASE/logs/stderr.log" &
           
           echo "Staging server starting on port $STAGING_PORT (PID: $!)"
+          echo "LAST_COMPLETED_STEP=start_server" >> $GITHUB_ENV
 
       - name: Initialize and capture API token
         run: |
+          echo "CURRENT_STEP=initialize" >> $GITHUB_ENV
+          
           # STAGING_BASE and STAGING_PORT from GITHUB_ENV
           BASE_URL="http://localhost:$STAGING_PORT"
           
@@ -278,9 +317,12 @@ jobs:
           else
             echo "⚠️ Could not capture API token from logs"
           fi
+          echo "LAST_COMPLETED_STEP=initialize" >> $GITHUB_ENV
 
       - name: Health check
         run: |
+          echo "CURRENT_STEP=health_check" >> $GITHUB_ENV
+          
           # STAGING_BASE, STAGING_PORT, STAGING_API_TOKEN from GITHUB_ENV
           echo "Checking health at http://localhost:$STAGING_PORT/api/health"
           
@@ -298,6 +340,7 @@ jobs:
               if [ "$STATUS" = "healthy" ]; then
                 echo "✅ Staging health check passed"
                 echo "$RESPONSE" | jq .
+                echo "LAST_COMPLETED_STEP=health_check" >> $GITHUB_ENV
                 exit 0
               fi
             fi
@@ -315,6 +358,8 @@ jobs:
         id: e2e_tests
         continue-on-error: true
         run: |
+          echo "CURRENT_STEP=e2e_tests" >> $GITHUB_ENV
+          
           # STAGING_BASE, STAGING_PORT, STAGING_API_TOKEN from GITHUB_ENV
           cd "$STAGING_BASE/code"
           
@@ -334,6 +379,7 @@ jobs:
           echo "  RUBIGO_API_TOKEN: (${#RUBIGO_API_TOKEN} chars)"
           
           bun run test:e2e 2>&1 | tee "$STAGING_BASE/logs/e2e-output.log"
+          echo "LAST_COMPLETED_STEP=e2e_tests" >> $GITHUB_ENV
 
       - name: Generate staging report
         if: always()
@@ -342,8 +388,17 @@ jobs:
           REPORT="$STAGING_BASE/staging-report.json"
           
           # Schema: rubigo-react/src/lib/schemas/staging-report.ts (v1.0)
-          # Note: If this report exists, all prerequisite steps passed.
-          # Only E2E test outcome is tracked as it uses continue-on-error.
+          # CURRENT_STEP is still set from the last step that ran (or failed)
+          # LAST_COMPLETED_STEP is the last step that completed successfully
+          # If CURRENT_STEP != LAST_COMPLETED_STEP, we know where it failed
+          
+          # Determine if there was a failure
+          if [ "$CURRENT_STEP" != "$LAST_COMPLETED_STEP" ] && [ "$CURRENT_STEP" != "e2e_tests" ]; then
+            FAILED_STEP="\"$CURRENT_STEP\""
+          else
+            FAILED_STEP="null"
+          fi
+          
           cat > "$REPORT" << EOF
           {
             "version": "1.0",
@@ -354,6 +409,8 @@ jobs:
             "workflow_run_id": ${{ github.run_id }},
             "staging_port": ${STAGING_PORT:-0},
             "db_initialized": ${DB_INITIALIZED:-false},
+            "failed_at_step": $FAILED_STEP,
+            "last_completed_step": "${LAST_COMPLETED_STEP:-null}",
             "passed": ${{ steps.e2e_tests.outcome == 'success' }},
             "e2e_tests": {
               "outcome": "${{ steps.e2e_tests.outcome }}"
