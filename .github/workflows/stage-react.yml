@@ -100,18 +100,7 @@ jobs:
       - name: Run E2E tests
         id: e2e_tests
         continue-on-error: true
-        run: |
-          cd "$BUILD_DIR"
-          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
-          export RUBIGO_API_URL="http://localhost:$STAGING_PORT"
-          export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
-          export DATABASE_URL="$DATA_DIR/rubigo.db"
-          
-          echo "Running E2E tests against staging:"
-          echo "  PLAYWRIGHT_BASE_URL: $PLAYWRIGHT_BASE_URL"
-          echo "  RUBIGO_API_URL: $RUBIGO_API_URL"
-          
-          bun run test:e2e 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
+        run: bun run rubigo-react/scripts/production/deploy.ts run-e2e --dir "$BUILD_DIR" --port $STAGING_PORT --token "$STAGING_API_TOKEN" --db-url "$DATA_DIR/rubigo.db" --logs-dir "$BASE_DIR/logs"
 
       - name: Generate staging report
         if: always()
