@@ -137,12 +137,26 @@ async function sanityCheck(ctx: CommandContext): Promise<void> {
     // Check executables
     log("🔍", "Checking required executables...");
 
-    const executables = ["sqlite3", "curl", "jq"];
+    const knownPaths = ["/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin", "/usr/bin"];
+    const executables = ["sqlite3", "curl", "jq", "ss"];
+
     for (const exe of executables) {
-        try {
-            await $`command -v ${exe}`.quiet();
-            log("  ✓", exe);
-        } catch {
+        let path = Bun.which(exe);
+
+        // Fallback: check known paths if Bun.which doesn't find it
+        if (!path) {
+            for (const dir of knownPaths) {
+                const fullPath = join(dir, exe);
+                if (existsSync(fullPath)) {
+                    path = fullPath;
+                    break;
+                }
+            }
+        }
+
+        if (path) {
+            log("  ✓", `${exe} (${path})`);
+        } else {
             fail(`${exe} is not installed or not in PATH`);
         }
     }
