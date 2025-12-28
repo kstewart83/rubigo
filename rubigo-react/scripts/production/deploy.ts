@@ -24,9 +24,6 @@ import { $ } from "bun";
 import { existsSync, mkdirSync, cpSync, rmSync } from "fs";
 import { join, dirname } from "path";
 
-// Ensure Bun shell inherits process.env (including PATH from GitHub Actions)
-$.env(process.env);
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -137,29 +134,15 @@ async function prepare(ctx: CommandContext): Promise<void> {
 async function sanityCheck(ctx: CommandContext): Promise<void> {
     const dir = requireArg(ctx.args, "dir");
 
-    // Check executables using Bun.which with fallback to known paths
+    // Check executables
     log("🔍", "Checking required executables...");
 
-    const knownPaths = ["/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin", "/usr/bin"];
-    const executables = ["sqlite3", "curl", "jq", "ss"];
-
+    const executables = ["bun", "sqlite3", "curl", "jq"];
     for (const exe of executables) {
-        let path = Bun.which(exe);
-
-        // Fallback: check known paths if Bun.which doesn't find it
-        if (!path) {
-            for (const dir of knownPaths) {
-                const fullPath = join(dir, exe);
-                if (existsSync(fullPath)) {
-                    path = fullPath;
-                    break;
-                }
-            }
-        }
-
-        if (path) {
-            log("  ✓", `${exe} (${path})`);
-        } else {
+        try {
+            await $`command -v ${exe}`.quiet();
+            log("  ✓", exe);
+        } catch {
             fail(`${exe} is not installed or not in PATH`);
         }
     }
@@ -241,12 +224,7 @@ async function startServer(ctx: CommandContext): Promise<void> {
 
     log("🚀", `Starting server on port ${port}...`);
 
-    // Create log directory
-    mkdirSync(logsDir, { recursive: true });
-    const stdoutFile = Bun.file(join(logsDir, "stdout.log"));
-    const stderrFile = Bun.file(join(logsDir, "stderr.log"));
-
-    // Start in detached background - process will outlive parent
+    // Start in background
     const proc = Bun.spawn(["bun", "run", "start"], {
         cwd: dir,
         env: {
@@ -254,13 +232,9 @@ async function startServer(ctx: CommandContext): Promise<void> {
             DATABASE_URL: dbUrl,
             PORT: port,
         },
-        detached: true,  // Run in separate process group
-        stdout: stdoutFile,
-        stderr: stderrFile,
+        stdout: Bun.file(join(logsDir, "stdout.log")),
+        stderr: Bun.file(join(logsDir, "stderr.log")),
     });
-
-    // Allow parent to exit without waiting for child
-    proc.unref();
 
     success(`Server starting (PID: ${proc.pid})`);
 }
@@ -352,6 +326,352 @@ async function backupDb(ctx: CommandContext): Promise<void> {
     }
 }
 
+/**
+ * Stop a server running on a specific port.
+ * SAFE: Uses port-based PID lookup to avoid killing unrelated processes.
+ * 
+ * Root cause of previous bug: pkill -f "bun.*" matched "ubuntu" in GNOME session processes!
+ */
+async function stopServer(ctx: CommandContext): Promise<void> {
+    const port = getArg(ctx.args, "port");
+
+    if (!port) {
+        log("⚠️", "No --port specified - skipping server stop");
+        return;
+    }
+
+    log("🛑", `Looking for process on port ${port}...`);
+
+    // Use lsof to find PID by port (safe, specific)
+    const result = await $`lsof -ti:${port} 2>/dev/null || true`.quiet();
+    const pids = result.text().trim().split("\n").filter(p => p);
+
+    if (pids.length === 0) {
+        log("ℹ️", `No process found on port ${port}`);
+        return;
+    }
+
+    for (const pid of pids) {
+        // Verify the process command before killing
+        const psResult = await $`ps -p ${pid} -o comm= 2>/dev/null || true`.quiet();
+        const comm = psResult.text().trim();
+
+        if (comm.includes("bun") || comm.includes("node") || comm.includes("next")) {
+            // Safe to kill - it's a bun/node/next process
+            await $`kill ${pid} 2>/dev/null || true`.quiet();
+            success(`Killed server process (PID: ${pid}, cmd: ${comm}) on port ${port}`);
+        } else if (comm) {
+            log("⚠️", `Process on port ${port} is not bun/node: ${comm} (PID: ${pid}) - NOT killing`);
+        }
+    }
+}
+
+/**
+ * Cleanup stale processes from previous staging runs.
+ * SAFE: Uses port-based PID lookup for the staging port range.
+ */
+async function cleanupStale(_ctx: CommandContext): Promise<void> {
+    log("🧹", "Cleaning up stale staging processes...");
+
+    // Kill playwright processes by exact name (safe)
+    await $`pkill -x "playwright" 2>/dev/null || true`.quiet();
+
+    // Kill processes on staging port range (4530-4630) using safe port-based lookup
+    const startPort = 4530;
+    const endPort = 4630;
+    let killed = 0;
+
+    for (let port = startPort; port <= endPort; port++) {
+        const result = await $`lsof -ti:${port} 2>/dev/null || true`.quiet();
+        const pids = result.text().trim().split("\n").filter(p => p);
+
+        for (const pid of pids) {
+            const psResult = await $`ps -p ${pid} -o comm= 2>/dev/null || true`.quiet();
+            const comm = psResult.text().trim();
+
+            if (comm.includes("bun") || comm.includes("node") || comm.includes("next")) {
+                await $`kill ${pid} 2>/dev/null || true`.quiet();
+                log("  🗑️", `Killed stale process on port ${port} (PID: ${pid}, cmd: ${comm})`);
+                killed++;
+            }
+        }
+    }
+
+    if (killed > 0) {
+        success(`Cleaned up ${killed} stale process(es)`);
+    } else {
+        log("ℹ️", "No stale processes found");
+    }
+}
+
+/**
+ * Find an available port in the staging range.
+ * Outputs: STAGING_PORT=<port> for workflow consumption.
+ */
+async function findPort(_ctx: CommandContext): Promise<void> {
+    log("🔍", "Finding available port in range 4530-4630...");
+
+    const startPort = 4530;
+    const endPort = 4630;
+
+    for (let port = startPort; port <= endPort; port++) {
+        const result = await $`ss -tuln | grep -q ":${port} " && echo "used" || echo "free"`.quiet();
+        const status = result.text().trim();
+
+        if (status === "free") {
+            success(`Found available port: ${port}`);
+            // Output for workflow to capture
+            console.log(`STAGING_PORT=${port}`);
+            return;
+        }
+    }
+
+    fail("No available port found in range 4530-4630");
+}
+
+/**
+ * Initialize the staging server and capture the API token.
+ * Handles both fresh databases (phrase init) and cloned databases (already initialized).
+ */
+async function initCaptureToken(ctx: CommandContext): Promise<void> {
+    const port = requireArg(ctx.args, "port");
+    const logsDir = requireArg(ctx.args, "logs-dir");
+    const baseUrl = `http://localhost:${port}`;
+
+    log("🔑", "Initializing and capturing API token...");
+
+    // Wait for server to start
+    log("⏳", "Waiting for server...");
+    let ready = false;
+    for (let i = 1; i <= 15; i++) {
+        try {
+            const response = await fetch(`${baseUrl}/api/init`);
+            if (response.ok) {
+                ready = true;
+                break;
+            }
+        } catch {
+            // Not ready yet
+        }
+        console.log(`  Waiting... (${i}/15)`);
+        await Bun.sleep(2000);
+    }
+
+    if (!ready) {
+        fail("Server did not start in time");
+    }
+
+    // Check initialization status
+    let initResponse: { initialized?: boolean } = {};
+    try {
+        const response = await fetch(`${baseUrl}/api/init`);
+        initResponse = await response.json() as { initialized?: boolean };
+    } catch (e) {
+        fail(`Failed to check init status: ${e}`);
+    }
+
+    let dbInitialized = false;
+
+    if (initResponse.initialized === false) {
+        log("🌱", "Fresh database detected - initializing via phrase...");
+
+        // Read init words from server logs
+        const stdoutLog = join(logsDir, "stdout.log");
+        const logContent = await Bun.file(stdoutLog).text();
+        const match = logContent.match(/INIT TOKEN: (.+)/);
+
+        if (!match) {
+            console.error("Server log content:");
+            console.error(logContent);
+            fail("Could not find INIT TOKEN in server logs");
+        }
+
+        const initWords = match[1].trim().split(" ");
+        log("  📝", `Found init phrase: ${initWords.join(" ")}`);
+
+        // Submit init phrase
+        const postResponse = await fetch(`${baseUrl}/api/init`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ words: initWords }),
+        });
+
+        const postResult = await postResponse.json() as { success?: boolean };
+        if (!postResult.success) {
+            fail(`Initialization failed: ${JSON.stringify(postResult)}`);
+        }
+
+        success("System initialized successfully");
+        dbInitialized = true;
+    } else {
+        log("ℹ️", "Database already initialized (copied from production)");
+        dbInitialized = true;
+    }
+
+    // Wait a moment for token to appear in logs
+    await Bun.sleep(2000);
+
+    // Capture API token from logs
+    const stdoutLog = join(logsDir, "stdout.log");
+    const logContent = await Bun.file(stdoutLog).text();
+    const tokenMatch = logContent.match(/API Token: ([a-f0-9]+)/);
+
+    if (tokenMatch) {
+        const token = tokenMatch[1];
+        success(`API token captured (${token.length} chars)`);
+        // Output for workflow to capture
+        console.log(`STAGING_API_TOKEN=${token}`);
+    } else {
+        log("⚠️", "Could not capture API token from logs");
+    }
+
+    console.log(`DB_INITIALIZED=${dbInitialized}`);
+}
+
+/**
+ * Generate the staging report JSON file.
+ */
+async function generateReport(ctx: CommandContext): Promise<void> {
+    const baseDir = requireArg(ctx.args, "base-dir");
+    const prNumber = requireArg(ctx.args, "pr-number");
+    const branch = requireArg(ctx.args, "branch");
+    const commit = requireArg(ctx.args, "commit");
+    const runId = requireArg(ctx.args, "run-id");
+    const port = getArg(ctx.args, "port") || "0";
+    const dbInitialized = getArg(ctx.args, "db-initialized") === "true";
+    const e2eOutcome = getArg(ctx.args, "e2e-outcome") || "unknown";
+
+    log("📊", "Generating staging report...");
+
+    const report = {
+        version: "1.0",
+        timestamp: new Date().toISOString(),
+        pr_number: parseInt(prNumber),
+        branch,
+        commit,
+        workflow_run_id: parseInt(runId),
+        staging_port: parseInt(port),
+        db_initialized: dbInitialized,
+        passed: e2eOutcome === "success",
+        e2e_tests: {
+            outcome: e2eOutcome,
+        },
+    };
+
+    const reportPath = join(baseDir, "staging-report.json");
+    await Bun.write(reportPath, JSON.stringify(report, null, 2));
+
+    success(`Staging report generated: ${reportPath}`);
+    console.log(JSON.stringify(report, null, 2));
+}
+
+/**
+ * Copy database files to build directory for isolated Next.js build.
+ */
+async function copyBuildDb(ctx: CommandContext): Promise<void> {
+    const dataDir = requireArg(ctx.args, "data-dir");
+    const buildDir = requireArg(ctx.args, "build-dir");
+
+    log("📦", "Copying database for build...");
+
+    const files = ["rubigo.db", "rubigo.db-wal", "rubigo.db-shm"];
+    for (const file of files) {
+        const src = join(dataDir, file);
+        const dest = join(buildDir, file);
+        if (existsSync(src)) {
+            cpSync(src, dest);
+            log("  ✓", file);
+        }
+    }
+
+    // Output build database path for workflow
+    console.log(`BUILD_DB=${join(buildDir, "rubigo.db")}`);
+    success("Database copied for build");
+}
+
+/**
+ * Deploy by swapping symlink and starting service.
+ */
+async function deploySwap(ctx: CommandContext): Promise<void> {
+    const buildDir = requireArg(ctx.args, "build-dir");
+    const baseDir = requireArg(ctx.args, "base-dir");
+
+    log("🔄", "Deploying (swap symlink and start service)...");
+
+    // Swap symlink to new build
+    const currentLink = join(baseDir, "current");
+    await $`ln -sfn ${buildDir} ${currentLink}`;
+    log("  ✓", `Symlink: ${currentLink} → ${buildDir}`);
+
+    // Start service via systemd
+    await $`systemctl --user start rubigo-react.service`;
+    log("  ✓", "Service started");
+
+    // Wait for service to initialize
+    await Bun.sleep(3000);
+
+    success(`Deployed: ${buildDir}`);
+}
+
+/**
+ * Stop the production service gracefully.
+ */
+async function stopService(_ctx: CommandContext): Promise<void> {
+    log("🛑", "Stopping rubigo-react.service...");
+
+    await $`systemctl --user stop rubigo-react.service 2>/dev/null || true`.quiet();
+
+    // Also stop by port in case systemd state is stale
+    const result = await $`lsof -ti:4430 2>/dev/null || true`.quiet();
+    const pids = result.text().trim().split("\n").filter(p => p);
+
+    for (const pid of pids) {
+        const psResult = await $`ps -p ${pid} -o comm= 2>/dev/null || true`.quiet();
+        const comm = psResult.text().trim();
+        if (comm.includes("bun") || comm.includes("node") || comm.includes("next")) {
+            await $`kill ${pid} 2>/dev/null || true`.quiet();
+            log("  ✓", `Killed process ${pid} (${comm})`);
+        }
+    }
+
+    await Bun.sleep(2000);
+    success("Service stopped");
+}
+
+/**
+ * Cleanup old builds, keeping the most recent N.
+ */
+async function cleanupOldBuilds(ctx: CommandContext): Promise<void> {
+    const baseDir = requireArg(ctx.args, "base-dir");
+    const keep = parseInt(getArg(ctx.args, "keep") || "3");
+
+    log("🧹", `Cleaning up old builds (keeping ${keep})...`);
+
+    const buildsDir = join(baseDir, "builds");
+    if (!existsSync(buildsDir)) {
+        log("ℹ️", "No builds directory found");
+        return;
+    }
+
+    // List builds sorted by modification time (newest first)
+    const result = await $`ls -dt ${buildsDir}/*/ 2>/dev/null || true`.quiet();
+    const builds = result.text().trim().split("\n").filter(b => b);
+
+    if (builds.length <= keep) {
+        log("ℹ️", `Only ${builds.length} builds exist, nothing to cleanup`);
+        return;
+    }
+
+    // Remove old builds
+    const toRemove = builds.slice(keep);
+    for (const buildPath of toRemove) {
+        rmSync(buildPath, { recursive: true, force: true });
+        log("  🗑️", `Removed: ${buildPath}`);
+    }
+
+    success(`Cleaned up ${toRemove.length} old build(s), ${keep} remaining`);
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -360,11 +680,20 @@ const commands: Record<string, (ctx: CommandContext) => Promise<void>> = {
     "validate-env": validateEnv,
     "prepare": prepare,
     "sanity-check": sanityCheck,
+    "cleanup-stale": cleanupStale,
+    "find-port": findPort,
     "db-schema": dbSchema,
     "install-deps": installDeps,
+    "copy-build-db": copyBuildDb,
     "build": build,
+    "stop-service": stopService,
     "start-server": startServer,
+    "deploy-swap": deploySwap,
+    "init-capture-token": initCaptureToken,
+    "stop-server": stopServer,
     "health-check": healthCheck,
+    "generate-report": generateReport,
+    "cleanup-old-builds": cleanupOldBuilds,
     "cleanup": cleanup,
     "clone-db": cloneDb,
     "backup-db": backupDb,
