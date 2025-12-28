@@ -21,6 +21,7 @@
     "db:studio": "drizzle-kit studio",
     "test:e2e": "bunx playwright test",
     "test:e2e:ui": "bunx playwright test --ui",
+    "test:e2e:smoke": "bunx playwright test e2e/ui/setup.spec.ts e2e/ui/initialization.spec.ts e2e/api/personnel.api.spec.ts e2e/ui/personnel.spec.ts",
     "test:e2e:full": "bun scripts/run-e2e.ts",
     "pre-push-check": "bun scripts/pre-push-check.ts",
     "deploy:monitor": "bun scripts/deploy-monitor.ts",
