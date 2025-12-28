@@ -26,6 +26,13 @@ jobs:
       OLLAMA_MODEL: gemma3:4b
       SFU_URL: NONE
       PORT: 4530
+      # Placeholder defaults for dynamic variables (set by later steps)
+      BASE_DIR: ""
+      BUILD_DIR: ""
+      DATA_DIR: ""
+      STAGING_PORT: ""
+      STAGING_API_TOKEN: ""
+      DB_INITIALIZED: ""
     
     steps:
       - name: Validate environment
