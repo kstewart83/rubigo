@@ -55,6 +55,39 @@ const HEALTH_CHECK_INTERVAL = 500;
 let serverProcess: ChildProcess | null = null;
 let capturedToken: string | null = null;
 
+// Cleanup function to kill server on exit (Ctrl+C or normal exit)
+function cleanupServer() {
+    if (serverProcess && !serverProcess.killed) {
+        console.log("\n🧹 Cleaning up server process...");
+        try {
+            // Kill the entire process group (negative PID)
+            process.kill(-serverProcess.pid!, "SIGTERM");
+        } catch {
+            try {
+                serverProcess.kill("SIGTERM");
+            } catch {
+                // Ignore if already dead
+            }
+        }
+        serverProcess = null;
+    }
+}
+
+// Register cleanup handlers for interruption (Ctrl+C) and termination
+process.on("SIGINT", () => {
+    cleanupServer();
+    process.exit(130); // 128 + SIGINT(2)
+});
+
+process.on("SIGTERM", () => {
+    cleanupServer();
+    process.exit(143); // 128 + SIGTERM(15)
+});
+
+process.on("exit", () => {
+    cleanupServer();
+});
+
 async function checkServer(url: string): Promise<boolean> {
     try {
         const headers: Record<string, string> = {};
