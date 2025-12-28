@@ -25,14 +25,24 @@ test.describe("Personnel API - CRUD Operations", () => {
         }
     });
 
+    // Cleanup: delete any personnel created during tests
+    test.afterAll(async ({ request }) => {
+        if (createdPersonnelId) {
+            await request.delete(`${API_URL}/api/personnel/${createdPersonnelId}`, {
+                headers,
+            });
+        }
+    });
+
     test("POST /api/personnel - create personnel", {
         tag: '@critical',
     }, async ({ request }) => {
+        const uniqueId = Date.now();
         const response = await request.post(`${API_URL}/api/personnel`, {
             headers,
             data: {
-                name: "Test User API",
-                email: "testuser-api@example.com",
+                name: `Test User API ${uniqueId}`,
+                email: `testuser-api-${uniqueId}@example.com`,
                 department: "IT",
                 title: "API Tester",
             },

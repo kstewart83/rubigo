@@ -13,6 +13,9 @@ export default defineConfig({
     /* Global setup - starts server and initializes system */
     globalSetup: "./e2e/global-setup.ts",
 
+    /* Global teardown - stops server after tests complete */
+    globalTeardown: "./e2e/global-teardown.ts",
+
     /* Run tests in files in parallel (within a project) */
     fullyParallel: true,
 
@@ -27,7 +30,7 @@ export default defineConfig({
 
     /* Reporter to use */
     reporter: [
-        ["html", { outputFolder: "e2e/test-results/html", open: "never" }],
+        ["html", { outputFolder: "e2e/html-report", open: "never" }],
         ["list"],
     ],
 
