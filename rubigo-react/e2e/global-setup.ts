@@ -85,7 +85,33 @@ async function waitForServer(url: string, timeout: number): Promise<void> {
 export default async function globalSetup(config: FullConfig) {
     console.log("🔧 E2E Global Setup starting...");
 
-    // Get port from wip.toml or E2E_PORT env var
+    // REUSE MODE: If RUBIGO_API_URL and RUBIGO_API_TOKEN are already set (CI/staging),
+    // skip server startup and just verify the server is healthy
+    if (process.env.RUBIGO_API_URL && process.env.RUBIGO_API_TOKEN) {
+        const baseUrl = process.env.RUBIGO_API_URL;
+        capturedToken = process.env.RUBIGO_API_TOKEN;
+
+        console.log(`   🔄 Reuse mode: Server already running at ${baseUrl}`);
+        console.log(`   Using provided API token (${capturedToken.length} chars)`);
+
+        // Verify health check passes
+        const healthy = await checkServer(baseUrl);
+        if (!healthy) {
+            throw new Error(`Health check failed for ${baseUrl}/api/health`);
+        }
+        console.log("   ✅ Health check passed");
+
+        // Set E2E_BASE_URL for tests
+        process.env.E2E_BASE_URL = baseUrl;
+
+        console.log("✅ E2E Global Setup complete (reuse mode)");
+        return;
+    }
+
+    // STARTUP MODE: Start our own server
+    console.log("   📦 Startup mode: Starting fresh server...");
+
+    // Get port from .env file or E2E_PORT env var
     const e2ePort = getE2EPort();
     const baseUrl = `http://localhost:${e2ePort}`;
     console.log(`   Target: ${baseUrl}`);
