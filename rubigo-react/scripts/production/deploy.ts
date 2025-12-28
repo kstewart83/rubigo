@@ -689,6 +689,44 @@ async function cleanupOldBuilds(ctx: CommandContext): Promise<void> {
     success(`Cleaned up ${toRemove.length} old build(s), ${keep} remaining`);
 }
 
+/**
+ * Run E2E tests with line-buffered output for real-time logging.
+ * Uses stdbuf -oL to force line buffering so tee captures output immediately.
+ */
+async function runE2e(ctx: CommandContext): Promise<void> {
+    const dir = requireArg(ctx.args, "dir");
+    const port = requireArg(ctx.args, "port");
+    const token = getArg(ctx.args, "token") || "";
+    const dbUrl = getArg(ctx.args, "db-url") || "";
+    const logsDir = getArg(ctx.args, "logs-dir") || join(dirname(dir), "logs");
+
+    log("🧪", "Running E2E tests...");
+    console.log(`  PLAYWRIGHT_BASE_URL: http://localhost:${port}`);
+    console.log(`  RUBIGO_API_URL: http://localhost:${port}`);
+
+    const outputLog = join(logsDir, "e2e-output.log");
+
+    // Use stdbuf -oL for line buffering so output appears in real-time
+    const result = await $`cd ${dir} && stdbuf -oL bun run test:e2e 2>&1 | tee ${outputLog}`
+        .env({
+            ...process.env,
+            PLAYWRIGHT_BASE_URL: `http://localhost:${port}`,
+            RUBIGO_API_URL: `http://localhost:${port}`,
+            RUBIGO_API_TOKEN: token,
+            DATABASE_URL: dbUrl,
+        })
+        .nothrow();
+
+    if (result.exitCode !== 0) {
+        log("⚠️", `E2E tests exited with code ${result.exitCode}`);
+    } else {
+        success("E2E tests completed");
+    }
+
+    // Output outcome for workflow
+    console.log(`E2E_OUTCOME=${result.exitCode === 0 ? "success" : "failure"}`);
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -714,6 +752,7 @@ const commands: Record<string, (ctx: CommandContext) => Promise<void>> = {
     "cleanup": cleanup,
     "clone-db": cloneDb,
     "backup-db": backupDb,
+    "run-e2e": runE2e,
 };
 
 async function main() {
