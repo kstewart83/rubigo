@@ -31,7 +31,8 @@ Use GitHub CLI to trigger the staging workflow:
 ```bash
 gh workflow run stage-react.yml \
   --field pr_number=<pr_number> \
-  --field branch=<branch>
+  --field branch=<branch> \
+  --field allow_fresh_db=false  # Set to true for first-time deployment without production DB
 ```
 
 ## Step 3: Monitor Workflow
@@ -102,7 +103,8 @@ If staging **failed**:
 
 ## Notes
 
-- Staging creates a copy of production database
-- Staging runs on port 4431 (vs production on 4430)
+- Staging creates a copy of production database (unless `allow_fresh_db=true`)
+- Staging uses dynamic port allocation (4530-4599 range)
 - Staging server is stopped after tests complete
 - Staging report is uploaded as GitHub artifact
+- E2E tests have a 5-minute timeout and won't fail the workflow
