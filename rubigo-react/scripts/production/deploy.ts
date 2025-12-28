@@ -237,9 +237,10 @@ async function startServer(ctx: CommandContext): Promise<void> {
 
     log("🚀", `Starting server on port ${port}...`);
 
-    // Start in background
+    // Start in background with detached process
     const proc = Bun.spawn(["bun", "run", "start"], {
         cwd: dir,
+        detached: true,
         env: {
             ...process.env,
             DATABASE_URL: dbUrl,
@@ -248,6 +249,9 @@ async function startServer(ctx: CommandContext): Promise<void> {
         stdout: Bun.file(join(logsDir, "stdout.log")),
         stderr: Bun.file(join(logsDir, "stderr.log")),
     });
+
+    // Detach the process so the workflow can continue
+    proc.unref();
 
     success(`Server starting (PID: ${proc.pid})`);
 }
