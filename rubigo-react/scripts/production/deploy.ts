@@ -68,6 +68,48 @@ function fail(message: string): never {
     process.exit(1);
 }
 
+// Shared token capture pattern - case insensitive, handles "API TOKEN: xxx"
+const API_TOKEN_PATTERN = /API TOKEN:\s*([a-f0-9]+)/i;
+
+/**
+ * Capture API token from a log source.
+ * @param source - Either a file path or "journalctl" for systemd logs
+ * @param serviceName - Service name for journalctl (optional)
+ * @returns The captured token or null if not found
+ */
+async function captureApiTokenFromSource(
+    source: string,
+    serviceName?: string
+): Promise<string | null> {
+    let logContent: string;
+
+    if (source === "journalctl") {
+        // Read from systemd journal
+        const service = serviceName || "rubigo-react";
+        try {
+            const result = await $`journalctl --user -u ${service} --since "15 minutes ago" -o cat`.text();
+            logContent = result;
+        } catch {
+            log("⚠️", "Failed to read journalctl");
+            return null;
+        }
+    } else {
+        // Read from file
+        try {
+            logContent = await Bun.file(source).text();
+        } catch {
+            log("⚠️", `Failed to read log file: ${source}`);
+            return null;
+        }
+    }
+
+    const match = logContent.match(API_TOKEN_PATTERN);
+    if (match) {
+        return match[1];
+    }
+    return null;
+}
+
 // ============================================================================
 // Commands
 // ============================================================================
@@ -528,13 +570,11 @@ async function initCaptureToken(ctx: CommandContext): Promise<void> {
     // Wait a moment for token to appear in logs
     await Bun.sleep(2000);
 
-    // Capture API token from logs
+    // Capture API token from logs using shared function
     const stdoutLog = join(logsDir, "stdout.log");
-    const logContent = await Bun.file(stdoutLog).text();
-    const tokenMatch = logContent.match(/API TOKEN: ([a-f0-9]+)/i);
+    const token = await captureApiTokenFromSource(stdoutLog);
 
-    if (tokenMatch) {
-        const token = tokenMatch[1];
+    if (token) {
         success(`API token captured (${token.length} chars)`);
         // Output for workflow to capture
         console.log(`STAGING_API_TOKEN=${token}`);
@@ -543,6 +583,77 @@ async function initCaptureToken(ctx: CommandContext): Promise<void> {
     }
 
     console.log(`DB_INITIALIZED=${dbInitialized}`);
+}
+
+/**
+ * Wait for manual initialization (production deployments).
+ * Polls /api/init until initialized, then captures token from journalctl.
+ */
+async function waitForInit(ctx: CommandContext): Promise<void> {
+    const port = requireArg(ctx.args, "port");
+    const timeoutMinutes = parseInt(getArg(ctx.args, "timeout") || "30", 10);
+    const baseUrl = `http://localhost:${port}`;
+
+    log("⏳", "Waiting for manual initialization...");
+    log("   ", `Please initialize the system at ${baseUrl}`);
+    log("   ", `Timeout: ${timeoutMinutes} minutes`);
+
+    // Display init phrase from journalctl
+    console.log("");
+    console.log("============================================================");
+    console.log("🔐 INITIALIZATION PHRASE:");
+    console.log("============================================================");
+    try {
+        const phraseResult = await $`journalctl --user -u rubigo-react --since "5 minutes ago" -o cat`.text();
+        const phraseMatch = phraseResult.match(/INIT TOKEN: (.+)/);
+        if (phraseMatch) {
+            console.log(`   ${phraseMatch[1]}`);
+        } else {
+            console.log("   (phrase not found in logs yet)");
+        }
+    } catch {
+        console.log("   (could not read journal)");
+    }
+    console.log("============================================================");
+    console.log("");
+
+    const maxAttempts = timeoutMinutes * 2; // Check every 30 seconds
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+
+        try {
+            const response = await fetch(`${baseUrl}/api/init`);
+            const data = await response.json() as { initialized?: boolean };
+
+            if (data.initialized === true) {
+                success("System initialized!");
+
+                // Wait a moment for token to appear in logs
+                await Bun.sleep(2000);
+
+                // Capture API token from journalctl using shared function
+                const token = await captureApiTokenFromSource("journalctl", "rubigo-react");
+
+                if (token) {
+                    success(`API token captured (${token.length} chars)`);
+                    console.log(`API_TOKEN=${token}`);
+                } else {
+                    log("⚠️", "Could not capture API token from journalctl");
+                }
+
+                return;
+            }
+        } catch {
+            // Server may not be responding yet
+        }
+
+        console.log(`   Waiting... (${attempt}/${maxAttempts}) - Not initialized yet`);
+        await Bun.sleep(30000); // 30 seconds
+    }
+
+    fail(`Timed out waiting for initialization after ${timeoutMinutes} minutes`);
 }
 
 /**
@@ -745,6 +856,7 @@ const commands: Record<string, (ctx: CommandContext) => Promise<void>> = {
     "start-server": startServer,
     "deploy-swap": deploySwap,
     "init-capture-token": initCaptureToken,
+    "wait-for-init": waitForInit,
     "stop-server": stopServer,
     "health-check": healthCheck,
     "generate-report": generateReport,
