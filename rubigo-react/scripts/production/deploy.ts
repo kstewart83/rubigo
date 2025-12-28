@@ -137,7 +137,7 @@ async function sanityCheck(ctx: CommandContext): Promise<void> {
     // Check executables
     log("🔍", "Checking required executables...");
 
-    const executables = ["bun", "sqlite3", "curl", "jq"];
+    const executables = ["sqlite3", "curl", "jq"];
     for (const exe of executables) {
         try {
             await $`command -v ${exe}`.quiet();
