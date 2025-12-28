@@ -105,25 +105,28 @@ function calculateStatus(lastSeen: string): PresenceStatus {
 
 /**
  * Get all online/away users
+ * Returns stored status directly (preserves manual overrides)
  */
 export async function getActiveUsers(): Promise<Array<{
     personnelId: string;
     status: PresenceStatus;
     lastSeen: string;
 }>> {
-    const awayThreshold = new Date(Date.now() - AWAY_THRESHOLD).toISOString();
-
+    // Get all presence records
     const presences = await db
         .select()
         .from(userPresence)
-        .where(lt(userPresence.lastSeen, awayThreshold) ? undefined : undefined)
         .all();
 
-    return presences.map(p => ({
-        personnelId: p.personnelId,
-        status: calculateStatus(p.lastSeen),
-        lastSeen: p.lastSeen,
-    })).filter(p => p.status !== "offline");
+    // Return stored status (don't recalculate - preserves manual overrides)
+    // Filter out offline entries (they shouldn't be in the table anyway, but just in case)
+    return presences
+        .filter(p => p.status !== "offline")
+        .map(p => ({
+            personnelId: p.personnelId,
+            status: p.status as PresenceStatus,
+            lastSeen: p.lastSeen,
+        }));
 }
 
 /**

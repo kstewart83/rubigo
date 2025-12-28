@@ -96,14 +96,26 @@ function handleHeartbeat(personnelId: string, sessionId: string): void {
     const database = getDb();
     const now = new Date().toISOString();
 
-    // Check current status before update
+    // Check current stored status
     const existing = database.query(
-        "SELECT last_seen FROM user_presence WHERE personnel_id = ?"
-    ).get(personnelId) as { last_seen: string } | null;
+        "SELECT status, last_seen FROM user_presence WHERE personnel_id = ?"
+    ).get(personnelId) as { status: string; last_seen: string } | null;
 
-    const previousStatus = existing ? calculateStatus(existing.last_seen) : "offline";
+    const storedStatus = existing?.status as PresenceStatus | undefined;
+    const previousCalculatedStatus = existing ? calculateStatus(existing.last_seen) : "offline";
 
-    // Upsert presence record
+    // If user has manually set away, preserve that - only update last_seen
+    // This prevents heartbeats from overwriting manual status
+    if (storedStatus === "away") {
+        database.run(
+            "UPDATE user_presence SET last_seen = ? WHERE personnel_id = ?",
+            [now, personnelId]
+        );
+        // Don't emit event - status hasn't changed
+        return;
+    }
+
+    // Otherwise, normal heartbeat behavior - set to online
     database.run(
         `INSERT INTO user_presence (personnel_id, session_id, status, last_seen)
          VALUES (?, ?, 'online', ?)
@@ -115,7 +127,7 @@ function handleHeartbeat(personnelId: string, sessionId: string): void {
     );
 
     // Only emit event if status changed
-    if (previousStatus !== "online") {
+    if (previousCalculatedStatus !== "online") {
         broadcastEvent("presence.update", {
             personnelId,
             status: "online",

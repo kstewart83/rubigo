@@ -645,6 +645,7 @@ export function PersonnelPageContent({
                 teams={personTeams}
                 isAdmin={isAdmin}
                 onDelete={(person) => openDelete(person)}
+                presenceStatus={selectedPerson ? presenceMap.get(selectedPerson.id) : undefined}
             />
 
             {/* Create Dialog */}

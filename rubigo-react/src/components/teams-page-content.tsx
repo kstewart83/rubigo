@@ -6,7 +6,7 @@
  * File-manager style navigation for hierarchical teams with 50/50 split editor.
  */
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,8 @@ import { MobilePagination } from "@/components/mobile-pagination";
 import { TeamCard } from "@/components/team-card";
 import { PersonCard } from "@/components/person-card";
 import { ResponsivePersonnelDetail } from "@/components/responsive-personnel-detail";
+import { PersonAvatar } from "@/components/ui/person-avatar";
+import { useActiveUsers } from "@/hooks/use-presence";
 import {
     createTeam,
     updateTeam,
@@ -224,6 +226,16 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
     }, [selectedPerson]);
 
     const isAdmin = currentPersona?.isGlobalAdmin ?? false;
+
+    // Track active users for presence indicators
+    const { users: activeUsers } = useActiveUsers();
+    const presenceMap = useMemo(() => {
+        const map = new Map<string, "online" | "away" | "offline">();
+        for (const u of activeUsers) {
+            map.set(u.personnelId, u.status);
+        }
+        return map;
+    }, [activeUsers]);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
@@ -735,6 +747,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                             photo={person.photo ?? null}
                                             aco={personAco}
                                             onClick={() => setSelectedPerson(person)}
+                                            presenceStatus={presenceMap.get(person.id)}
                                         />
                                     );
                                 })}
@@ -903,19 +916,13 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                         >
                                             <TableCell className="text-center text-muted-foreground text-xs">-</TableCell>
                                             <TableCell>
-                                                {person.photo ? (
-                                                    <Image
-                                                        src={person.photo}
-                                                        alt={person.name}
-                                                        width={20}
-                                                        height={20}
-                                                        className="rounded-full"
-                                                    />
-                                                ) : (
-                                                    <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs">
-                                                        {person.name.charAt(0)}
-                                                    </div>
-                                                )}
+                                                <PersonAvatar
+                                                    photo={person.photo}
+                                                    name={person.name}
+                                                    size="xs"
+                                                    showPresence
+                                                    presenceStatus={presenceMap.get(person.id)}
+                                                />
                                             </TableCell>
                                             <TableCell>
                                                 <span className="flex items-center gap-1.5">
@@ -1546,6 +1553,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                 onOpenChange={(open) => !open && setSelectedPerson(null)}
                 teams={personTeams}
                 isAdmin={isAdmin}
+                presenceStatus={selectedPerson ? presenceMap.get(selectedPerson.id) : undefined}
             />
         </div>
     );

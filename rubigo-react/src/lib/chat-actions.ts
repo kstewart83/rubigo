@@ -31,6 +31,7 @@ export interface ChatChannelWithMembers extends ChatChannel {
 
 export interface ChatMessageWithSender extends ChatMessage {
     senderName: string;
+    senderPhoto?: string | null;
     senderEmail?: string | null;
     senderTitle?: string | null;
     senderDepartment?: string | null;
@@ -365,6 +366,7 @@ export async function getMessages(
         .select({
             message: chatMessages,
             senderName: personnel.name,
+            senderPhoto: personnel.photo,
             senderEmail: personnel.email,
             senderTitle: personnel.title,
             senderDepartment: personnel.department,
@@ -384,9 +386,10 @@ export async function getMessages(
         .limit(limit);
 
     // Reverse to get chronological order (oldest first)
-    return messages.reverse().map(({ message, senderName, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone, senderIsAgent }) => ({
+    return messages.reverse().map(({ message, senderName, senderPhoto, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone, senderIsAgent }) => ({
         ...message,
         senderName,
+        senderPhoto,
         senderEmail,
         senderTitle,
         senderDepartment,

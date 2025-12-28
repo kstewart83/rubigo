@@ -72,6 +72,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PersonaSwitcher } from "@/components/persona-switcher";
+import { PersonAvatar } from "@/components/ui/person-avatar";
 import { usePersona } from "@/contexts/persona-context";
 import { useTheme } from "@/components/theme-provider";
 import { useStatusSnooze } from "@/hooks/use-status-snooze";
@@ -382,22 +383,13 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
                                             className="data-[state=open]:bg-sidebar-accent"
                                             tooltip={isCollapsed ? currentPersona.name : undefined}
                                         >
-                                            {currentPersona.photo ? (
-                                                <Image
-                                                    src={currentPersona.photo}
-                                                    alt={currentPersona.name}
-                                                    width={32}
-                                                    height={32}
-                                                    className="size-8 rounded-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium">
-                                                    {currentPersona.name
-                                                        .split(" ")
-                                                        .map((n) => n[0])
-                                                        .join("")}
-                                                </div>
-                                            )}
+                                            <PersonAvatar
+                                                photo={currentPersona.photo}
+                                                name={currentPersona.name}
+                                                size="sm"
+                                                showPresence
+                                                presenceStatus={currentStatus}
+                                            />
                                             {!isCollapsed && (
                                                 <>
                                                     <div className="flex flex-col gap-0.5 leading-none text-left">
