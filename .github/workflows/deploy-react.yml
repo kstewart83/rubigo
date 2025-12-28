@@ -17,13 +17,13 @@ jobs:
       RUN_ID: ${{ github.run_id }}
     
     steps:
+      - name: Validate environment
+        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           clean: false
-
-      - name: Validate environment
-        run: bun run rubigo-react/scripts/production/deploy.ts validate-env
 
       - name: Validate migrations
         run: bun run rubigo-react/scripts/production/validate-migrations.ts rubigo-react
@@ -44,11 +44,7 @@ jobs:
         run: bun run rubigo-react/scripts/production/deploy.ts install-deps --dir "$BUILD_DIR"
 
       - name: Stop current service
-        run: |
-          systemctl --user stop rubigo-react.service 2>/dev/null || true
-          pkill -f "bun.*4430" 2>/dev/null || true
-          sleep 2
-          echo "Service stopped for build"
+        run: bun run rubigo-react/scripts/production/deploy.ts stop-service
 
       - name: Backup database
         run: bun run rubigo-react/scripts/production/deploy.ts backup-db --db "$DATA_DIR/rubigo.db" --backup-dir "$BASE_DIR/backups" --run-id $RUN_ID
@@ -56,32 +52,20 @@ jobs:
       - name: Apply database schema
         run: bun run rubigo-react/scripts/production/deploy.ts db-schema --dir "$BUILD_DIR" --db-url "$DATA_DIR/rubigo.db"
 
-      - name: Build application
+      - name: Copy database for build
         run: |
-          # Create isolated build database copy
-          BUILD_DB="$BUILD_DIR/rubigo.db"
-          cp "$DATA_DIR/rubigo.db" "$BUILD_DB" 2>/dev/null || true
-          cp "$DATA_DIR/rubigo.db-wal" "$BUILD_DIR/rubigo.db-wal" 2>/dev/null || true
-          cp "$DATA_DIR/rubigo.db-shm" "$BUILD_DIR/rubigo.db-shm" 2>/dev/null || true
-          
-          bun run rubigo-react/scripts/production/deploy.ts build --dir "$BUILD_DIR" --db-url "$BUILD_DB"
+          OUTPUT=$(bun run rubigo-react/scripts/production/deploy.ts copy-build-db --data-dir "$DATA_DIR" --build-dir "$BUILD_DIR")
+          echo "$OUTPUT"
+          echo "BUILD_DB=$(echo "$OUTPUT" | grep '^BUILD_DB=' | cut -d= -f2)" >> $GITHUB_ENV
+
+      - name: Build application
+        run: bun run rubigo-react/scripts/production/deploy.ts build --dir "$BUILD_DIR" --db-url "$BUILD_DB"
 
       - name: Deploy (swap symlink and start)
-        run: |
-          # Swap symlink to new build
-          ln -sfn "$BUILD_DIR" "$BASE_DIR/current"
-          
-          # Start service via systemd
-          systemctl --user start rubigo-react.service
-          sleep 3
-          
-          echo "Deployed: $(readlink $BASE_DIR/current)"
+        run: bun run rubigo-react/scripts/production/deploy.ts deploy-swap --build-dir "$BUILD_DIR" --base-dir "$BASE_DIR"
 
       - name: Health check
         run: bun run rubigo-react/scripts/production/deploy.ts health-check --port 4430 --attempts 10
 
       - name: Cleanup old builds
-        run: |
-          cd "$BASE_DIR/builds"
-          ls -dt */ 2>/dev/null | tail -n +4 | xargs rm -rf || true
-          echo "Remaining builds: $(ls -d */ 2>/dev/null | wc -l)"
+        run: bun run rubigo-react/scripts/production/deploy.ts cleanup-old-builds --base-dir "$BASE_DIR" --keep 3
