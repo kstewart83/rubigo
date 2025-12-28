@@ -1,0 +1,4 @@
+# VM images and cache (large files)
+vdi/images/*.qcow2
+vdi/.cache/
+vdi/.work/

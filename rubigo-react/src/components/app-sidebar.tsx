@@ -117,6 +117,7 @@ const sidebarModules: SidebarModule[] = [
             { id: "files", label: "Files", href: "/files", icon: FolderOpen },
             { id: "screen-share", label: "Screen Share", href: "/screen-share", icon: MonitorPlay },
             { id: "presentations", label: "Presentations", href: "/presentations", icon: Presentation },
+            { id: "virtual-desktop", label: "Virtual Desktop", href: "/virtual-desktop", icon: Laptop },
         ],
     },
     {
