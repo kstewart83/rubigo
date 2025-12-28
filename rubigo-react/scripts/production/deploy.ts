@@ -185,18 +185,17 @@ async function dbSchema(ctx: CommandContext): Promise<void> {
     const dir = requireArg(ctx.args, "dir");
     const dbUrl = requireArg(ctx.args, "db-url");
 
-    log("🗄️", "Applying database schema...");
+    log("🗄️", "Applying database migrations...");
 
-    // Use db:push --force for idempotent schema application
-    // This is safe on existing tables and doesn't require migration tracking
-    const result = await $`cd ${dir} && DATABASE_URL=${dbUrl} bun run db:push --force`.nothrow();
+    // Use db:migrate:bun for proper migration tracking in staging/production
+    const result = await $`cd ${dir} && DATABASE_URL=${dbUrl} bun run db:migrate:bun`.nothrow();
 
     if (result.exitCode !== 0) {
         console.error(result.stderr.toString());
-        fail("Database schema application failed");
+        fail("Database migration failed");
     }
 
-    success("Database schema applied");
+    success("Database migrations applied");
 }
 
 async function installDeps(ctx: CommandContext): Promise<void> {
