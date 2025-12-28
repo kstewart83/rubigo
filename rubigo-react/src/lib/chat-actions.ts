@@ -19,6 +19,7 @@ import {
     type ChatReaction,
 } from "@/db/schema";
 import { eq, and, desc, or } from "drizzle-orm";
+import { emitBroadcast } from "@/lib/emit-event";
 
 // ============================================================================
 // Types
@@ -335,6 +336,15 @@ export async function sendMessage(
             threadId: threadId ?? null,
             sentAt: now,
             deleted: false,
+        });
+
+        // Emit real-time event for instant updates
+        await emitBroadcast("chat.message", {
+            channelId,
+            messageId: id,
+            senderId,
+            content,
+            sentAt: now,
         });
 
         return { success: true, id };

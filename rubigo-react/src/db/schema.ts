@@ -1027,3 +1027,37 @@ export type NewTeamTeam = typeof teamTeams.$inferInsert;
 
 export type TeamOwner = typeof teamOwners.$inferSelect;
 export type NewTeamOwner = typeof teamOwners.$inferInsert;
+
+// ============================================================================
+// Real-Time Events System
+// ============================================================================
+
+/**
+ * Session Events - Persisted SSE events per session for catch-up
+ * Events are stored until acknowledged, then cleaned up after 1 hour
+ */
+export const sessionEvents = sqliteTable("session_events", {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    eventType: text("event_type").notNull(),
+    payload: text("payload").notNull(), // JSON
+    createdAt: text("created_at").notNull(),
+    ackedAt: text("acked_at"), // NULL until client acknowledges
+});
+
+export type SessionEvent = typeof sessionEvents.$inferSelect;
+export type NewSessionEvent = typeof sessionEvents.$inferInsert;
+
+/**
+ * User Presence - Track online/away/offline status
+ * Updated via heartbeat, status derived from last_seen age
+ */
+export const userPresence = sqliteTable("user_presence", {
+    personnelId: text("personnel_id").primaryKey().references(() => personnel.id, { onDelete: "cascade" }),
+    sessionId: text("session_id").notNull(),
+    status: text("status", { enum: ["online", "away", "offline"] }).notNull().default("online"),
+    lastSeen: text("last_seen").notNull(),
+});
+
+export type UserPresence = typeof userPresence.$inferSelect;
+export type NewUserPresence = typeof userPresence.$inferInsert;

@@ -11,6 +11,7 @@ import * as schema from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type { Department } from "@/types/personnel";
+import { emitBroadcast } from "@/lib/emit-event";
 
 // ============================================================================
 // Types
@@ -143,6 +144,13 @@ export async function createPersonnel(
             department: input.department,
         }, source);
 
+        // Emit real-time event
+        await emitBroadcast("personnel.update", {
+            action: "create",
+            personnelId: id,
+            name: input.name,
+        });
+
         revalidatePath("/personnel");
         return { success: true, id };
     } catch (error) {
@@ -219,6 +227,12 @@ export async function updatePersonnel(
 
         await logAction(actorId, actorName, "personnel", id, "update", updates, source);
 
+        // Emit real-time event
+        await emitBroadcast("personnel.update", {
+            action: "update",
+            personnelId: id,
+        });
+
         revalidatePath("/personnel");
         return { success: true, id };
     } catch (error) {
@@ -262,6 +276,13 @@ export async function deletePersonnel(
             name: existing[0].name,
             email: existing[0].email,
         }, source);
+
+        // Emit real-time event
+        await emitBroadcast("personnel.update", {
+            action: "delete",
+            personnelId: id,
+            name: existing[0].name,
+        });
 
         revalidatePath("/personnel");
         return { success: true, id };

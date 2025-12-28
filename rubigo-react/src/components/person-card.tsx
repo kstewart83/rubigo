@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AgentBadge } from "@/components/ui/agent-badge";
 import { AgentGlowAvatar } from "@/components/ui/agent-glow-avatar";
+import { PresenceIndicator } from "@/components/ui/presence-indicator";
 import { MessageCircle, Smartphone, Phone, Mail } from "lucide-react";
 import type { AccessControlObject } from "@/lib/access-control/types";
+import type { PresenceStatus } from "@/hooks/use-presence";
 import { ClassificationCell } from "@/components/ui/secure-table-wrapper";
 
 interface PersonCardProps {
@@ -29,6 +31,7 @@ interface PersonCardProps {
     cellPhone?: string | null;
     deskPhone?: string | null;
     aco?: AccessControlObject;
+    presenceStatus?: PresenceStatus;
     onClick?: () => void;
 }
 
@@ -52,6 +55,7 @@ export function PersonCard({
     cellPhone,
     deskPhone,
     aco,
+    presenceStatus,
     onClick,
 }: PersonCardProps) {
     const router = useRouter();
@@ -71,7 +75,7 @@ export function PersonCard({
                 <div className="grid grid-cols-[2fr_3fr] gap-3">
                     {/* Left column - Photo with classification badge */}
                     <div className="flex flex-col gap-1">
-                        <div className="aspect-[4/3] w-full flex items-center justify-center">
+                        <div className="aspect-[4/3] w-full flex items-center justify-center relative">
                             {isAgent ? (
                                 /* AI Agent: Use reusable glow component */
                                 <AgentGlowAvatar
@@ -80,16 +84,32 @@ export function PersonCard({
                                     alt={name}
                                 />
                             ) : (
-                                /* Human: Regular avatar */
-                                <Avatar className="h-full w-full rounded-lg">
+                                /* Human: Rectangular rounded avatar - z-0 */
+                                <Avatar className="h-full w-full rounded-lg relative z-0">
                                     {photo && <AvatarImage src={photo} alt={name} className="rounded-lg object-cover h-full w-full" />}
                                     <AvatarFallback className="text-xl rounded-lg bg-primary/10 text-primary font-semibold h-full w-full">
                                         {getInitials(name)}
                                     </AvatarFallback>
                                 </Avatar>
                             )}
+                            {/* Presence indicator with blurred background circle */}
+                            <span className="absolute bottom-2 right-2 flex items-center justify-center">
+                                {/* Blurred backdrop - rounded square behind indicator */}
+                                <span
+                                    className="absolute w-6 h-6 rounded-md"
+                                    style={{
+                                        background: 'rgba(0, 0, 0, 0.5)',
+                                        backdropFilter: 'blur(4px)',
+                                        WebkitBackdropFilter: 'blur(4px)',
+                                    }}
+                                />
+                                {/* Indicator on top */}
+                                <span className="relative">
+                                    <PresenceIndicator status={presenceStatus || "offline"} size="md" />
+                                </span>
+                            </span>
                         </div>
-                        {/* Classification badge using ClassificationCell */}
+                        {/* Classification badge */}
                         <ClassificationCell aco={aco} />
                     </div>
 

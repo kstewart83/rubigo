@@ -20,6 +20,7 @@ import type { CalendarEventWithParticipants } from "@/lib/calendar-utils";
 import { type SessionContext, filterBySession } from "@/lib/access-control/abac-filter";
 import { getOrCreateAcoId } from "@/lib/access-control/aco-registry";
 import { parseAco } from "@/lib/access-control/abac-filter";
+import { emitBroadcast } from "@/lib/emit-event";
 
 // ============================================================================
 // Types
@@ -138,6 +139,14 @@ export async function createCalendarEvent(
                 }
             }
         }
+
+        // Emit real-time event
+        await emitBroadcast("calendar.update", {
+            action: "create",
+            eventId: id,
+            title: input.title,
+            startTime: input.startTime,
+        });
 
         return { success: true, id };
     } catch (error) {
@@ -441,6 +450,12 @@ export async function updateCalendarEvent(
             }
         }
 
+        // Emit real-time event
+        await emitBroadcast("calendar.update", {
+            action: "update",
+            eventId: id,
+        });
+
         return { success: true };
     } catch (error) {
         console.error("Failed to update calendar event:", error);
@@ -457,6 +472,12 @@ export async function deleteCalendarEvent(id: string): Promise<{ success: boolea
             .update(calendarEvents)
             .set({ deleted: true, updatedAt: new Date().toISOString() })
             .where(eq(calendarEvents.id, id));
+
+        // Emit real-time event
+        await emitBroadcast("calendar.update", {
+            action: "delete",
+            eventId: id,
+        });
 
         return { success: true };
     } catch (error) {

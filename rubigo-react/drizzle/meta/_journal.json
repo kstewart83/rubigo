@@ -8,6 +8,20 @@
       "when": 1766858387725,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1735397000000,
+      "tag": "0001_session_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1735397001000,
+      "tag": "0002_user_presence",
+      "breakpoints": true
     }
   ]
 }

@@ -9,9 +9,11 @@ import { MobileNav } from "@/components/mobile-nav";
 import { PersonaSwitcher } from "@/components/persona-switcher";
 import { InitializationForm } from "@/components/initialization-form";
 import { SecurityProvider } from "@/contexts/security-context";
+import { EventProvider } from "@/contexts/event-context";
 import { SecurityBanner } from "@/components/ui/security-banner";
 import { usePersona } from "@/contexts/persona-context";
 import { useIsDesktop } from "@/hooks/use-mobile";
+import { usePresence } from "@/hooks/use-presence";
 import type { Person } from "@/types/personnel";
 
 interface AppShellProps {
@@ -340,18 +342,27 @@ export function AppShell({ children, personnel, version = "0.1.0" }: AppShellPro
     // Sidebar is expanded on desktop (lg+), collapsed (icon-only) on tablet (md-lg)
     return (
         <SecurityProvider persona={currentPersona}>
-            <div className="flex flex-col h-screen">
-                <SecurityBanner />
-                <SidebarProvider defaultOpen={isDesktop} className="flex-1 min-h-0 flex">
-                    <AppSidebar personnel={personnel} version={version} />
-                    <SidebarInset>
-                        <main className="flex-1 h-full p-6 pb-24 md:pb-6 overflow-hidden flex flex-col">
-                            {children}
-                        </main>
-                    </SidebarInset>
-                    <MobileNav personnel={personnel} />
-                </SidebarProvider>
-            </div>
+            <EventProvider>
+                <PresenceTracker />
+                <div className="flex flex-col h-screen">
+                    <SecurityBanner />
+                    <SidebarProvider defaultOpen={isDesktop} className="flex-1 min-h-0 flex">
+                        <AppSidebar personnel={personnel} version={version} />
+                        <SidebarInset>
+                            <main className="flex-1 h-full p-6 pb-24 md:pb-6 overflow-hidden flex flex-col">
+                                {children}
+                            </main>
+                        </SidebarInset>
+                        <MobileNav personnel={personnel} />
+                    </SidebarProvider>
+                </div>
+            </EventProvider>
         </SecurityProvider>
     );
+}
+
+// Separate component to use the presence hook
+function PresenceTracker() {
+    usePresence();
+    return null;
 }

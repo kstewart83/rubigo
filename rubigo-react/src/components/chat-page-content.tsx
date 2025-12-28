@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useEvent } from "@/hooks/use-event";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -215,6 +216,15 @@ export function ChatPageContent() {
         const interval = setInterval(loadMessages, 15000);
         return () => clearInterval(interval);
     }, [selectedChannel, currentPersona]);
+
+    // Real-time: Listen for chat.message events and refresh immediately
+    useEvent("chat.message", useCallback((event) => {
+        const payload = event.payload as { channelId: string };
+        if (payload.channelId === selectedChannel) {
+            // Refresh messages when a new message arrives in this channel
+            getMessages(selectedChannel).then(setMessages);
+        }
+    }, [selectedChannel]));
 
     // Scroll to bottom only on initial load or when new messages are added
     const prevMessageCountRef = useRef(0);

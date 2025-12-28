@@ -29,6 +29,7 @@ import {
     Mail,
     MessageCircle,
     MonitorPlay,
+    Radio,
 
     Bot,
     FolderOpen,
@@ -73,6 +74,7 @@ import {
 import { PersonaSwitcher } from "@/components/persona-switcher";
 import { usePersona } from "@/contexts/persona-context";
 import { useTheme } from "@/components/theme-provider";
+import { useStatusSnooze } from "@/hooks/use-status-snooze";
 import type { Person } from "@/types/personnel";
 
 // =====================================================================
@@ -152,6 +154,7 @@ const sidebarModules: SidebarModule[] = [
         icon: FileText,
         subPages: [
             { id: "actions", label: "Actions", href: "/logs/actions", icon: Activity },
+            { id: "events", label: "Events (Debug)", href: "/events", icon: Radio },
         ],
     },
     {
@@ -183,6 +186,7 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
     const { theme, setTheme, resolvedTheme } = useTheme();
     const { state, toggleSidebar } = useSidebar();
     const [showSwitcher, setShowSwitcher] = useState(false);
+    const { currentStatus, isSnoozing, formattedTime, setStatus, extendSnooze } = useStatusSnooze();
     const [expandedModules, setExpandedModules] = useState<Set<string>>(() => {
         // Auto-expand modules based on current path
         const expanded = new Set<string>();
@@ -428,6 +432,59 @@ export function AppSidebar({ personnel, version = "0.1.0", variant = "sidebar" }
                                             <RefreshCcw className="mr-2 size-4" />
                                             Switch Persona
                                         </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <div className="px-2 py-1.5">
+                                            <p className="text-xs font-medium text-muted-foreground">Status</p>
+                                        </div>
+                                        <DropdownMenuItem onClick={() => setStatus("online")}>
+                                            <span className="mr-2 w-3 h-3 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                                            Online
+                                            {currentStatus === "online" && <span className="ml-auto text-xs">✓</span>}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatus("away")}>
+                                            <span className="mr-2 w-3 h-3 rounded-full bg-gradient-to-br from-amber-400 to-orange-500" />
+                                            Away
+                                            {currentStatus === "away" && <span className="ml-auto text-xs">✓</span>}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatus("offline")}>
+                                            <span className="mr-2 w-3 h-3 rounded-full border-[1.5px] border-zinc-400" />
+                                            Appear Offline
+                                            {currentStatus === "offline" && <span className="ml-auto text-xs">✓</span>}
+                                        </DropdownMenuItem>
+                                        {/* Snooze timer and extend options */}
+                                        {isSnoozing && (
+                                            <>
+                                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                                    Auto-resume in <span className="font-mono font-medium text-foreground">{formattedTime}</span>
+                                                </div>
+                                                <div className="px-2 py-1 flex gap-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); extendSnooze(1); }}
+                                                        className="text-xs px-2 py-0.5 rounded bg-muted hover:bg-accent"
+                                                    >
+                                                        +1h
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); extendSnooze(2); }}
+                                                        className="text-xs px-2 py-0.5 rounded bg-muted hover:bg-accent"
+                                                    >
+                                                        +2h
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); extendSnooze(4); }}
+                                                        className="text-xs px-2 py-0.5 rounded bg-muted hover:bg-accent"
+                                                    >
+                                                        +4h
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); extendSnooze(8); }}
+                                                        className="text-xs px-2 py-0.5 rounded bg-muted hover:bg-accent"
+                                                    >
+                                                        +8h
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                         <DropdownMenuSeparator />
                                         <div className="px-2 py-1.5">
                                             <p className="text-xs font-medium text-muted-foreground">Theme</p>
