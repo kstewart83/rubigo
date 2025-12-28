@@ -107,8 +107,8 @@ jobs:
           export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
           export DATABASE_URL="$DATA_DIR/rubigo.db"
           
-          echo "Running smoke tests against http://localhost:$STAGING_PORT"
-          bun run test:e2e:smoke 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
+          echo "Running E2E tests (@critical only) against http://localhost:$STAGING_PORT"
+          bun run test:e2e 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
 
       - name: Generate staging report
         if: always()

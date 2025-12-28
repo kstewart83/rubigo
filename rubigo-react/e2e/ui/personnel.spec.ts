@@ -59,7 +59,9 @@ test.describe("Personnel Directory", () => {
         await page.waitForTimeout(500);
     });
 
-    test("scen-personnel-list: Browse personnel directory", async ({ page }) => {
+    test("scen-personnel-list: Browse personnel directory", {
+        tag: '@critical',
+    }, async ({ page }) => {
         // Given I am signed in as any user (via Global Admin auto-init)
         // Then I see a table of personnel records
 
