@@ -82,7 +82,8 @@ base = <allocated_base>
 # Reserved ports within the range
 dev = <base>         # Next.js development server
 webrtc = <base + 1>  # Go WebRTC server
-# Additional ports available: <base + 2> through <base + 999>
+e2e = <base + 10>    # E2E test server (auto-started by playwright)
+# Additional ports available: <base + 11> through <base + 999>
 
 # Project-specific operational settings
 [projects.rubigo-react]
@@ -103,7 +104,33 @@ test_cmd = "bun run test"
 # updated_at = "<ISO 8601 timestamp>"
 ```
 
-## Step 6: Begin Work
+## Step 6: Generate .env File
+
+Create `../wip/<slug>/rubigo-react/.env` with ports derived from `wip.toml`:
+
+```bash
+# Core Application
+DATABASE_URL=./rubigo.db
+PORT=<base>                    # From wip.toml [ports].dev
+
+# AI/Agents - set to NONE to disable
+OLLAMA_URL=NONE
+OLLAMA_MODEL=gemma3:4b
+
+# Screen Share - set to NONE to disable
+SFU_URL=NONE
+
+# E2E Testing
+E2E_PORT=<base + 10>           # From wip.toml [ports].e2e
+E2E_BASE_URL=http://localhost:<base + 10>
+RUBIGO_API_URL=http://localhost:<base + 10>
+RUBIGO_API_TOKEN=
+```
+
+> [!IMPORTANT]
+> The `.env` file is required for local E2E tests. The `globalSetup` reads `E2E_PORT` from this file to start the test server.
+
+## Step 7: Begin Work
 
 Work continues in `../wip/<slug>/` using absolute paths. The main checkout remains untouched.
 
