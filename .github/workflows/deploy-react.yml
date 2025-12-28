@@ -108,7 +108,7 @@ jobs:
       - name: Capture API token
         run: |
           # After initialization, get API token from service logs
-          API_TOKEN=$(journalctl --user -u rubigo-react --since "10 minutes ago" -o cat | grep -o 'API Token: [a-f0-9]*' | tail -1 | cut -d' ' -f3)
+          API_TOKEN=$(journalctl --user -u rubigo-react --since "10 minutes ago" -o cat | grep -o 'API TOKEN: [a-f0-9]*' | tail -1 | cut -d' ' -f3)
           if [ -n "$API_TOKEN" ]; then
             echo "✅ Captured API token (${#API_TOKEN} chars)"
             echo "API_TOKEN=$API_TOKEN" >> $GITHUB_ENV
