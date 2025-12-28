@@ -25,7 +25,9 @@ test.describe("Personnel API - CRUD Operations", () => {
         }
     });
 
-    test("POST /api/personnel - create personnel", async ({ request }) => {
+    test("POST /api/personnel - create personnel", {
+        tag: '@critical',
+    }, async ({ request }) => {
         const response = await request.post(`${API_URL}/api/personnel`, {
             headers,
             data: {
