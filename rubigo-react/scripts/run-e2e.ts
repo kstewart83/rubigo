@@ -110,9 +110,9 @@ async function startServer(port: number, databasePath: string): Promise<{ proc: 
         cmd: ["bun", "--bun", "run", "start"],
         stdout: "pipe",
         stderr: "pipe",
-        env: { 
-            ...process.env, 
-            PORT: String(port), 
+        env: {
+            ...process.env,
+            PORT: String(port),
             RUBIGO_AUTO_INIT: "true",
             DATABASE_URL: `./${databasePath}`,
         },
@@ -250,7 +250,7 @@ async function main() {
             console.log(`   Init Token: ${initToken}`);
         }
         if (apiToken) {
-            console.log(`   API Token: ${apiToken}`);
+            console.log(`   API TOKEN: ${apiToken}`);
         }
         console.log();
 

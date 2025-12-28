@@ -169,7 +169,7 @@ async function main() {
     try {
         // Start server and capture API token
         const apiToken = await startServer();
-        console.log(`\n✅ Captured API Token: ${apiToken}\n`);
+        console.log(`\n✅ Captured API TOKEN: ${apiToken}\n`);
 
         // Wait for server to be fully ready
         await waitForServer();
