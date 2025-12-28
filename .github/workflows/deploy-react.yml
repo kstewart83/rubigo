@@ -68,8 +68,56 @@ jobs:
       - name: Deploy (swap symlink and start)
         run: bun run rubigo-react/scripts/production/deploy.ts deploy-swap --build-dir "$BUILD_DIR" --base-dir "$BASE_DIR"
 
+      - name: Wait for initialization
+        run: |
+          echo "⏳ Waiting for manual initialization..."
+          echo "   Please initialize the system at http://localhost:4430"
+          echo ""
+          
+          # Extract and display the init phrase from service logs
+          echo "============================================================"
+          echo "🔐 INITIALIZATION PHRASE:"
+          echo "============================================================"
+          journalctl --user -u rubigo-react --since "2 minutes ago" -o cat | grep -A1 "Enter the following words" | tail -1 || echo "(phrase not found in logs)"
+          echo "============================================================"
+          echo ""
+          echo "   Checking every 30 seconds for up to 30 minutes..."
+          
+          MAX_ATTEMPTS=60  # 30 min / 30 sec = 60 attempts
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            
+            # Check if system is initialized via /api/init
+            RESPONSE=$(curl -s http://localhost:4430/api/init 2>/dev/null || echo '{"initialized":false}')
+            INITIALIZED=$(echo "$RESPONSE" | grep -o '"initialized":[^,}]*' | cut -d: -f2)
+            
+            if [ "$INITIALIZED" = "true" ]; then
+              echo "✅ System initialized!"
+              exit 0
+            fi
+            
+            echo "   Waiting... ($ATTEMPT/$MAX_ATTEMPTS) - Not initialized yet"
+            sleep 30
+          done
+          
+          echo "❌ Timed out waiting for initialization"
+          exit 1
+
+      - name: Capture API token
+        run: |
+          # After initialization, get API token from service logs
+          API_TOKEN=$(journalctl --user -u rubigo-react --since "10 minutes ago" -o cat | grep -o 'API Token: [a-f0-9]*' | tail -1 | cut -d' ' -f3)
+          if [ -n "$API_TOKEN" ]; then
+            echo "✅ Captured API token (${#API_TOKEN} chars)"
+            echo "API_TOKEN=$API_TOKEN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Could not capture API token from logs"
+          fi
+
       - name: Health check
-        run: bun run rubigo-react/scripts/production/deploy.ts health-check --port 4430 --attempts 10
+        run: bun run rubigo-react/scripts/production/deploy.ts health-check --port 4430 --attempts 10 --token "$API_TOKEN"
 
       - name: Cleanup old builds
         run: bun run rubigo-react/scripts/production/deploy.ts cleanup-old-builds --base-dir "$BASE_DIR" --keep 3
