@@ -531,7 +531,7 @@ async function initCaptureToken(ctx: CommandContext): Promise<void> {
     // Capture API token from logs
     const stdoutLog = join(logsDir, "stdout.log");
     const logContent = await Bun.file(stdoutLog).text();
-    const tokenMatch = logContent.match(/API Token: ([a-f0-9]+)/);
+    const tokenMatch = logContent.match(/API TOKEN: ([a-f0-9]+)/i);
 
     if (tokenMatch) {
         const token = tokenMatch[1];
