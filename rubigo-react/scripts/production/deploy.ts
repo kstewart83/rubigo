@@ -103,9 +103,12 @@ async function captureApiTokenFromSource(
         }
     }
 
-    const match = logContent.match(API_TOKEN_PATTERN);
-    if (match) {
-        return match[1];
+    // Get ALL matches and return the LAST one (most recent)
+    // This handles cases where stale logs contain old tokens
+    const matches = [...logContent.matchAll(new RegExp(API_TOKEN_PATTERN, "gi"))];
+    if (matches.length > 0) {
+        const lastMatch = matches[matches.length - 1];
+        return lastMatch[1];
     }
     return null;
 }
