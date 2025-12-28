@@ -97,7 +97,7 @@ jobs:
       - name: Health check
         run: bun run rubigo-react/scripts/production/deploy.ts health-check --port $STAGING_PORT --token "$STAGING_API_TOKEN" --attempts 10
 
-      - name: Run E2E tests
+      - name: Run E2E tests (smoke)
         id: e2e_tests
         continue-on-error: true
         run: |
@@ -107,19 +107,8 @@ jobs:
           export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
           export DATABASE_URL="$DATA_DIR/rubigo.db"
           
-          echo "=== E2E DIAGNOSTICS ==="
-          echo "  PLAYWRIGHT_BASE_URL: $PLAYWRIGHT_BASE_URL"
-          echo "  RUBIGO_API_URL: $RUBIGO_API_URL"
-          echo "  TOKEN set: $([ -n \"$RUBIGO_API_TOKEN\" ] && echo 'yes' || echo 'no')"
-          echo "  CWD: $(pwd)"
-          echo "  Node version: $(node --version)"
-          echo "  Bun version: $(bun --version)"
-          echo "========================"
-          
-          # Use script for PTY allocation to force unbuffered output
-          script -q -c "bun run test:e2e" "$BASE_DIR/logs/e2e-output.log" || true
-          
-          echo "=== E2E Test Exit ==="
+          echo "Running smoke tests against http://localhost:$STAGING_PORT"
+          bun run test:e2e:smoke 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
 
       - name: Generate staging report
         if: always()
