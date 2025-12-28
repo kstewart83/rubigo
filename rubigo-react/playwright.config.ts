@@ -10,6 +10,9 @@ import { defineConfig, devices } from "@playwright/test";
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
+    /* Global setup - starts server and initializes system */
+    globalSetup: "./e2e/global-setup.ts",
+
     /* Run tests in files in parallel (within a project) */
     fullyParallel: true,
 
@@ -24,7 +27,7 @@ export default defineConfig({
 
     /* Reporter to use */
     reporter: [
-        ["html", { outputFolder: "e2e/test-results/html" }],
+        ["html", { outputFolder: "e2e/test-results/html", open: "never" }],
         ["list"],
     ],
 
