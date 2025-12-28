@@ -99,8 +99,8 @@ jobs:
 
       - name: Run E2E tests (smoke)
         id: e2e_tests
-        if: false  # DISABLED: E2E tests need debugging - hanging in CI
-        continue-on-error: true
+        continue-on-error: true  # Don't fail workflow if tests fail
+        timeout-minutes: 5  # Hard limit to prevent hanging
         env:
           RUBIGO_API_URL: "http://localhost:${{ env.STAGING_PORT }}"
           RUBIGO_API_TOKEN: "${{ env.STAGING_API_TOKEN }}"
