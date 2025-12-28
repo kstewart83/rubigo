@@ -1027,3 +1027,43 @@ export type NewTeamTeam = typeof teamTeams.$inferInsert;
 
 export type TeamOwner = typeof teamOwners.$inferSelect;
 export type NewTeamOwner = typeof teamOwners.$inferInsert;
+
+// ============================================================================
+// Virtual Desktop
+// ============================================================================
+
+/**
+ * Virtual Desktops - User-owned virtual desktop instances
+ * Managed via Cloud Hypervisor, accessed via Guacamole
+ */
+export const virtualDesktops = sqliteTable("virtual_desktops", {
+    /** Unique desktop ID (UUID) */
+    id: text("id").primaryKey(),
+
+    /** User who owns this desktop */
+    userId: text("user_id").notNull(),
+
+    /** User-friendly name */
+    name: text("name").notNull(),
+
+    /** Template used to create this desktop */
+    template: text("template").notNull(), // 'ubuntu-desktop', 'ubuntu-server', 'windows-11'
+
+    /** Cloud Hypervisor VM ID (set when VM is created) */
+    vmId: text("vm_id"),
+
+    /** VNC port for this desktop */
+    vncPort: integer("vnc_port"),
+
+    /** Current status */
+    status: text("status").notNull(), // 'creating', 'starting', 'running', 'stopping', 'stopped', 'error'
+
+    /** ISO 8601 timestamp when created */
+    createdAt: text("created_at").notNull(),
+
+    /** ISO 8601 timestamp of last access */
+    lastAccessedAt: text("last_accessed_at"),
+});
+
+export type VirtualDesktop = typeof virtualDesktops.$inferSelect;
+export type NewVirtualDesktop = typeof virtualDesktops.$inferInsert;

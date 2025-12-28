@@ -1,0 +1,36 @@
+# VDI Infrastructure for Rubigo Virtual Desktop
+#
+# Services:
+#   - guacd: Apache Guacamole protocol translation daemon
+#
+# Note: Cloud Hypervisor is now managed directly by the Next.js app
+# via the /api/virtual-desktop/infra endpoint (auto-download from GitHub)
+#
+# Usage:
+#   docker compose -f docker-compose.vdi.yml up -d
+
+services:
+  # Apache Guacamole daemon - translates remote desktop protocols
+  # Supports VNC, RDP, SSH connections to guest VMs
+  guacd:
+    image: guacamole/guacd:1.5.5
+    container_name: rubigo-guacd
+    ports:
+      - "4822:4822"
+    volumes:
+      # Shared drive for file transfers
+      - ./vdi/drive:/drive
+      # Session recordings (optional)
+      - ./vdi/record:/record
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4822"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Note: Cloud Hypervisor is managed by Rubigo's VDI module:
+# - Binary auto-downloaded from GitHub releases
+# - Version managed via /api/virtual-desktop/infra
+# - VMs spawned directly by Next.js process
+# - Requires /dev/kvm access on the host
