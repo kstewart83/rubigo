@@ -100,14 +100,13 @@ jobs:
       - name: Run E2E tests (smoke)
         id: e2e_tests
         continue-on-error: true
+        env:
+          RUBIGO_API_URL: "http://localhost:${{ env.STAGING_PORT }}"
+          RUBIGO_API_TOKEN: "${{ env.STAGING_API_TOKEN }}"
+          DATABASE_URL: "${{ env.DATA_DIR }}/rubigo.db"
         run: |
           cd "$BUILD_DIR"
-          export PLAYWRIGHT_BASE_URL="http://localhost:$STAGING_PORT"
-          export RUBIGO_API_URL="http://localhost:$STAGING_PORT"
-          export RUBIGO_API_TOKEN="$STAGING_API_TOKEN"
-          export DATABASE_URL="$DATA_DIR/rubigo.db"
-          
-          echo "Running E2E tests (@critical only) against http://localhost:$STAGING_PORT"
+          echo "Running E2E tests (@critical only) against $RUBIGO_API_URL"
           bun run test:e2e 2>&1 | tee "$BASE_DIR/logs/e2e-output.log"
 
       - name: Generate staging report
