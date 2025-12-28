@@ -123,7 +123,7 @@ export async function generateAndLogToken(): Promise<void> {
         console.log("=".repeat(60));
         console.log("\nThe system is ready. Users can sign in.");
         if (apiToken) {
-            console.log(`\nAPI Token: ${apiToken}`);
+            console.log(`\nAPI TOKEN: ${apiToken}`);
             console.log("Use this token for programmatic API access.");
         }
         console.log("\n" + "=".repeat(60) + "\n");
@@ -165,7 +165,7 @@ async function autoInitialize(): Promise<void> {
         console.log("=".repeat(60));
         console.log("\nThe system is ready. Users can sign in.");
         if (apiToken) {
-            console.log(`\nAPI Token: ${apiToken}`);
+            console.log(`\nAPI TOKEN: ${apiToken}`);
         }
         console.log("\n" + "=".repeat(60) + "\n");
         return;
@@ -194,7 +194,7 @@ async function autoInitialize(): Promise<void> {
     console.log("\nGlobal Administrator created automatically.");
     console.log("The system is ready. Users can sign in.");
     if (apiToken) {
-        console.log(`\nAPI Token: ${apiToken}`);
+        console.log(`\nAPI TOKEN: ${apiToken}`);
         console.log("Use this token for programmatic API access.");
     }
     console.log("\n" + "=".repeat(60) + "\n");
@@ -291,7 +291,7 @@ export async function initializeSystem(words: string[]): Promise<boolean> {
     console.log("\nGlobal Administrator account created successfully.");
     console.log("The system is now ready for use.");
     if (apiToken) {
-        console.log(`\n   API TOKEN: ${apiToken}\n`);
+        console.log(`\nAPI TOKEN: ${apiToken}`);
         console.log("Use this token for programmatic API access.");
     }
     console.log("\n" + "=".repeat(60) + "\n");
