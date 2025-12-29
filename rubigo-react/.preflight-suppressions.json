@@ -18,6 +18,8 @@
         "src/app/api/agents/tick/route.ts:194",
         "src/app/api/agents/tick/route.ts:200",
         "src/app/api/agents/tick/route.ts:209",
+        "src/app/api/events/route.ts:75",
+        "src/app/api/events/route.ts:122",
         "src/components/calendar-page-content.tsx:638",
         "src/components/calendar-page-content.tsx:900",
         "src/components/calendar-page-content.tsx:918",
@@ -30,6 +32,10 @@
         "src/components/calendar-page-content.tsx:974",
         "src/components/presentations/presentation-view-content.tsx:120",
         "src/components/screen-share/ScreenShareProvider.tsx:203",
+        "src/contexts/event-context.tsx:117",
+        "src/contexts/event-context.tsx:141",
+        "src/contexts/event-context.tsx:161",
+        "src/contexts/event-context.tsx:166",
         "src/db/clean.ts:101",
         "src/db/clean.ts:104",
         "src/db/clean.ts:107",
@@ -114,6 +120,7 @@
         "src/db/sync.ts:570",
         "src/db/sync.ts:571",
         "src/db/sync.ts:97",
+        "src/hooks/use-event.ts:8",
         "src/lib/agent-worker-manager.ts:119",
         "src/lib/agent-worker-manager.ts:123",
         "src/lib/agent-worker-manager.ts:128",
@@ -308,7 +315,28 @@
         "src/scripts/toml-to-sql.ts:334",
         "src/scripts/toml-to-sql.ts:336",
         "src/scripts/toml-to-sql.ts:337",
-        "src/scripts/toml-to-sql.ts:339"
+        "src/scripts/toml-to-sql.ts:339",
+        "src/workers/event-router.ts:63",
+        "src/workers/event-router.ts:69",
+        "src/workers/event-router.ts:83",
+        "src/workers/event-router.ts:87",
+        "src/workers/event-router.ts:94",
+        "src/workers/event-router.ts:99",
+        "src/workers/event-router.ts:104",
+        "src/workers/event-worker.ts:65",
+        "src/workers/event-worker.ts:79",
+        "src/workers/event-worker.ts:92",
+        "src/workers/event-worker.ts:105",
+        "src/workers/event-worker.ts:114",
+        "src/workers/presence-manager.ts:54",
+        "src/workers/presence-manager.ts:136",
+        "src/workers/presence-manager.ts:152",
+        "src/workers/presence-manager.ts:181",
+        "src/workers/presence-manager.ts:208",
+        "src/workers/presence-manager.ts:220",
+        "src/workers/presence-manager.ts:232",
+        "src/workers/presence-manager.ts:260",
+        "src/workers/presence-manager.ts:271"
       ]
     },
     "localhost": {
@@ -338,6 +366,22 @@
         "src/scripts/sync-scenario-sqlite.ts:9",
         "src/workers/agent-loop-worker.ts:14",
         "src/lib/rubigo-client.ts:891"
+      ]
+    },
+    "largeFiles": {
+      "description": "Large gitignored database files used for local development",
+      "approved_by": "User review on 2025-12-28",
+      "entries": [
+        "rubigo.db",
+        "rubigo.db-wal",
+        "rubigo.db-shm"
+      ]
+    },
+    "envFiles": {
+      "description": "Gitignored environment files for local configuration",
+      "approved_by": "User review on 2025-12-28",
+      "entries": [
+        ".env"
       ]
     }
   }
