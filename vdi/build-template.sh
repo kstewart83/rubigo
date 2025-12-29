@@ -105,7 +105,6 @@ runcmd:
     [Service]
     Type=simple
     User=rubigo
-    PAMName=login
     PIDFile=/home/rubigo/.vnc/%H:%i.pid
     ExecStartPre=/usr/bin/vncserver -kill :%i > /dev/null 2>&1 || :
     ExecStart=/usr/bin/vncserver -localhost no -geometry 1920x1080 -depth 24 :%i

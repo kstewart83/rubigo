@@ -15,6 +15,7 @@ export interface GuacClientOptions {
     onStateChange?: (state: ConnectionState) => void;
     onError?: (error: string) => void;
     onResize?: (width: number, height: number) => void;
+    onCursor?: (cursorUrl: string, hotspotX: number, hotspotY: number) => void;
 }
 
 interface LayerData {
@@ -35,6 +36,8 @@ export class GuacClient {
     private activeStreams: Map<string, StreamData> = new Map();
     private messageBuffer = '';
     private state: ConnectionState = 'disconnected';
+    private expectedArgs: string[] = [];
+    private pendingCursor: { args: string[] } | null = null;
 
     private displayCanvas: HTMLCanvasElement;
     private displayCtx: CanvasRenderingContext2D;
@@ -135,7 +138,9 @@ export class GuacClient {
 
         switch (opcode) {
             case 'args':
-                console.log('[GuacClient] Got args, sending connect...');
+                // Store expected args (skipping first which is version)
+                this.expectedArgs = args;
+                console.log(`[GuacClient] Got args (${args.length} expected), sending connect...`);
                 this.sendConnect();
                 break;
 
@@ -165,17 +170,63 @@ export class GuacClient {
             case 'sync':
                 this.sendInstruction('sync', args[0]);
                 break;
+
+            case 'cursor':
+                this.handleCursor(args);
+                break;
         }
     }
 
     private sendConnect(): void {
         const { vncHost, vncPort, vncPassword = '' } = this.options;
-        // Build connect with all required args (45 total)
-        const connectArgs = [
-            'VERSION_1_5_0', vncHost, vncPort, '', '', '', vncPassword,
-            '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-            '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
-        ];
+
+        // Per Guacamole protocol spec, client must send these BEFORE connect:
+        // - size (display dimensions)
+        // - audio (supported audio codecs)
+        // - video (supported video codecs)  
+        // - image (supported image formats)
+        // - connect (terminates handshake)
+
+        console.log('[GuacClient] Sending handshake instructions...');
+
+        // Send optimal display size (width, height, dpi)
+        this.sendInstruction('size', '1920', '1080', '96');
+
+        // Send supported audio codecs (none for now)
+        this.sendInstruction('audio');
+
+        // Send supported video codecs (none)
+        this.sendInstruction('video');
+
+        // Send supported image formats
+        this.sendInstruction('image', 'image/png', 'image/jpeg', 'image/webp');
+
+        // Build connect args to match exactly what guacd expects
+        // The args instruction tells us the expected parameter names
+        const connectArgs: string[] = [];
+
+        for (const argName of this.expectedArgs) {
+            switch (argName) {
+                case 'VERSION_1_5_0':
+                    connectArgs.push('VERSION_1_5_0');
+                    break;
+                case 'hostname':
+                    connectArgs.push(vncHost);
+                    break;
+                case 'port':
+                    connectArgs.push(vncPort);
+                    break;
+                case 'password':
+                    connectArgs.push(vncPassword);
+                    break;
+                default:
+                    // All other args default to empty
+                    connectArgs.push('');
+                    break;
+            }
+        }
+
+        console.log(`[GuacClient] Sending connect with ${connectArgs.length} args`);
         this.sendInstruction('connect', ...connectArgs);
     }
 
@@ -202,9 +253,16 @@ export class GuacClient {
     }
 
     private handleImg(args: string[]): void {
-        const [stream, , layerStr, , xStr, yStr] = args;
+        // img(stream, mode, layer, mimetype, x, y)
+        const [stream, mode, layerStr, mimetype, xStr, yStr] = args;
+        const layer = parseInt(layerStr);
+
+        if (layer === -1) {
+            // Cursor layer - debug only when needed
+        }
+
         this.activeStreams.set(stream, {
-            layer: parseInt(layerStr) || 0,
+            layer: layer,
             x: parseInt(xStr) || 0,
             y: parseInt(yStr) || 0,
             data: ''
@@ -224,10 +282,18 @@ export class GuacClient {
         const streamData = this.activeStreams.get(stream);
 
         if (streamData && streamData.data) {
-            const layerData = this.ensureLayer(streamData.layer);
+            const layer = streamData.layer;
+            const layerData = this.ensureLayer(layer);
             const img = new Image();
             img.onload = () => {
                 layerData.ctx.drawImage(img, streamData.x, streamData.y);
+
+                // If this was layer -1 (cursor) and we have a pending cursor, process it now
+                if (layer === -1 && this.pendingCursor) {
+                    this.extractCursor(this.pendingCursor.args);
+                    this.pendingCursor = null;
+                }
+
                 this.composeLayers();
             };
             img.src = 'data:image/png;base64,' + streamData.data;
@@ -254,6 +320,81 @@ export class GuacClient {
         return layer;
     }
 
+    /**
+     * Handle cursor instruction - for layer -1, defer until image stream completes
+     * Format: cursor(hotspotX, hotspotY, srcL, srcX, srcY, srcW, srcH)
+     */
+    private handleCursor(args: string[]): void {
+        if (args.length < 7) return;
+
+        const layerIdx = parseInt(args[2]);
+
+        // For the cursor buffer layer (-1), defer until image stream completes
+        if (layerIdx === -1) {
+            this.pendingCursor = { args };
+            return;
+        }
+
+        // For other layers, extract immediately
+        this.extractCursor(args);
+    }
+
+    /**
+     * Extract cursor image from layer and notify viewer
+     */
+    private extractCursor(args: string[]): void {
+        const [hotspotXStr, hotspotYStr, srcLStr, srcXStr, srcYStr, srcWStr, srcHStr] = args;
+        const hotspotX = parseInt(hotspotXStr);
+        const hotspotY = parseInt(hotspotYStr);
+        const layerIdx = parseInt(srcLStr);
+        const srcX = parseInt(srcXStr);
+        const srcY = parseInt(srcYStr);
+        const srcW = parseInt(srcWStr);
+        const srcH = parseInt(srcHStr);
+
+
+        // Get cursor image from the layer
+        const layer = this.layers.get(layerIdx);
+        if (!layer) {
+            this.options.onCursor?.('default', 0, 0);
+            return;
+        }
+
+        if (srcW === 0 || srcH === 0) {
+            this.options.onCursor?.('', 0, 0);
+            return;
+        }
+
+        // Create a temporary canvas to extract just the cursor region
+        const cursorCanvas = document.createElement('canvas');
+        cursorCanvas.width = srcW;
+        cursorCanvas.height = srcH;
+        const cursorCtx = cursorCanvas.getContext('2d')!;
+        cursorCtx.drawImage(
+            layer.canvas,
+            srcX, srcY, srcW, srcH,
+            0, 0, srcW, srcH
+        );
+
+        // Check if the cursor canvas has any non-transparent pixels
+        const imageData = cursorCtx.getImageData(0, 0, srcW, srcH);
+        let hasContent = false;
+        for (let i = 3; i < imageData.data.length; i += 4) {
+            if (imageData.data[i] > 0) {
+                hasContent = true;
+                break;
+            }
+        }
+
+        if (!hasContent) {
+            this.options.onCursor?.('default', 0, 0);
+            return;
+        }
+
+        const cursorUrl = cursorCanvas.toDataURL('image/png');
+        this.options.onCursor?.(cursorUrl, hotspotX, hotspotY);
+    }
+
     private composeLayers(): void {
         const layer0 = this.layers.get(0);
         if (layer0) {
@@ -273,7 +414,6 @@ export class GuacClient {
      */
     sendMouse(x: number, y: number, buttonMask: number): void {
         if (this.state !== 'connected') return;
-        console.log(`[GuacClient] sendMouse: x=${x}, y=${y}, mask=${buttonMask}`);
         this.sendInstruction('mouse', x.toString(), y.toString(), buttonMask.toString());
     }
 

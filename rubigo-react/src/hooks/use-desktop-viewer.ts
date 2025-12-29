@@ -20,6 +20,8 @@ interface UseDesktopViewerOptions {
     connection: DesktopConnection | null;
     /** Callback when display resizes */
     onResize?: (width: number, height: number) => void;
+    /** Callback when cursor changes */
+    onCursor?: (cursorUrl: string, hotspotX: number, hotspotY: number) => void;
 }
 
 interface UseDesktopViewerReturn {
@@ -37,6 +39,8 @@ interface UseDesktopViewerReturn {
     sendMouse: (x: number, y: number, buttonMask: number) => void;
     /** Send key event */
     sendKey: (keysym: number, pressed: boolean) => void;
+    /** Current cursor style (for CSS) */
+    cursorStyle: string;
 }
 
 /**
@@ -46,9 +50,11 @@ export function useDesktopViewer({
     canvasRef,
     connection,
     onResize,
+    onCursor,
 }: UseDesktopViewerOptions): UseDesktopViewerReturn {
     const [state, setState] = useState<ConnectionState>("disconnected");
     const [error, setError] = useState<string | null>(null);
+    const [cursorStyle, setCursorStyle] = useState<string>("default");
     const clientRef = useRef<GuacClient | null>(null);
 
     // Connect to the remote desktop
@@ -74,11 +80,24 @@ export function useDesktopViewer({
                 onStateChange: setState,
                 onError: setError,
                 onResize,
+                onCursor: (cursorUrl, hotspotX, hotspotY) => {
+                    if (cursorUrl === 'default' || cursorUrl === 'none') {
+                        // Use standard cursor keywords
+                        setCursorStyle(cursorUrl);
+                    } else if (cursorUrl) {
+                        // Custom cursor from guacd
+                        setCursorStyle(`url(${cursorUrl}) ${hotspotX} ${hotspotY}, default`);
+                    } else {
+                        // Hidden cursor (empty cursorUrl means no cursor)
+                        setCursorStyle('none');
+                    }
+                    onCursor?.(cursorUrl, hotspotX, hotspotY);
+                },
             });
         }
 
         clientRef.current.connect();
-    }, [connection, canvasRef, onResize]);
+    }, [connection, canvasRef, onResize, onCursor]);
 
     // Disconnect from the remote desktop
     const disconnect = useCallback(() => {
@@ -142,5 +161,6 @@ export function useDesktopViewer({
         toggleFullscreen,
         sendMouse,
         sendKey,
+        cursorStyle,
     };
 }

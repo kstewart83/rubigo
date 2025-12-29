@@ -65,6 +65,7 @@ export function DesktopViewer({
         toggleFullscreen,
         sendMouse,
         sendKey,
+        cursorStyle,
     } = useDesktopViewer({
         canvasRef,
         connection,
@@ -93,6 +94,8 @@ export function DesktopViewer({
     }, [state, sendMouse, displaySize]);
 
     const handleMouseDown = useCallback((e: MouseEvent<HTMLCanvasElement>) => {
+        // Focus the canvas on click to enable keyboard input
+        e.currentTarget.focus();
         if (state !== "connected") return;
         e.preventDefault();
         const rect = e.currentTarget.getBoundingClientRect();
@@ -215,7 +218,7 @@ export function DesktopViewer({
                         height: `${cssHeight}px`,
                         imageRendering: 'pixelated',
                         outline: 'none',
-                        cursor: state === 'connected' ? 'none' : 'default',
+                        cursor: cursorStyle,
                     }}
                     className="bg-black focus:ring-2 focus:ring-purple-500"
                     onMouseMove={handleMouseMove}
@@ -224,6 +227,8 @@ export function DesktopViewer({
                     onWheel={handleWheel}
                     onKeyDown={handleKeyDown}
                     onKeyUp={handleKeyUp}
+                    onMouseEnter={(e) => e.currentTarget.focus()}
+                    onMouseLeave={(e) => e.currentTarget.blur()}
                     onContextMenu={(e) => e.preventDefault()}
                 />
             </div>

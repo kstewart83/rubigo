@@ -12,8 +12,8 @@ const GUACD_PORT = parseInt(process.env.GUACD_PORT || "4822", 10);
 const TUNNEL_PORT = parseInt(process.env.TUNNEL_PORT || "4823", 10);
 
 const DEFAULT_VNC_HOST = process.env.VNC_HOST || "host.docker.internal";
-const DEFAULT_VNC_PORT = "15901";
-const DEFAULT_VNC_PASSWORD = "rubigo";
+const DEFAULT_VNC_PORT = "5900";
+const DEFAULT_VNC_PASSWORD = ""; // QEMU VNC has no password
 
 /**
  * Parse a Guacamole instruction string
