@@ -53,6 +53,7 @@ import type { VirtualDesktop, DesktopTemplateInfo } from "@/types/virtual-deskto
 import { cn } from "@/lib/utils";
 
 import { usePersona } from "@/contexts/persona-context";
+import { VdiAdminPanel } from "./vdi-admin-panel";
 
 export function VirtualDesktopContent() {
     const router = useRouter();
@@ -288,6 +289,9 @@ export function VirtualDesktopContent() {
                     </Dialog>
                 </div>
             </div>
+
+            {/* VDI Admin Panel */}
+            <VdiAdminPanel />
 
             {/* Infrastructure Status */}
             {infraStatus && !infraStatus.installed && (
