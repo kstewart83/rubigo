@@ -244,7 +244,7 @@ export class GuacClient {
         const width = parseInt(widthStr);
         const height = parseInt(heightStr);
 
-        console.log(`[GuacClient] Size: layer ${layer} = ${width}x${height}`);
+        // Only log main display size changes (layer 0), not cursor sizes (layer -1)
 
         if (layer === 0) {
             // Update main display canvas

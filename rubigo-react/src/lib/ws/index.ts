@@ -7,6 +7,7 @@
 
 import type { WebSocketHandler, BaseConnectionData, HandlerRegistry } from "./types";
 import { guacHandler } from "./guac-handler";
+import { hmrHandler } from "./hmr-handler";
 
 /**
  * All registered WebSocket handlers.
@@ -14,6 +15,7 @@ import { guacHandler } from "./guac-handler";
  */
 export const handlers: WebSocketHandler<BaseConnectionData>[] = [
     guacHandler as WebSocketHandler<BaseConnectionData>,
+    hmrHandler as WebSocketHandler<BaseConnectionData>,
     // Future handlers:
     // chatHandler,
     // presenceHandler,
@@ -42,9 +44,11 @@ export function getHandlerByType(type: string): WebSocketHandler<BaseConnectionD
     // For now, use a simple mapping
     const typeToPath: Record<string, string> = {
         guac: "/api/guac-tunnel",
+        hmr: "/_next/webpack-hmr",
         // chat: "/api/ws/chat",
         // presence: "/api/ws/presence",
     };
     const path = typeToPath[type];
     return path ? getHandlerByPath(path) : undefined;
 }
+

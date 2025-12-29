@@ -101,12 +101,21 @@ const server = Bun.serve<BaseConnectionData>({
                 body: req.body,
             });
 
-            const response = await fetch(proxyReq);
+            // Use redirect: 'manual' to pass redirect status to client
+            const response = await fetch(proxyReq, { redirect: 'manual' });
 
             // Clone response headers and strip Content-Encoding to avoid browser issues
             const responseHeaders = new Headers(response.headers);
             responseHeaders.delete('Content-Encoding');
             responseHeaders.delete('Content-Length');
+
+            // If it's a redirect, adjust Location header to match original host
+            if (response.status >= 300 && response.status < 400) {
+                const location = response.headers.get('Location');
+                if (location && location.includes(`localhost:${NEXT_PORT}`)) {
+                    responseHeaders.set('Location', location.replace(`localhost:${NEXT_PORT}`, originalHost));
+                }
+            }
 
             return new Response(response.body, {
                 status: response.status,

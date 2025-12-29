@@ -84,6 +84,7 @@ packages:
   - sddm
   - pcmanfm-qt
   - qterminal
+  - chromium-browser
 
 # Run commands after boot
 runcmd:
@@ -114,12 +115,14 @@ runcmd:
     After=network.target
 
     [Service]
-    Type=simple
+    Type=forking
     User=rubigo
-    PIDFile=/home/rubigo/.vnc/%H:%i.pid
-    ExecStartPre=/usr/bin/vncserver -kill :%i > /dev/null 2>&1 || :
+    Environment=HOME=/home/rubigo
+    WorkingDirectory=/home/rubigo
     ExecStart=/usr/bin/vncserver -localhost no -geometry 1920x1080 -depth 24 :%i
     ExecStop=/usr/bin/vncserver -kill :%i
+    Restart=on-failure
+    RestartSec=5
 
     [Install]
     WantedBy=multi-user.target

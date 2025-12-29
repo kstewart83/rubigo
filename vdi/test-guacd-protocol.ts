@@ -170,9 +170,15 @@ function handleInstruction(instr: { opcode: string; args: string[] }): void {
         return;
     }
 
-    // Don't log noisy image data
-    const isNoisy = ['img', 'blob', 'end', 'png', 'copy', 'sync', 'size'].includes(opcode);
-    if (!isNoisy) {
+    // Always log sync instructions explicitly
+    if (opcode === 'sync') {
+        log('in', `SYNC received: timestamp=${args[0]}, args=${JSON.stringify(args)}`);
+        // Note: guacd 1.6.0 may send additional frame count parameter
+    }
+
+    // Don't log noisy image data (but do log sync now)
+    const isNoisy = ['img', 'blob', 'end', 'png', 'copy', 'size'].includes(opcode);
+    if (!isNoisy && opcode !== 'sync') {
         log('in', `${opcode}(${args.slice(0, 3).join(', ')}${args.length > 3 ? '...' : ''})`);
     }
 
@@ -248,6 +254,40 @@ function sendHandshakeAndConnect(): void {
                 break;
             case 'password':
                 connectArgs.push(VNC_PASSWORD);
+                break;
+            // Boolean parameters - guacd 1.6.0 requires "true"/"false" (not "0"/"1")
+            case 'read-only':
+            case 'disable-display-resize':  // New in 1.6.0
+            case 'swap-red-blue':
+            case 'autoretry':
+            case 'enable-audio':
+            case 'reverse-connect':
+            case 'enable-sftp':
+            case 'sftp-disable-download':
+            case 'sftp-disable-upload':
+            case 'recording-exclude-output':
+            case 'recording-exclude-mouse':
+            case 'recording-include-keys':
+            case 'create-recording-path':
+            case 'recording-write-existing':  // New in 1.6.0
+            case 'disable-copy':
+            case 'disable-paste':
+            case 'disable-server-input':  // New in 1.6.0
+            case 'wol-send-packet':
+            case 'force-lossless':
+                connectArgs.push('false');  // guacd 1.6.0 requires "true"/"false"
+                break;
+            // Numeric parameters with -1 meaning "auto/default"
+            case 'color-depth':
+            case 'sftp-port':
+            case 'sftp-timeout':  // New in 1.6.0
+            case 'sftp-server-alive-interval':
+            case 'listen-timeout':
+            case 'wol-udp-port':
+            case 'wol-wait-time':
+            case 'compress-level':  // New in 1.6.0: -1 = default
+            case 'quality-level':   // New in 1.6.0: -1 = default
+                connectArgs.push('');
                 break;
             default:
                 connectArgs.push('');
