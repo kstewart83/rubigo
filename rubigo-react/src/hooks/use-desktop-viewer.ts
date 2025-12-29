@@ -4,29 +4,22 @@
  * Desktop Viewer Hook
  *
  * React hook for managing Guacamole client connection.
- * Handles connection lifecycle, input capture, and display scaling.
+ * Uses custom GuacClient for sharp rendering with devicePixelRatio compensation.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { GuacClient, type ConnectionState } from "@/lib/vdi/guac-client";
 import type { DesktopConnection } from "@/types/virtual-desktop";
 
-export type ConnectionState =
-    | "disconnected"
-    | "connecting"
-    | "connected"
-    | "error";
+export type { ConnectionState };
 
 interface UseDesktopViewerOptions {
-    /** Container element ref for the display */
-    containerRef: React.RefObject<HTMLElement>;
+    /** Canvas element ref for the display */
+    canvasRef: React.RefObject<HTMLCanvasElement | null>;
     /** Connection parameters */
     connection: DesktopConnection | null;
-    /** Enable keyboard input capture */
-    captureKeyboard?: boolean;
-    /** Enable mouse input capture */
-    captureMouse?: boolean;
-    /** Auto-scale display to container */
-    autoScale?: boolean;
+    /** Callback when display resizes */
+    onResize?: (width: number, height: number) => void;
 }
 
 interface UseDesktopViewerReturn {
@@ -40,209 +33,106 @@ interface UseDesktopViewerReturn {
     disconnect: () => void;
     /** Toggle fullscreen */
     toggleFullscreen: () => void;
-    /** Current scale factor */
-    scale: number;
-    /** Set scale factor */
-    setScale: (scale: number) => void;
+    /** Send mouse event */
+    sendMouse: (x: number, y: number, buttonMask: number) => void;
+    /** Send key event */
+    sendKey: (keysym: number, pressed: boolean) => void;
 }
 
 /**
  * Hook for managing desktop viewer connection
  */
 export function useDesktopViewer({
-    containerRef,
+    canvasRef,
     connection,
-    captureKeyboard = true,
-    captureMouse = true,
-    autoScale = true,
+    onResize,
 }: UseDesktopViewerOptions): UseDesktopViewerReturn {
     const [state, setState] = useState<ConnectionState>("disconnected");
     const [error, setError] = useState<string | null>(null);
-    const [scale, setScale] = useState(1);
-
-    // Guacamole client refs
-    const clientRef = useRef<any>(null);
-    const tunnelRef = useRef<any>(null);
-    const keyboardRef = useRef<any>(null);
-    const mouseRef = useRef<any>(null);
+    const clientRef = useRef<GuacClient | null>(null);
 
     // Connect to the remote desktop
-    const connect = useCallback(async () => {
-        if (!connection || !containerRef.current) {
-            setError("No connection parameters or container");
+    const connect = useCallback(() => {
+        console.log('[useDesktopViewer] connect called, connection:', !!connection, 'canvas:', !!canvasRef.current, 'client:', !!clientRef.current);
+
+        if (!connection || !canvasRef.current) {
+            setError("No connection parameters or canvas");
             setState("error");
             return;
         }
 
-        try {
-            setState("connecting");
-            setError(null);
+        setError(null);
 
-            // Dynamic import to avoid SSR issues
-            const Guacamole = await import("guacamole-common-js");
-
-            // Create tunnel
-            const tunnel = new Guacamole.WebSocketTunnel(connection.tunnelUrl);
-            tunnelRef.current = tunnel;
-
-            // Create client
-            const client = new Guacamole.Client(tunnel);
-            clientRef.current = client;
-
-            // Get display element and append to container
-            const display = client.getDisplay();
-            const displayElement = display.getElement();
-            displayElement.style.position = "absolute";
-            displayElement.style.top = "0";
-            displayElement.style.left = "0";
-            containerRef.current.appendChild(displayElement);
-
-            // Handle state changes
-            client.onstatechange = (clientState: number) => {
-                switch (clientState) {
-                    case 0: // IDLE
-                        setState("disconnected");
-                        break;
-                    case 1: // CONNECTING
-                    case 2: // WAITING
-                        setState("connecting");
-                        break;
-                    case 3: // CONNECTED
-                        setState("connected");
-                        break;
-                    case 4: // DISCONNECTING
-                    case 5: // DISCONNECTED
-                        setState("disconnected");
-                        break;
-                }
-            };
-
-            // Handle errors
-            client.onerror = (status: any) => {
-                console.error("[DesktopViewer] Error:", status);
-                setError(status.message || "Connection error");
-                setState("error");
-            };
-
-            // Handle display resize
-            display.onresize = (width: number, height: number) => {
-                if (autoScale && containerRef.current) {
-                    const containerWidth = containerRef.current.clientWidth;
-                    const containerHeight = containerRef.current.clientHeight;
-                    const scaleX = containerWidth / width;
-                    const scaleY = containerHeight / height;
-                    const newScale = Math.min(scaleX, scaleY, 1);
-                    display.scale(newScale);
-                    setScale(newScale);
-                }
-            };
-
-            // Set up keyboard input
-            if (captureKeyboard) {
-                const keyboard = new Guacamole.Keyboard(document);
-                keyboardRef.current = keyboard;
-
-                keyboard.onkeydown = (keysym: number) => {
-                    client.sendKeyEvent(true, keysym);
-                    return false; // Prevent default
-                };
-
-                keyboard.onkeyup = (keysym: number) => {
-                    client.sendKeyEvent(false, keysym);
-                };
-            }
-
-            // Set up mouse input
-            if (captureMouse) {
-                const mouse = new Guacamole.Mouse(displayElement);
-                mouseRef.current = mouse;
-
-                mouse.onmousedown =
-                    mouse.onmouseup =
-                    mouse.onmousemove =
-                    (mouseState: any) => {
-                        client.sendMouseState(mouseState);
-                    };
-            }
-
-            // Build connection string
-            const params = new URLSearchParams({
-                token: connection.token,
-                hostname: connection.connectionParams.hostname,
-                port: connection.connectionParams.port.toString(),
-                protocol: connection.connectionParams.protocol,
+        // Create client if needed or if connection params changed
+        if (!clientRef.current) {
+            console.log('[useDesktopViewer] Creating new GuacClient');
+            clientRef.current = new GuacClient(canvasRef.current, {
+                tunnelUrl: connection.tunnelUrl,
+                vncHost: connection.connectionParams.hostname,
+                vncPort: connection.connectionParams.port.toString(),
+                vncPassword: connection.connectionParams.password,
+                onStateChange: setState,
+                onError: setError,
+                onResize,
             });
-
-            if (connection.connectionParams.password) {
-                params.set("password", connection.connectionParams.password);
-            }
-
-            // Connect
-            client.connect(params.toString());
-        } catch (err) {
-            console.error("[DesktopViewer] Connection failed:", err);
-            setError(err instanceof Error ? err.message : "Connection failed");
-            setState("error");
         }
-    }, [connection, containerRef, captureKeyboard, captureMouse, autoScale]);
+
+        clientRef.current.connect();
+    }, [connection, canvasRef, onResize]);
 
     // Disconnect from the remote desktop
     const disconnect = useCallback(() => {
-        if (keyboardRef.current) {
-            keyboardRef.current.reset();
-            keyboardRef.current = null;
-        }
-
         if (clientRef.current) {
             clientRef.current.disconnect();
             clientRef.current = null;
         }
-
-        if (tunnelRef.current) {
-            tunnelRef.current.disconnect();
-            tunnelRef.current = null;
-        }
-
-        // Remove display element
-        if (containerRef.current) {
-            const displayElement = containerRef.current.querySelector("div");
-            if (displayElement) {
-                containerRef.current.removeChild(displayElement);
-            }
-        }
-
         setState("disconnected");
-    }, [containerRef]);
+    }, []);
 
     // Toggle fullscreen
     const toggleFullscreen = useCallback(() => {
-        if (!containerRef.current) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
         if (document.fullscreenElement) {
             document.exitFullscreen();
         } else {
-            containerRef.current.requestFullscreen();
+            canvas.requestFullscreen();
         }
-    }, [containerRef]);
+    }, [canvasRef]);
 
-    // Update scale manually
-    const updateScale = useCallback(
-        (newScale: number) => {
-            if (clientRef.current) {
-                const display = clientRef.current.getDisplay();
-                display.scale(newScale);
-                setScale(newScale);
-            }
-        },
-        []
-    );
+    // Use isMounted ref to handle React Strict Mode double-mount
+    const isMountedRef = useRef(true);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - use slight delay to avoid Strict Mode race
     useEffect(() => {
+        isMountedRef.current = true;
+
         return () => {
-            disconnect();
+            isMountedRef.current = false;
+            // Delay cleanup to allow Strict Mode remount
+            setTimeout(() => {
+                if (!isMountedRef.current && clientRef.current) {
+                    console.log('[useDesktopViewer] Cleanup - disconnecting');
+                    clientRef.current.disconnect();
+                    clientRef.current = null;
+                }
+            }, 100);
         };
-    }, [disconnect]);
+    }, []);
+    // Send mouse event
+    const sendMouse = useCallback((x: number, y: number, buttonMask: number) => {
+        if (clientRef.current) {
+            clientRef.current.sendMouse(x, y, buttonMask);
+        }
+    }, []);
+
+    // Send key event
+    const sendKey = useCallback((keysym: number, pressed: boolean) => {
+        if (clientRef.current) {
+            clientRef.current.sendKey(keysym, pressed);
+        }
+    }, []);
 
     return {
         state,
@@ -250,7 +140,7 @@ export function useDesktopViewer({
         connect,
         disconnect,
         toggleFullscreen,
-        scale,
-        setScale: updateScale,
+        sendMouse,
+        sendKey,
     };
 }

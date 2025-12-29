@@ -4,6 +4,8 @@
  * GET /api/virtual-desktop/[id] - Get desktop details
  * PATCH /api/virtual-desktop/[id] - Update desktop (start/stop)
  * DELETE /api/virtual-desktop/[id] - Destroy desktop
+ * 
+ * Auth: Accepts either Bearer token OR X-Persona-Id header
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -20,17 +22,39 @@ interface RouteParams {
 }
 
 /**
+ * Helper to validate request auth
+ * Checks Bearer token first, falls back to X-Persona-Id header
+ */
+async function validateRequest(request: NextRequest): Promise<{ valid: boolean; actorId?: string; error?: string }> {
+    // Try Bearer token first
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "") ?? null;
+
+    if (token) {
+        const auth = await validateApiToken(token);
+        if (auth.valid && auth.actorId) {
+            return { valid: true, actorId: auth.actorId };
+        }
+    }
+
+    // Fall back to X-Persona-Id header (for browser requests)
+    const personaId = request.headers.get("X-Persona-Id");
+    if (personaId) {
+        return { valid: true, actorId: personaId };
+    }
+
+    return { valid: false, error: "Unauthorized" };
+}
+
+/**
  * GET /api/virtual-desktop/[id]
  * Get desktop details
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader?.replace("Bearer ", "") ?? null;
-        const auth = await validateApiToken(token);
-
+        const auth = await validateRequest(request);
         if (!auth.valid || !auth.actorId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
         }
 
         const { id } = await params;
@@ -57,12 +81,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader?.replace("Bearer ", "") ?? null;
-        const auth = await validateApiToken(token);
-
+        const auth = await validateRequest(request);
         if (!auth.valid || !auth.actorId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
         }
 
         const { id } = await params;
@@ -106,12 +127,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader?.replace("Bearer ", "") ?? null;
-        const auth = await validateApiToken(token);
-
+        const auth = await validateRequest(request);
         if (!auth.valid || !auth.actorId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
         }
 
         const { id } = await params;

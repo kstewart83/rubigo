@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Guacamole.js Library Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #22c55e;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        #display {
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            min-width: 800px;
+            min-height: 600px;
+            max-width: 100%;
+            overflow: auto;
+            position: relative;
+        }
+
+        #log {
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            width: 400px;
+            height: 720px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info-text {
+            color: #3b82f6;
+        }
+
+        .stats {
+            margin: 10px 0;
+            padding: 10px;
+            background: #111;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📚 Guacamole.js Library Test</h1>
+    <p class="info">Testing the official Guacamole JavaScript library with correct handshake</p>
+
+    <div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="stats">
+        <span>Status: <span id="status">Disconnected</span></span>
+    </div>
+
+    <div class="container">
+        <div id="display"></div>
+        <div id="log"></div>
+    </div>
+
+    <script type="module">
+        import Guacamole from '/guacamole-common.min.js';
+
+        // Make functions available globally
+        window.Guacamole = Guacamole;
+
+        const VNC_HOST = 'host.docker.internal';
+        const VNC_PORT = '15901';
+        const VNC_PASS = 'rubigo';
+
+        let client = null;
+        let tunnel = null;
+
+        function log(msg, className = '') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toISOString().substring(11, 19);
+            logDiv.innerHTML += `<span class="${className}">${time} ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        function setStatus(s) {
+            document.getElementById('status').textContent = s;
+        }
+
+        function connect() {
+            // Check if Guacamole library loaded
+            if (typeof Guacamole === 'undefined') {
+                log('ERROR: Guacamole library not loaded!', 'error');
+                return;
+            }
+            log('Guacamole library loaded: ' + (typeof Guacamole.Client), 'success');
+
+            log('Connecting with Guacamole.js library...', 'info-text');
+            setStatus('Connecting...');
+
+            const displayDiv = document.getElementById('display');
+            displayDiv.innerHTML = '';
+
+            // Create tunnel
+            const tunnelUrl = 'ws://localhost:4823/tunnel';
+            log(`Tunnel URL: ${tunnelUrl}`);
+
+            tunnel = new Guacamole.WebSocketTunnel(tunnelUrl);
+
+            // Create client
+            client = new Guacamole.Client(tunnel);
+
+            // Get display element
+            const display = client.getDisplay();
+            displayDiv.appendChild(display.getElement());
+
+            // Handle display resize events from the server
+            display.onresize = function (width, height) {
+                log(`Display resized: ${width}x${height}`, 'success');
+                // The display should auto-resize, but log it
+            };
+
+            // Log display dimensions periodically
+            let syncCount = 0;
+            client.onsync = function (timestamp) {
+                syncCount++;
+                if (syncCount === 1 || syncCount === 5 || syncCount === 10 || syncCount % 100 === 0) {
+                    const w = display.getWidth();
+                    const h = display.getHeight();
+                    const scale = display.getScale();
+                    log(`Sync #${syncCount}: display ${w}x${h} scale=${scale}`);
+                }
+            };
+
+            // Error handler
+            client.onerror = function (error) {
+                log(`Client error: ${error.message || JSON.stringify(error)}`, 'error');
+            };
+
+            // State change handler
+            client.onstatechange = function (state) {
+                const states = ['IDLE', 'CONNECTING', 'WAITING', 'CONNECTED', 'DISCONNECTING', 'DISCONNECTED'];
+                const stateName = states[state] || `UNKNOWN(${state})`;
+                log(`State: ${stateName}`, state === 3 ? 'success' : 'info-text');
+                setStatus(stateName);
+            };
+
+            // Tunnel error handler
+            tunnel.onerror = function (status) {
+                log(`Tunnel error: ${status.message || JSON.stringify(status)}`, 'error');
+            };
+
+            // Tunnel state change
+            tunnel.onstatechange = function (state) {
+                const states = ['CLOSED', 'OPEN', 'UNKNOWN'];
+                log(`Tunnel state: ${states[state] || state}`);
+            };
+
+            // Build connection parameters
+            // The library sends "select,vnc" automatically and then we need to respond to "args"
+            // by providing connect parameters. The library does this via the connect() method params.
+
+            // Build URL-encoded params for all 45 args that guacd expects
+            const params = new URLSearchParams();
+            params.set('VERSION', 'VERSION_1_5_0');
+            params.set('hostname', VNC_HOST);
+            params.set('port', VNC_PORT);
+            params.set('password', VNC_PASS);
+            // All other params are optional/empty
+
+            log(`Connecting with params: ${params.toString().substring(0, 80)}...`);
+
+            try {
+                client.connect(params.toString());
+                log('client.connect() called', 'success');
+
+                // Send desired display size to guacd
+                setTimeout(() => {
+                    client.sendSize(1920, 1080);
+                    log('Sent size: 1920x1080');
+                }, 100);
+            } catch (e) {
+                log(`Connect error: ${e.message}`, 'error');
+            }
+
+            // Setup keyboard input
+            const keyboard = new Guacamole.Keyboard(document);
+            keyboard.onkeydown = function (keysym) {
+                if (client) client.sendKeyEvent(1, keysym);
+            };
+            keyboard.onkeyup = function (keysym) {
+                if (client) client.sendKeyEvent(0, keysym);
+            };
+
+            // Setup mouse input
+            const mouse = new Guacamole.Mouse(display.getElement());
+            mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = function (mouseState) {
+                if (client) client.sendMouseState(mouseState);
+            };
+
+            log('Input handlers attached');
+        }
+
+        function disconnect() {
+            if (client) {
+                client.disconnect();
+                client = null;
+            }
+            if (tunnel) {
+                tunnel = null;
+            }
+            setStatus('Disconnected');
+            log('Disconnected');
+        }
+
+        log('Ready. Click Connect to start.');
+        log('This test uses the Guacamole.js library.');
+
+        // Make functions available globally for onclick handlers
+        window.connect = connect;
+        window.disconnect = disconnect;
+    </script>
+</body>
+
+</html>

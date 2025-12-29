@@ -3,6 +3,8 @@
  *
  * Server-side functions for managing virtual desktops.
  * Uses inline VM management (no separate ch-manager service).
+ * 
+ * Set VDI_MOCK_MODE=true to use mock mode with existing test VM.
  */
 
 "use server";
@@ -29,6 +31,13 @@ import type {
 // Guacamole daemon URL
 const GUACD_HOST = process.env.GUACD_HOST || "localhost";
 const GUACD_PORT = process.env.GUACD_PORT || "4822";
+
+// VNC host from guacd's perspective (Docker uses host.docker.internal to reach host)
+const VNC_HOST = process.env.VNC_HOST || "host.docker.internal";
+
+// Mock mode: skip real VM provisioning, use existing test VM
+const MOCK_MODE = process.env.VDI_MOCK_MODE === "true";
+const MOCK_VNC_PORT = parseInt(process.env.VDI_MOCK_VNC_PORT || "15901");
 
 /**
  * Generate a unique ID for new desktops
@@ -148,6 +157,32 @@ export async function createDesktop(
     const id = generateId();
     const timestamp = now();
 
+    // MOCK MODE: Skip real VM creation
+    if (MOCK_MODE) {
+        console.log(`[VDI Mock] Creating mock desktop: ${name}`);
+
+        await db.insert(virtualDesktops).values({
+            id,
+            userId,
+            name,
+            template,
+            status: "stopped",
+            vmId: `mock-${id}`,
+            vncPort: MOCK_VNC_PORT,
+            createdAt: timestamp,
+        });
+
+        return {
+            id,
+            userId,
+            name,
+            template,
+            status: "stopped",
+            vncPort: MOCK_VNC_PORT,
+            createdAt: timestamp,
+        };
+    }
+
     // Create in database first with 'creating' status
     await db.insert(virtualDesktops).values({
         id,
@@ -204,6 +239,16 @@ export async function startDesktop(
         throw new Error("Desktop not found");
     }
 
+    // MOCK MODE: Just update status without starting real VM
+    if (MOCK_MODE) {
+        console.log(`[VDI Mock] Starting mock desktop: ${desktopId}`);
+        await db
+            .update(virtualDesktops)
+            .set({ status: "running", lastAccessedAt: now() })
+            .where(eq(virtualDesktops.id, desktopId));
+        return { ...desktop, status: "running" };
+    }
+
     // Get VM ID from database
     const results = await db
         .select({ vmId: virtualDesktops.vmId })
@@ -252,6 +297,16 @@ export async function stopDesktop(
     const desktop = await getDesktop(userId, desktopId);
     if (!desktop) {
         throw new Error("Desktop not found");
+    }
+
+    // MOCK MODE: Just update status without stopping real VM
+    if (MOCK_MODE) {
+        console.log(`[VDI Mock] Stopping mock desktop: ${desktopId}`);
+        await db
+            .update(virtualDesktops)
+            .set({ status: "stopped" })
+            .where(eq(virtualDesktops.id, desktopId));
+        return { ...desktop, status: "stopped" };
     }
 
     const results = await db
@@ -357,14 +412,18 @@ export async function getDesktopConnection(
     const protocol =
         desktop.template === "windows-11" ? ("rdp" as const) : ("vnc" as const);
 
+    // Tunnel server port (Bun WebSocket server)
+    const tunnelPort = process.env.TUNNEL_PORT || "4823";
+    const tunnelHost = process.env.TUNNEL_HOST || "localhost";
+
     return {
-        tunnelUrl: `ws://${GUACD_HOST}:${GUACD_PORT}/websocket-tunnel`,
+        tunnelUrl: `ws://${tunnelHost}:${tunnelPort}/tunnel?hostname=${VNC_HOST}&port=${desktop.vncPort}&password=rubigo`,
         token,
         connectionParams: {
-            hostname: "localhost", // VM is on same host
+            hostname: VNC_HOST,
             port: desktop.vncPort,
             protocol,
-            // Password would be set during VM provisioning
+            password: "rubigo",
         },
     };
 }

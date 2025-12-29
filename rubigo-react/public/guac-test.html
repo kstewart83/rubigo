@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Guacamole Tunnel Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #a855f7;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        #log {
+            background: #111;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .send {
+            color: #3b82f6;
+        }
+
+        .recv {
+            color: #f59e0b;
+        }
+
+        .frame {
+            color: #a855f7;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔌 Guacamole Tunnel Test</h1>
+    <p class="info">Raw WebSocket test to validate Browser → Tunnel → guacd → VM connection</p>
+
+    <button onclick="runTest()">Run Connection Test</button>
+    <button onclick="clearLog()">Clear Log</button>
+
+    <div id="log"></div>
+
+    <script>
+        const VNC_HOST = 'host.docker.internal';
+        const VNC_PORT = '15901';
+        const VNC_PASS = 'rubigo';
+
+        let frameCount = 0;
+        let syncCount = 0;
+
+        function log(msg, className = '') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toISOString().substring(11, 19);
+            logDiv.innerHTML += `<span class="${className}">${time} ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            frameCount = 0;
+            syncCount = 0;
+        }
+
+        async function runTest() {
+            clearLog();
+            log('=== Starting Guacamole Connection Test ===\n');
+
+            const tunnelUrl = `ws://localhost:4823/tunnel`;
+            log(`Tunnel URL: ${tunnelUrl}`);
+            log(`VNC Target: ${VNC_HOST}:${VNC_PORT}\n`);
+
+            log('Step 1: Connecting to WebSocket tunnel...');
+
+            const ws = new WebSocket(tunnelUrl);
+
+            ws.onopen = function () {
+                log('✓ WebSocket connected!\n', 'success');
+
+                log('Step 2: Sending select instruction...');
+                const select = '6.select,3.vnc;';
+                log(`SEND: ${select}`, 'send');
+                ws.send(select);
+            };
+
+            ws.onmessage = function (event) {
+                const data = event.data;
+
+                // Check for args response
+                if (data.includes('4.args')) {
+                    const preview = data.length > 100 ? data.substring(0, 100) + '...' : data;
+                    log(`RECV: ${preview}`, 'recv');
+                    log('\n✓ Received args from guacd!\n', 'success');
+
+                    log('Step 3: Sending connect instruction...');
+                    // Must send all 44 args that guacd asked for
+                    // Args: VERSION, hostname, port, read-only, encodings, username, password, + 37 more
+                    const args = [
+                        'VERSION_1_5_0',     // VERSION
+                        VNC_HOST,            // hostname
+                        VNC_PORT,            // port
+                        '',                  // read-only
+                        '',                  // encodings
+                        '',                  // username
+                        VNC_PASS,            // password
+                    ];
+                    // Fill remaining args with empty strings (total 45 - guacd requires exactly this many)
+                    while (args.length < 45) args.push('');
+
+                    // Build instruction: 7.connect,len.val,len.val,...;
+                    const connect = '7.connect,' + args.map(a => `${a.length}.${a}`).join(',') + ';';
+                    log(`SEND: ${connect.substring(0, 80)}...`, 'send');
+                    ws.send(connect);
+                    return;
+                }
+
+                // Check for ready response
+                if (data.includes('5.ready')) {
+                    log(`RECV: ${data}`, 'recv');
+                    log('\n🎉 SUCCESS: VNC connection established!', 'success');
+                    log('Waiting for frame data (10 seconds)...\n', 'success');
+
+                    // Send size instruction to tell guacd our display size
+                    const size = '4.size,1.0,4.1920,4.1080;';
+                    log(`SEND: ${size}`, 'send');
+                    ws.send(size);
+
+                    // Keep connection open for 10 seconds to capture frames
+                    setTimeout(() => {
+                        log(`\n=== Summary ===`);
+                        log(`Total frames received: ${frameCount}`);
+                        log(`Total syncs received: ${syncCount}`);
+                        log('\nClosing test connection...');
+                        ws.close();
+                    }, 10000);
+                    return;
+                }
+
+                // Check for error
+                if (data.includes('.error')) {
+                    log(`\n❌ ERROR: ${data}`, 'error');
+                    return;
+                }
+
+                // Check for sync (frame complete marker)
+                if (data.includes('4.sync')) {
+                    syncCount++;
+                    if (syncCount <= 5) {
+                        log(`✓ Sync #${syncCount}`, 'success');
+                    } else if (syncCount === 6) {
+                        log('... (more syncs incoming, summarizing at end)', 'success');
+                    }
+                    return;
+                }
+
+                // Track frame data
+                frameCount++;
+                if (frameCount <= 10) {
+                    const preview = data.length > 60 ? data.substring(0, 60) + '...' : data;
+                    log(`FRAME: ${preview}`, 'frame');
+                } else if (frameCount === 11) {
+                    log('... (more frame data incoming, summarizing at end)', 'frame');
+                }
+            };
+
+            ws.onerror = function (error) {
+                log(`\n❌ WebSocket error: ${JSON.stringify(error)}`, 'error');
+            };
+
+            ws.onclose = function () {
+                log('\nWebSocket closed');
+                log('\n=== Test Complete ===');
+            };
+        }
+
+        log('Ready. Click "Run Connection Test" to start.');
+    </script>
+</body>
+
+</html>

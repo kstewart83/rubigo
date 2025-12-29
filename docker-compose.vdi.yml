@@ -17,6 +17,9 @@ services:
     container_name: rubigo-guacd
     ports:
       - "4822:4822"
+    extra_hosts:
+      # Allow guacd to connect to VNC on the host
+      - "host.docker.internal:host-gateway"
     volumes:
       # Shared drive for file transfers
       - ./vdi/drive:/drive

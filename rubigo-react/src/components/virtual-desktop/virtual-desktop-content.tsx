@@ -52,12 +52,11 @@ import { toast } from "sonner";
 import type { VirtualDesktop, DesktopTemplateInfo } from "@/types/virtual-desktop";
 import { cn } from "@/lib/utils";
 
-interface VirtualDesktopContentProps {
-    apiToken: string;
-}
+import { usePersona } from "@/contexts/persona-context";
 
-export function VirtualDesktopContent({ apiToken }: VirtualDesktopContentProps) {
+export function VirtualDesktopContent() {
     const router = useRouter();
+    const { currentPersona } = usePersona();
     const [desktops, setDesktops] = useState<VirtualDesktop[]>([]);
     const [templates, setTemplates] = useState<DesktopTemplateInfo[]>([]);
     const [loading, setLoading] = useState(true);
@@ -75,15 +74,18 @@ export function VirtualDesktopContent({ apiToken }: VirtualDesktopContentProps) 
     // Action loading states
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
+    // Auth headers using persona ID
     const authHeaders = {
-        "Authorization": `Bearer ${apiToken}`,
+        "X-Persona-Id": currentPersona?.id || "",
         "Content-Type": "application/json",
     };
 
-    // Fetch data on mount
+    // Fetch data on mount and when persona changes
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (currentPersona) {
+            fetchData();
+        }
+    }, [currentPersona]);
 
     async function fetchData() {
         setLoading(true);

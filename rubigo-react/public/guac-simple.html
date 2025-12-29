@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simple Guac Test</title>
+</head>
+
+<body>
+    <button onclick="connect()">Connect</button>
+    <br><br>
+    <canvas id="display" width="1920" height="1080"></canvas>
+    <div id="log"></div>
+
+    <script>
+        // Compensate for devicePixelRatio - display at true physical pixel size
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = document.getElementById('display');
+        canvas.style.width = (1920 / dpr) + 'px';
+        canvas.style.height = (1080 / dpr) + 'px';
+        console.log('DPR:', dpr, '- CSS size:', 1920 / dpr, 'x', 1080 / dpr);
+
+        let ws = null;
+        let ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        let layers = {};
+        let activeStreams = {};
+        let messageBuffer = '';
+
+        function log(msg) {
+            document.getElementById('log').innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        function parseInstructions(data) {
+            messageBuffer += data;
+            const instructions = [];
+            while (messageBuffer.includes(';')) {
+                const semiIdx = messageBuffer.indexOf(';');
+                const instrStr = messageBuffer.substring(0, semiIdx);
+                messageBuffer = messageBuffer.substring(semiIdx + 1);
+
+                const parts = [];
+                let pos = 0;
+                while (pos < instrStr.length) {
+                    const dotPos = instrStr.indexOf('.', pos);
+                    if (dotPos === -1) break;
+                    const len = parseInt(instrStr.substring(pos, dotPos));
+                    parts.push(instrStr.substring(dotPos + 1, dotPos + 1 + len));
+                    pos = dotPos + 1 + len + 1;
+                }
+                if (parts.length > 0) {
+                    instructions.push({ opcode: parts[0], args: parts.slice(1) });
+                }
+            }
+            return instructions;
+        }
+
+        function sendInstruction(opcode, ...args) {
+            const parts = [opcode, ...args];
+            ws.send(parts.map(p => `${String(p).length}.${p}`).join(',') + ';');
+        }
+
+        function ensureLayer(index, width, height) {
+            if (!layers[index]) {
+                const c = document.createElement('canvas');
+                c.width = width || 1920;
+                c.height = height || 1080;
+                const layerCtx = c.getContext('2d');
+                layerCtx.imageSmoothingEnabled = false;
+                layers[index] = { canvas: c, ctx: layerCtx };
+            }
+            return layers[index];
+        }
+
+        function composeLayers() {
+            const layer0 = layers[0];
+            if (layer0) ctx.drawImage(layer0.canvas, 0, 0);
+        }
+
+        function handleInstruction(instr) {
+            const { opcode, args } = instr;
+
+            if (opcode === 'args') {
+                log('Got args, sending connect...');
+                sendInstruction('connect', 'VERSION_1_5_0', 'host.docker.internal', '15901', '', '', '', 'rubigo',
+                    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                    '', '', '', '', '', '', '', '', '', '', '', '', '', '');
+            } else if (opcode === 'ready') {
+                log('Ready! Sending size...');
+                sendInstruction('size', '0', '1920', '1080');
+            } else if (opcode === 'size') {
+                const [layer, w, h] = args;
+                log(`Size: layer ${layer} = ${w}x${h}`);
+                if (layer === '0') {
+                    ensureLayer(0, parseInt(w), parseInt(h));
+                }
+            } else if (opcode === 'img') {
+                const [stream, mode, layer, mimetype, x, y] = args;
+                activeStreams[stream] = { layer: parseInt(layer), x: parseInt(x), y: parseInt(y), data: '' };
+            } else if (opcode === 'blob') {
+                const [stream, data] = args;
+                if (activeStreams[stream]) activeStreams[stream].data += data;
+            } else if (opcode === 'end') {
+                const [stream] = args;
+                const s = activeStreams[stream];
+                if (s && s.data) {
+                    const layerObj = ensureLayer(s.layer);
+                    const img = new Image();
+                    img.onload = () => {
+                        layerObj.ctx.drawImage(img, s.x, s.y);
+                        composeLayers();
+                        log(`Drew ${img.width}x${img.height} at ${s.x},${s.y}`);
+                    };
+                    img.src = 'data:image/png;base64,' + s.data;
+                }
+                delete activeStreams[stream];
+                sendInstruction('ack', stream, '0', 'OK');
+            } else if (opcode === 'sync') {
+                sendInstruction('sync', args[0]);
+            }
+        }
+
+        function connect() {
+            log('Connecting...');
+            ws = new WebSocket('ws://localhost:4823/tunnel');
+            ws.onopen = () => {
+                log('Connected, sending select...');
+                sendInstruction('select', 'vnc');
+            };
+            ws.onmessage = (e) => {
+                parseInstructions(e.data).forEach(handleInstruction);
+            };
+            ws.onclose = () => log('Closed');
+            ws.onerror = () => log('Error');
+        }
+    </script>
+</body>
+
+</html>

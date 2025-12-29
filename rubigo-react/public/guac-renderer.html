@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Guacamole Custom Renderer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #a855f7;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        #display-container {
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            /* No overflow restriction - show full desktop at native size */
+        }
+
+        #display {
+            /* Native resolution, CSS scaled for display */
+            display: block;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+
+        #log {
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            width: 400px;
+            height: 600px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info-text {
+            color: #3b82f6;
+        }
+
+        .stats {
+            margin: 10px 0;
+            padding: 10px;
+            background: #111;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🖥️ Guacamole Custom Renderer</h1>
+    <p class="info">Minimal custom renderer to display VNC frames</p>
+
+    <div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="stats">
+        <span>Status: <span id="status">Disconnected</span></span> |
+        <span>Frames: <span id="frameCount">0</span></span> |
+        <span>Syncs: <span id="syncCount">0</span></span> |
+        <span>Images: <span id="imgCount">0</span></span>
+    </div>
+
+    <div class="container">
+        <div id="display-container">
+            <canvas id="display" width="1920" height="1080"></canvas>
+        </div>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const VNC_HOST = 'host.docker.internal';
+        const VNC_PORT = '15901';
+        const VNC_PASS = 'rubigo';
+
+        let ws = null;
+        let ctx = null;
+        let layers = {}; // layer index -> canvas
+        let stats = { frames: 0, syncs: 0, images: 0 };
+
+        function log(msg, className = '') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toISOString().substring(11, 19);
+            logDiv.innerHTML += `<span class="${className}">${time} ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('frameCount').textContent = stats.frames;
+            document.getElementById('syncCount').textContent = stats.syncs;
+            document.getElementById('imgCount').textContent = stats.images;
+        }
+
+        function setStatus(s) {
+            document.getElementById('status').textContent = s;
+        }
+
+        // Buffer for incomplete instructions
+        let messageBuffer = '';
+
+        // Parse Guacamole instructions from buffered data
+        function parseInstructions(newData) {
+            messageBuffer += newData;
+            const instructions = [];
+
+            while (messageBuffer.length > 0) {
+                // Check if we have a complete instruction (ends with ;)
+                const semicolonIdx = messageBuffer.indexOf(';');
+                if (semicolonIdx === -1) {
+                    // Incomplete instruction, wait for more data
+                    break;
+                }
+
+                // Extract complete instruction
+                const instructionStr = messageBuffer.substring(0, semicolonIdx + 1);
+                messageBuffer = messageBuffer.substring(semicolonIdx + 1);
+
+                // Parse this instruction
+                const instr = parseSingleInstruction(instructionStr);
+                if (instr) {
+                    instructions.push(instr);
+                }
+            }
+
+            return instructions;
+        }
+
+        // Parse a single complete instruction
+        function parseSingleInstruction(data) {
+            let pos = 0;
+
+            // Find opcode length
+            let dotPos = data.indexOf('.', pos);
+            if (dotPos === -1) return null;
+
+            const opcodeLen = parseInt(data.substring(pos, dotPos), 10);
+            if (isNaN(opcodeLen)) return null;
+
+            const opcode = data.substring(dotPos + 1, dotPos + 1 + opcodeLen);
+            pos = dotPos + 1 + opcodeLen;
+
+            const args = [];
+
+            // Parse args
+            while (pos < data.length && data[pos] === ',') {
+                pos++;
+                dotPos = data.indexOf('.', pos);
+                if (dotPos === -1) break;
+
+                const argLen = parseInt(data.substring(pos, dotPos), 10);
+                if (isNaN(argLen)) break;
+
+                const arg = data.substring(dotPos + 1, dotPos + 1 + argLen);
+                args.push(arg);
+                pos = dotPos + 1 + argLen;
+            }
+
+            return { opcode, args };
+        }
+
+        // Handle incoming Guacamole instruction
+        function handleInstruction(instr) {
+            const { opcode, args } = instr;
+
+            // Debug: log first 20 instructions
+            if (stats.frames < 20) {
+                log(`INSTR: ${opcode}(${args.length} args): ${args.slice(0, 3).join(', ')}...`);
+            }
+
+            switch (opcode) {
+                case 'args':
+                    log('✓ Received args, sending connect...', 'success');
+                    sendConnect(args);
+                    break;
+
+                case 'ready':
+                    log(`✓ Connected!`, 'success');
+                    setStatus('Connected');
+                    sendSize();
+                    break;
+
+                case 'size':
+                    const [layer, w, h] = args;
+                    log(`Size: layer=${layer} ${w}x${h}`, 'info-text');
+                    ensureLayer(parseInt(layer), parseInt(w), parseInt(h));
+                    break;
+
+                case 'img':
+                    // img instruction: stream, layer, mimetype, x, y
+                    stats.images++;
+                    handleImage(opcode, args);
+                    break;
+
+                case 'png':
+                case 'jpeg':
+                    stats.images++;
+                    handleImage(opcode, args);
+                    break;
+
+                case 'blob':
+                    // blob instruction contains actual image data
+                    handleBlob(args);
+                    break;
+
+                case 'end':
+                    // Stream ended
+                    handleEnd(args);
+                    break;
+
+                case 'sync':
+                    stats.syncs++;
+                    updateStats();
+                    // Composite layers to main canvas
+                    composeLayers();
+                    break;
+
+                case 'cursor':
+                    // Cursor update - skip for now
+                    break;
+
+                case 'mouse':
+                    break;
+
+                case 'error':
+                    log(`❌ Error: ${args.join(', ')}`, 'error');
+                    break;
+
+                default:
+                    // Many other instructions we're ignoring for now
+                    break;
+            }
+
+            stats.frames++;
+        }
+
+        // Track active streams for image data
+        let activeStreams = {};
+
+        function handleImage(opcode, args) {
+            // img instruction: stream, mode, layer, mimetype, x, y
+            // mode = composite mode (how to blend)
+            // layer can be negative (buffer layer)
+            if (args.length >= 6) {
+                const [stream, mode, layer, mimetype, x, y] = args;
+                activeStreams[stream] = {
+                    layer: parseInt(layer) || 0,
+                    mimetype,
+                    x: parseInt(x) || 0,
+                    y: parseInt(y) || 0,
+                    data: ''
+                };
+                if (stats.images <= 5) {
+                    log(`IMG stream=${stream} layer=${layer} ${mimetype} @${x},${y}`, 'info-text');
+                }
+            }
+        }
+
+        function handleBlob(args) {
+            // blob instruction: stream, base64data
+            const [stream, data] = args;
+            if (activeStreams[stream]) {
+                activeStreams[stream].data += data;
+            }
+        }
+
+        function handleEnd(args) {
+            // end instruction: stream
+            const [stream] = args;
+            const streamData = activeStreams[stream];
+            if (streamData && streamData.data) {
+                const layerObj = ensureLayer(streamData.layer, null, null);
+                const img = new Image();
+                img.onload = () => {
+                    layerObj.ctx.drawImage(img, streamData.x, streamData.y);
+                    if (stats.images <= 5) {
+                        log(`✓ Drew ${img.width}x${img.height} image @${streamData.x},${streamData.y}`, 'success');
+                    }
+                };
+                img.onerror = (e) => {
+                    log(`Image decode error`, 'error');
+                };
+                img.src = `data:${streamData.mimetype};base64,${streamData.data}`;
+            }
+            delete activeStreams[stream];
+        }
+
+        function ensureLayer(index, width, height) {
+            if (!layers[index]) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width || 1920;
+                canvas.height = height || 1080;
+                const layerCtx = canvas.getContext('2d');
+                layerCtx.imageSmoothingEnabled = false;
+                layers[index] = {
+                    canvas,
+                    ctx: layerCtx
+                };
+                // If this is layer 0, update main canvas size
+                if (index === 0 && width && height) {
+                    updateCanvasSize(width, height);
+                }
+            } else if (width && height) {
+                layers[index].canvas.width = width;
+                layers[index].canvas.height = height;
+                // If this is layer 0, update main canvas size
+                if (index === 0) {
+                    updateCanvasSize(width, height);
+                }
+            }
+            return layers[index];
+        }
+
+
+
+        // Track remote desktop dimensions
+        let remoteWidth = 1920;
+        let remoteHeight = 1080;
+        const MAX_DISPLAY_WIDTH = 1600;
+        const MAX_DISPLAY_HEIGHT = 900;
+
+        function composeLayers() {
+            // Draw layer 0 (default layer) to main canvas at native resolution (no scaling)
+            const layer0 = layers[0];
+            if (layer0) {
+                // Clear and draw at native resolution
+                ctx.drawImage(layer0.canvas, 0, 0);
+            }
+        }
+
+        // Update main canvas size when remote desktop size changes
+        function updateCanvasSize(width, height) {
+            remoteWidth = width;
+            remoteHeight = height;
+
+            const canvas = document.getElementById('display');
+
+            // Set canvas internal resolution
+            canvas.width = width;
+            canvas.height = height;
+
+            // CRITICAL: Set CSS size to match exactly - prevents browser scaling
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            ctx = canvas.getContext('2d');
+
+            // Disable image smoothing for sharp pixels
+            ctx.imageSmoothingEnabled = false;
+
+            // No CSS transform scaling
+            canvas.style.transform = 'none';
+
+            // Update container to match canvas size
+            const container = document.getElementById('display-container');
+            container.style.width = `${width}px`;
+            container.style.height = `${height}px`;
+
+            log(`Canvas: ${width}x${height} (native, no scaling)`, 'success');
+        }
+
+        function sendInstruction(opcode, ...args) {
+            const parts = [opcode, ...args];
+            const msg = parts.map(p => `${String(p).length}.${p}`).join(',') + ';';
+            ws.send(msg);
+        }
+
+        function sendConnect(serverArgs) {
+            // Build connect with all required args
+            const connectArgs = [
+                'VERSION_1_5_0',     // VERSION
+                VNC_HOST,            // hostname
+                VNC_PORT,            // port
+                '',                  // read-only
+                '',                  // encodings
+                '',                  // username
+                VNC_PASS,            // password
+            ];
+            // Fill remaining with empty strings
+            while (connectArgs.length < serverArgs.length) {
+                connectArgs.push('');
+            }
+
+            sendInstruction('connect', ...connectArgs);
+        }
+
+        function sendSize() {
+            // Tell server our optimal display size - use container size for 1:1 pixels
+            sendInstruction('size', '0', String(MAX_DISPLAY_WIDTH), String(MAX_DISPLAY_HEIGHT));
+            log(`Requested size: ${MAX_DISPLAY_WIDTH}x${MAX_DISPLAY_HEIGHT}`);
+        }
+
+        function connect() {
+            log('Connecting...', 'info-text');
+            setStatus('Connecting...');
+
+            const canvas = document.getElementById('display');
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            layers = {};
+            stats = { frames: 0, syncs: 0, images: 0 };
+            activeStreams = {};
+            messageBuffer = '';
+            updateStats();
+
+            ws = new WebSocket('ws://localhost:4823/tunnel');
+
+            ws.onopen = () => {
+                log('WebSocket connected', 'success');
+                sendInstruction('select', 'vnc');
+            };
+
+            ws.onmessage = (event) => {
+                const instructions = parseInstructions(event.data);
+                for (const instr of instructions) {
+                    handleInstruction(instr);
+                }
+            };
+
+            ws.onerror = (e) => {
+                log('WebSocket error', 'error');
+                setStatus('Error');
+            };
+
+            ws.onclose = () => {
+                log('WebSocket closed');
+                setStatus('Disconnected');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            setStatus('Disconnected');
+        }
+
+        log('Ready. Click Connect to start.');
+    </script>
+</body>
+
+</html>

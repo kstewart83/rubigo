@@ -7,3 +7,11 @@ wip/
 
 # WIP configuration files (created by /wip workflow)
 wip.toml
+
+# VDI development files (large VM images and caches)
+vdi/.cache/
+vdi/.work/
+vdi/images/
+vdi/vms/
+*.qcow2
+*.img

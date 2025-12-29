@@ -9,6 +9,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { DesktopViewer } from "@/components/virtual-desktop";
+import { usePersona } from "@/contexts/persona-context";
 import type { VirtualDesktop, DesktopConnection } from "@/types/virtual-desktop";
 import { Loader2 } from "lucide-react";
 
@@ -19,20 +20,25 @@ interface DesktopSessionPageProps {
 export default function DesktopSessionPage({ params }: DesktopSessionPageProps) {
     const { id } = use(params);
     const router = useRouter();
+    const { currentPersona, isLoading: personaLoading } = usePersona();
     const [desktop, setDesktop] = useState<VirtualDesktop | null>(null);
     const [connection, setConnection] = useState<DesktopConnection | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Auth headers using persona ID
+    const getHeaders = () => ({
+        "X-Persona-Id": currentPersona?.id || "",
+        "Content-Type": "application/json",
+    });
+
     useEffect(() => {
+        // Wait for persona to load
+        if (personaLoading || !currentPersona) return;
+
         async function fetchDesktopAndConnect() {
             try {
-                // Get API token from localStorage or cookie
-                const apiToken = localStorage.getItem("rubigo-api-token") || "";
-                const headers = {
-                    "Authorization": `Bearer ${apiToken}`,
-                    "Content-Type": "application/json",
-                };
+                const headers = getHeaders();
 
                 // Fetch desktop details
                 const desktopRes = await fetch(`/api/virtual-desktop/${id}`, { headers });
@@ -61,17 +67,13 @@ export default function DesktopSessionPage({ params }: DesktopSessionPageProps) 
         }
 
         fetchDesktopAndConnect();
-    }, [id]);
+    }, [id, currentPersona, personaLoading]);
 
     async function handleConnect() {
-        if (!desktop) return;
+        if (!desktop || !currentPersona) return;
 
         try {
-            const apiToken = localStorage.getItem("rubigo-api-token") || "";
-            const headers = {
-                "Authorization": `Bearer ${apiToken}`,
-                "Content-Type": "application/json",
-            };
+            const headers = getHeaders();
 
             // Start desktop if not running
             if (desktop.status !== "running") {
@@ -108,7 +110,7 @@ export default function DesktopSessionPage({ params }: DesktopSessionPageProps) 
         router.push("/virtual-desktop");
     }
 
-    if (loading) {
+    if (loading || personaLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-zinc-900">
                 <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
