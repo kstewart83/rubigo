@@ -412,12 +412,18 @@ export async function getDesktopConnection(
     const protocol =
         desktop.template === "windows-11" ? ("rdp" as const) : ("vnc" as const);
 
-    // Tunnel server port (Bun WebSocket server)
-    const tunnelPort = process.env.TUNNEL_PORT || "4823";
-    const tunnelHost = process.env.TUNNEL_HOST || "localhost";
+    // Tunnel server can be same-origin (consolidated) or separate
+    // In production: wss://rubigo.example.com/api/guac-tunnel
+    // In dev with consolidated server: ws://localhost:PORT/api/guac-tunnel
+    // In dev with separate tunnel: ws://localhost:4823/tunnel
+    const tunnelBase = process.env.TUNNEL_URL || "";
+    const tunnelPath = tunnelBase
+        ? `${tunnelBase}/tunnel`  // Legacy separate tunnel
+        : `/api/guac-tunnel`;     // Consolidated same-origin
 
     return {
-        tunnelUrl: `ws://${tunnelHost}:${tunnelPort}/tunnel?hostname=${VNC_HOST}&port=${desktop.vncPort}&password=rubigo`,
+        // Client-side will prefix with ws:// and current host if relative
+        tunnelUrl: `${tunnelPath}?hostname=${VNC_HOST}&port=${desktop.vncPort}&password=rubigo`,
         token,
         connectionParams: {
             hostname: VNC_HOST,

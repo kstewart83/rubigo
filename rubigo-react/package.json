@@ -3,7 +3,9 @@
   "version": "0.1.2",
   "private": true,
   "scripts": {
-    "dev": "RUBIGO_AUTO_INIT=true RUBIGO_SHOW_COMMIT=true bun --bun next dev --turbopack",
+    "dev": "bun run dev:start",
+    "dev:start": "(RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack -p ${NEXT_PORT:-3001} &) && sleep 2 && bun run server.ts",
+    "dev:next": "RUBIGO_AUTO_INIT=true RUBIGO_SHOW_COMMIT=true bun --bun next dev --turbopack",
     "dev:clean": "RUBIGO_SHOW_COMMIT=true bun --bun next dev --turbopack",
     "dev:isolated": "NEXT_DIST_DIR=.next-isolated RUBIGO_AUTO_INIT=true bun --bun next dev --turbopack",
     "dev:mmc": "bun src/scripts/dev-mmc.ts",

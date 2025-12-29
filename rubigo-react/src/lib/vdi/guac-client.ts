@@ -60,8 +60,16 @@ export class GuacClient {
         this.layers.clear();
         this.activeStreams.clear();
 
-        console.log('[GuacClient] Connecting to:', this.options.tunnelUrl);
-        this.ws = new WebSocket(this.options.tunnelUrl);
+        // Construct WebSocket URL - handle both absolute and relative paths
+        let wsUrl = this.options.tunnelUrl;
+        if (wsUrl.startsWith('/')) {
+            // Relative path - construct full URL from current location
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host}${wsUrl}`;
+        }
+
+        console.log('[GuacClient] Connecting to:', wsUrl);
+        this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
             console.log('[GuacClient] WebSocket connected, sending select...');
