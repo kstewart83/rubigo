@@ -110,7 +110,7 @@ case "${1:-}" in
             -cdrom "$CLOUD_INIT_ISO" \
             -vga std \
             -vnc "$QEMU_VNC_DISPLAY" \
-            -nic user,hostfwd=tcp::${HOST_VNC_PORT}-:${GUEST_VNC_PORT}
+            -nic user,hostfwd=tcp::${HOST_VNC_PORT}-:${GUEST_VNC_PORT},hostfwd=tcp::2222-:22
         ;;
     
     *)

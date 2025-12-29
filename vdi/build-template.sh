@@ -2,8 +2,10 @@
 #
 # VM Template Builder for Rubigo Virtual Desktop
 #
-# Creates Ubuntu 24.04 desktop images with XFCE + TigerVNC
+# Creates Ubuntu 24.04 desktop images with LXQt + TigerVNC
 # for use with Cloud Hypervisor.
+#
+# LXQt is lighter than XFCE (~419MB RAM at idle) for faster boot times.
 #
 # Usage: ./build-template.sh [template-name]
 # Example: ./build-template.sh ubuntu-desktop
@@ -27,6 +29,7 @@ VNC_PASSWORD="rubigo"
 
 echo "=== Rubigo VM Template Builder ==="
 echo "Template: ${TEMPLATE_NAME}"
+echo "Desktop: LXQt (lightweight)"
 echo ""
 
 # Create directories
@@ -63,18 +66,24 @@ users:
     lock_passwd: false
     # Password: rubigo
     passwd: \$6\$khYzuIZ3/QzUgiDH\$x20Mh4XZ0UH435Vp7hV7fDKtG2lIjlK58eamu9MuFisxijv1BnIfHLqXiNOZjc.W5RiQDSoLqgxK0oTuA0oi/.
+    ssh_authorized_keys:
+      - $(cat ~/.ssh/id_ed25519.pub 2>/dev/null || cat ~/.ssh/id_rsa.pub 2>/dev/null || echo "# No SSH key found")
 
 # Expand root filesystem
 growpart:
   mode: auto
   devices: ['/']
 
-# Install packages
+# Install packages - LXQt is lighter than XFCE
 packages:
-  - xfce4
-  - xfce4-goodies
+  - lxqt
+  - lxqt-core
+  - openbox
   - tigervnc-standalone-server
   - dbus-x11
+  - sddm
+  - pcmanfm-qt
+  - qterminal
 
 # Run commands after boot
 runcmd:
@@ -84,13 +93,15 @@ runcmd:
   - chmod 600 /home/rubigo/.vnc/passwd
   - chown -R rubigo:rubigo /home/rubigo/.vnc
   
-  # Create VNC xstartup script
+  # Create VNC xstartup script for LXQt
   - |
     cat > /home/rubigo/.vnc/xstartup << 'XSTARTUP'
     #!/bin/bash
     unset SESSION_MANAGER
     unset DBUS_SESSION_BUS_ADDRESS
-    exec startxfce4
+    export XDG_SESSION_TYPE=x11
+    export XDG_CURRENT_DESKTOP=LXQt
+    exec startlxqt
     XSTARTUP
   - chmod +x /home/rubigo/.vnc/xstartup
   - chown rubigo:rubigo /home/rubigo/.vnc/xstartup
@@ -114,13 +125,16 @@ runcmd:
     WantedBy=multi-user.target
     VNCSERVICE
   
+  # Disable SDDM (we use VNC, not local display)
+  - systemctl disable sddm || true
+  
   # Enable VNC on display :1 (port 5901)
   - systemctl daemon-reload
   - systemctl enable vnc@1.service
   - systemctl start vnc@1.service
 
 # Final message
-final_message: "Rubigo Desktop template ready! VNC available on port 5901"
+final_message: "Rubigo Desktop template ready! VNC available on port 5901 (LXQt)"
 EOF
 
 # Step 4: Create cloud-init ISO
