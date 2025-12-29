@@ -46,7 +46,7 @@ console.log("## Check 1: Statement Breakpoint Format");
 for (const file of sqlFiles) {
   const content = readFileSync(join(drizzlePath, file), "utf-8");
   const lines = content.split("\n");
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Check for invalid format: "-->" followed immediately by non-space
@@ -86,7 +86,7 @@ if (existsSync(journalPath)) {
   try {
     const journal = JSON.parse(readFileSync(journalPath, "utf-8"));
     const journalEntries = journal.entries || [];
-    
+
     // Check that all journal entries have corresponding files
     for (const entry of journalEntries) {
       const expectedFile = `${entry.tag}.sql`;
@@ -94,7 +94,7 @@ if (existsSync(journalPath)) {
         errors.push(`Journal references missing file: ${expectedFile}`);
       }
     }
-    
+
     // Check that all SQL files are in the journal
     const journalTags = journalEntries.map((e: { tag: string }) => `${e.tag}.sql`);
     for (const file of sqlFiles) {
@@ -102,7 +102,7 @@ if (existsSync(journalPath)) {
         warnings.push(`Migration file not in journal: ${file}`);
       }
     }
-    
+
     if (errors.filter(e => e.includes("Journal")).length === 0) {
       console.log("✅ Journal entries match migration files\n");
     } else {
@@ -129,6 +129,75 @@ if (numericPrefixes.length > 0) {
   } else {
     console.log("⚠️ Gaps found in migration sequence\n");
   }
+}
+
+// 5. Check migration timestamp ordering (CRITICAL for drizzle-orm)
+// Drizzle-orm uses journal 'when' timestamps to determine pending migrations.
+// If a new migration has a timestamp OLDER than existing ones, it will be skipped!
+console.log("## Check 5: Migration Timestamp Ordering (Critical)");
+if (existsSync(journalPath)) {
+  try {
+    const journal = JSON.parse(readFileSync(journalPath, "utf-8"));
+    const journalEntries: Array<{ idx: number; when: number; tag: string }> = journal.entries || [];
+
+    // Sort by idx to get intended order
+    const sortedByIdx = [...journalEntries].sort((a, b) => a.idx - b.idx);
+
+    let timestampErrors = 0;
+    for (let i = 1; i < sortedByIdx.length; i++) {
+      const prev = sortedByIdx[i - 1];
+      const curr = sortedByIdx[i];
+
+      if (curr.when <= prev.when) {
+        errors.push(
+          `Migration timestamp ordering error: ${curr.tag} (idx=${curr.idx}, when=${curr.when}) ` +
+          `has timestamp <= ${prev.tag} (idx=${prev.idx}, when=${prev.when}). ` +
+          `Drizzle-orm will SKIP this migration! ` +
+          `Fix: Update 'when' in journal to be > ${prev.when}`
+        );
+        timestampErrors++;
+      }
+    }
+
+    if (timestampErrors === 0) {
+      console.log("✅ Migration timestamps are strictly ascending\n");
+    } else {
+      console.log("❌ CRITICAL: Migration timestamp ordering errors found!\n");
+      console.log("   Drizzle-orm uses 'when' timestamps to determine pending migrations.");
+      console.log("   New migrations must have timestamps AFTER the last applied migration.\n");
+    }
+  } catch (e) {
+    // Already caught in Check 3
+  }
+}
+
+// 6. Check for destructive operations (warnings only)
+// These are valid but should require explicit acknowledgment
+console.log("## Check 6: Destructive Operations");
+const destructivePatterns = [
+  { pattern: /\bDROP\s+TABLE\b/i, desc: "DROP TABLE" },
+  { pattern: /\bDROP\s+INDEX\b/i, desc: "DROP INDEX" },
+  { pattern: /\bDELETE\s+FROM\b/i, desc: "DELETE FROM" },
+  { pattern: /\bTRUNCATE\b/i, desc: "TRUNCATE" },
+  { pattern: /\bALTER\s+TABLE\s+\w+\s+DROP\s+COLUMN\b/i, desc: "DROP COLUMN" },
+];
+
+let destructiveFound = 0;
+for (const file of sqlFiles) {
+  const content = readFileSync(join(drizzlePath, file), "utf-8");
+
+  for (const { pattern, desc } of destructivePatterns) {
+    if (pattern.test(content)) {
+      warnings.push(`${file} contains ${desc} - ensure this is intentional`);
+      destructiveFound++;
+    }
+  }
+}
+
+if (destructiveFound === 0) {
+  console.log("✅ No destructive operations found\n");
+} else {
+  console.log(`⚠️ Found ${destructiveFound} destructive operation(s) - review required\n`);
 }
 
 // Summary

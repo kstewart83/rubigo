@@ -30,10 +30,18 @@ bun run production/validate-migrations.ts rubigo-react
 ```
 
 Checks:
-- Statement breakpoint format
+- Statement breakpoint format (`--> statement-breakpoint` with space)
 - No duplicate migration numbers
-- Journal consistency
+- Journal consistency (all referenced migrations exist)
 - Sequential numbering
+- **Timestamp ordering (CRITICAL)** - see below
+- Destructive operations (DROP TABLE, DELETE FROM, etc.)
+
+> [!CAUTION]
+> **Migration Timestamp Ordering**: Drizzle-orm determines pending migrations by comparing the journal `when` timestamp against the last applied migration's `created_at`. If a new migration has a timestamp **older than** the last applied migration, drizzle will **silently skip it**.
+>
+> **Fix**: Ensure new migration entries in `drizzle/meta/_journal.json` have `when` values greater than ALL previous entries.
+
 
 ## Step 3: Check for Uncommitted Changes
 
