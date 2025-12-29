@@ -15,17 +15,20 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { AgentBadge } from "@/components/ui/agent-badge";
+import { PersonAvatar } from "@/components/ui/person-avatar";
 import { MessageSquare, Mail, Phone, Smartphone } from "lucide-react";
 
 interface PersonnelPopoverProps {
     personnelId: string;
     personnelName: string;
+    personnelPhoto?: string | null;
     personnelTitle?: string;
     personnelDepartment?: string;
     personnelEmail?: string;
     personnelDeskPhone?: string;
     personnelCellPhone?: string;
     personnelIsAgent?: boolean;
+    presenceStatus?: "online" | "away" | "offline";
     children: React.ReactNode;
     onStartDM?: (personnelId: string) => void;
     currentUserId?: string;
@@ -34,12 +37,14 @@ interface PersonnelPopoverProps {
 export function PersonnelPopover({
     personnelId,
     personnelName,
+    personnelPhoto,
     personnelTitle,
     personnelDepartment,
     personnelEmail,
     personnelDeskPhone,
     personnelCellPhone,
     personnelIsAgent,
+    presenceStatus,
     children,
     onStartDM,
     currentUserId,
@@ -69,11 +74,15 @@ export function PersonnelPopover({
                 <div className="space-y-3">
                     {/* Photo/Avatar */}
                     <div className="flex items-center gap-3">
-                        <div
-                            data-testid="popup-avatar"
-                            className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-medium overflow-hidden"
-                        >
-                            {personnelName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                        <div data-testid="popup-avatar">
+                            <PersonAvatar
+                                photo={personnelPhoto}
+                                name={personnelName}
+                                isAgent={personnelIsAgent}
+                                size="lg"
+                                showPresence
+                                presenceStatus={presenceStatus}
+                            />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div

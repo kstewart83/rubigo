@@ -6,7 +6,10 @@
  * Main chat UI component with channel sidebar and message area
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useEvent } from "@/hooks/use-event";
+import { PersonAvatar } from "@/components/ui/person-avatar";
+import { useActiveUsers } from "@/hooks/use-presence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -74,6 +77,16 @@ export function ChatPageContent() {
     const { currentPersona } = usePersona();
     const { resolvedTheme } = useTheme();
     const isDarkMode = resolvedTheme === "dark";
+
+    // Track active users for presence indicators
+    const { users: activeUsers } = useActiveUsers();
+    const presenceMap = useMemo(() => {
+        const map = new Map<string, "online" | "away" | "offline">();
+        for (const u of activeUsers) {
+            map.set(u.personnelId, u.status);
+        }
+        return map;
+    }, [activeUsers]);
 
     // State
     const [channels, setChannels] = useState<ChannelListItem[]>([]);
@@ -215,6 +228,15 @@ export function ChatPageContent() {
         const interval = setInterval(loadMessages, 15000);
         return () => clearInterval(interval);
     }, [selectedChannel, currentPersona]);
+
+    // Real-time: Listen for chat.message events and refresh immediately
+    useEvent("chat.message", useCallback((event) => {
+        const payload = event.payload as { channelId: string };
+        if (payload.channelId === selectedChannel) {
+            // Refresh messages when a new message arrives in this channel
+            getMessages(selectedChannel).then(setMessages);
+        }
+    }, [selectedChannel]));
 
     // Scroll to bottom only on initial load or when new messages are added
     const prevMessageCountRef = useRef(0);
@@ -500,20 +522,26 @@ export function ChatPageContent() {
                                                 <PersonnelPopover
                                                     personnelId={msg.senderId}
                                                     personnelName={msg.senderName}
+                                                    personnelPhoto={msg.senderPhoto}
                                                     personnelTitle={msg.senderTitle ?? undefined}
                                                     personnelDepartment={msg.senderDepartment ?? undefined}
                                                     personnelEmail={msg.senderEmail ?? undefined}
                                                     personnelDeskPhone={msg.senderDeskPhone ?? undefined}
                                                     personnelCellPhone={msg.senderCellPhone ?? undefined}
                                                     personnelIsAgent={msg.senderIsAgent ?? false}
+                                                    presenceStatus={presenceMap.get(msg.senderId)}
                                                     currentUserId={currentPersona?.id}
                                                     onStartDM={handleStartDM}
                                                 >
-                                                    <div
-                                                        data-testid="message-avatar"
-                                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm flex items-center justify-center text-xs font-semibold cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all border border-primary/10 shadow-sm"
-                                                    >
-                                                        {msg.senderName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                                                    <div data-testid="message-avatar" className="cursor-pointer">
+                                                        <PersonAvatar
+                                                            photo={msg.senderPhoto}
+                                                            name={msg.senderName}
+                                                            isAgent={msg.senderIsAgent ?? false}
+                                                            size="md"
+                                                            showPresence
+                                                            presenceStatus={presenceMap.get(msg.senderId)}
+                                                        />
                                                     </div>
                                                 </PersonnelPopover>
                                                 <div
@@ -527,12 +555,14 @@ export function ChatPageContent() {
                                                         <PersonnelPopover
                                                             personnelId={msg.senderId}
                                                             personnelName={msg.senderName}
+                                                            personnelPhoto={msg.senderPhoto}
                                                             personnelTitle={msg.senderTitle ?? undefined}
                                                             personnelDepartment={msg.senderDepartment ?? undefined}
                                                             personnelEmail={msg.senderEmail ?? undefined}
                                                             personnelDeskPhone={msg.senderDeskPhone ?? undefined}
                                                             personnelCellPhone={msg.senderCellPhone ?? undefined}
                                                             personnelIsAgent={msg.senderIsAgent ?? false}
+                                                            presenceStatus={presenceMap.get(msg.senderId)}
                                                             currentUserId={currentPersona?.id}
                                                             onStartDM={handleStartDM}
                                                         >
@@ -667,12 +697,14 @@ export function ChatPageContent() {
                                                                         data-testid="thread-reply"
                                                                         className="flex items-start gap-2 text-sm group/reply"
                                                                     >
-                                                                        <div
-                                                                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
-                                                                            style={{ backgroundColor: replyColor }}
-                                                                        >
-                                                                            {reply.senderName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-                                                                        </div>
+                                                                        <PersonAvatar
+                                                                            photo={reply.senderPhoto}
+                                                                            name={reply.senderName}
+                                                                            isAgent={reply.senderIsAgent ?? false}
+                                                                            size="xs"
+                                                                            showPresence
+                                                                            presenceStatus={presenceMap.get(reply.senderId)}
+                                                                        />
                                                                         <div className="min-w-0 flex-1">
                                                                             <div className="flex items-center gap-2">
                                                                                 <span className="font-medium text-xs">{reply.senderName}</span>
@@ -923,9 +955,12 @@ export function ChatPageContent() {
                                                             }`}
                                                         onClick={() => handleMentionSelect(person.name)}
                                                     >
-                                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                                            {person.name.charAt(0).toUpperCase()}
-                                                        </div>
+                                                        <PersonAvatar
+                                                            name={person.name}
+                                                            size="xs"
+                                                            showPresence
+                                                            presenceStatus={presenceMap.get(person.id)}
+                                                        />
                                                         <span>{person.name}</span>
                                                     </button>
                                                 ))}
@@ -1150,9 +1185,10 @@ function PersonSearch({
                     onClick={() => onSelect(person.id)}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-accent text-left"
                 >
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                        {person.name.charAt(0).toUpperCase()}
-                    </div>
+                    <PersonAvatar
+                        name={person.name}
+                        size="sm"
+                    />
                     <span className="text-sm">{person.name}</span>
                 </button>
             ))}

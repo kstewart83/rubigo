@@ -4,6 +4,7 @@
  * This file runs on server startup. It handles:
  * 1. OpenTelemetry registration with custom SQLite exporter
  * 2. System initialization (Global Administrator creation)
+ * 3. Event Router initialization (worker threads)
  * 
  * Must be at the root (not in src/) for Next.js 15+.
  */
@@ -30,6 +31,10 @@ export async function register() {
             // 2. Initialize system (generate token or auto-init)
             const { generateAndLogToken } = await import("@/lib/initialization");
             await generateAndLogToken();
+
+            // 3. Initialize Event Router (spawns worker threads)
+            const { eventRouter } = await import("@/workers/event-router");
+            eventRouter.initialize();
 
             console.log("[Instrumentation] Setup complete");
         } catch (error) {

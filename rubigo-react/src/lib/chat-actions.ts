@@ -19,6 +19,7 @@ import {
     type ChatReaction,
 } from "@/db/schema";
 import { eq, and, desc, or } from "drizzle-orm";
+import { emitBroadcast } from "@/lib/emit-event";
 
 // ============================================================================
 // Types
@@ -30,6 +31,7 @@ export interface ChatChannelWithMembers extends ChatChannel {
 
 export interface ChatMessageWithSender extends ChatMessage {
     senderName: string;
+    senderPhoto?: string | null;
     senderEmail?: string | null;
     senderTitle?: string | null;
     senderDepartment?: string | null;
@@ -337,6 +339,15 @@ export async function sendMessage(
             deleted: false,
         });
 
+        // Emit real-time event for instant updates
+        await emitBroadcast("chat.message", {
+            channelId,
+            messageId: id,
+            senderId,
+            content,
+            sentAt: now,
+        });
+
         return { success: true, id };
     } catch (error) {
         console.error("Failed to send message:", error);
@@ -355,6 +366,7 @@ export async function getMessages(
         .select({
             message: chatMessages,
             senderName: personnel.name,
+            senderPhoto: personnel.photo,
             senderEmail: personnel.email,
             senderTitle: personnel.title,
             senderDepartment: personnel.department,
@@ -374,9 +386,10 @@ export async function getMessages(
         .limit(limit);
 
     // Reverse to get chronological order (oldest first)
-    return messages.reverse().map(({ message, senderName, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone, senderIsAgent }) => ({
+    return messages.reverse().map(({ message, senderName, senderPhoto, senderEmail, senderTitle, senderDepartment, senderDeskPhone, senderCellPhone, senderIsAgent }) => ({
         ...message,
         senderName,
+        senderPhoto,
         senderEmail,
         senderTitle,
         senderDepartment,

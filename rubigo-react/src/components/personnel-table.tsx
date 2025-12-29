@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
 import {
     Table,
     TableBody,
@@ -25,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PersonAvatar } from "@/components/ui/person-avatar";
+import { useActiveUsers } from "@/hooks/use-presence";
 import type { Person, Department } from "@/types/personnel";
 
 interface PersonnelTableProps {
@@ -50,6 +51,14 @@ export function PersonnelTable({ personnel, onEdit, onDelete }: PersonnelTablePr
     const [departmentFilter, setDepartmentFilter] = useState<string>("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+
+    // Track active users for presence indicators
+    const { users: activeUsers } = useActiveUsers();
+    const presenceMap = useMemo(() => {
+        const map = new Map<string, "online" | "away" | "offline">();
+        activeUsers.forEach(u => map.set(u.personnelId, u.status));
+        return map;
+    }, [activeUsers]);
 
     // Filter personnel
     const filteredPersonnel = useMemo(() => {
@@ -139,19 +148,12 @@ export function PersonnelTable({ personnel, onEdit, onDelete }: PersonnelTablePr
                                 onClick={() => setSelectedPerson(person)}
                             >
                                 <TableCell>
-                                    {person.photo ? (
-                                        <Image
-                                            src={person.photo}
-                                            alt={person.name}
-                                            width={32}
-                                            height={32}
-                                            className="rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-medium">
-                                            {person.name.split(" ").map((n) => n[0]).join("")}
-                                        </div>
-                                    )}
+                                    <PersonAvatar
+                                        person={person}
+                                        size="sm"
+                                        showPresence
+                                        presenceStatus={presenceMap.get(person.id)}
+                                    />
                                 </TableCell>
                                 <TableCell>
                                     <div className="font-medium">{person.name}</div>
@@ -215,19 +217,12 @@ export function PersonnelTable({ personnel, onEdit, onDelete }: PersonnelTablePr
                         <>
                             <SheetHeader>
                                 <div className="flex items-center gap-4 mb-4">
-                                    {selectedPerson.photo ? (
-                                        <Image
-                                            src={selectedPerson.photo}
-                                            alt={selectedPerson.name}
-                                            width={80}
-                                            height={80}
-                                            className="rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-2xl font-medium">
-                                            {selectedPerson.name.split(" ").map((n) => n[0]).join("")}
-                                        </div>
-                                    )}
+                                    <PersonAvatar
+                                        person={selectedPerson}
+                                        size="xl"
+                                        showPresence
+                                        presenceStatus={presenceMap.get(selectedPerson.id)}
+                                    />
                                     <div>
                                         <SheetTitle className="text-xl">{selectedPerson.name}</SheetTitle>
                                         <p className="text-zinc-500">{selectedPerson.title}</p>

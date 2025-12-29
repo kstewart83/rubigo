@@ -7,11 +7,12 @@
  * Receives paginated data from the server component.
  */
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { useServerPagination } from "@/hooks/use-server-pagination";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useActiveUsers } from "@/hooks/use-presence";
+import { PersonAvatar } from "@/components/ui/person-avatar";
 import {
     Table,
     TableBody,
@@ -129,6 +130,14 @@ export function PersonnelPageContent({
     const { currentPersona } = usePersona();
     const [isPending, startTransition] = useTransition();
     const isMobile = useIsMobile();
+
+    // Track active users for presence indicators
+    const { users: activeUsers } = useActiveUsers();
+    const presenceMap = useMemo(() => {
+        const map = new Map<string, "online" | "away" | "offline">();
+        activeUsers.forEach(u => map.set(u.personnelId, u.status));
+        return map;
+    }, [activeUsers]);
 
     // Server-side pagination with dynamic measurement
     const {
@@ -503,6 +512,7 @@ export function PersonnelPageContent({
                                     isAgent={person.isAgent}
                                     cellPhone={person.cellPhone}
                                     deskPhone={person.deskPhone}
+                                    presenceStatus={presenceMap.get(person.id)}
                                     onClick={() => setSelectedPerson(person)}
                                 />
                             ))
@@ -557,19 +567,12 @@ export function PersonnelPageContent({
                                         onClick={() => setSelectedPerson(person)}
                                     >
                                         <TableCell>
-                                            {person.photo ? (
-                                                <Image
-                                                    src={person.photo}
-                                                    alt={person.name}
-                                                    width={32}
-                                                    height={32}
-                                                    className="rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
-                                                    {person.name.split(" ").map((n) => n[0]).join("")}
-                                                </div>
-                                            )}
+                                            <PersonAvatar
+                                                person={person}
+                                                size="sm"
+                                                showPresence
+                                                presenceStatus={presenceMap.get(person.id)}
+                                            />
                                         </TableCell>
                                         <TableCell className="font-medium">
                                             <span className="flex items-center gap-2">
@@ -642,6 +645,7 @@ export function PersonnelPageContent({
                 teams={personTeams}
                 isAdmin={isAdmin}
                 onDelete={(person) => openDelete(person)}
+                presenceStatus={selectedPerson ? presenceMap.get(selectedPerson.id) : undefined}
             />
 
             {/* Create Dialog */}
