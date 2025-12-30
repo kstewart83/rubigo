@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Select dropdown with keyboard navigation and typeahead
 ---
 

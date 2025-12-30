@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Tabbed interface with accessible keyboard navigation
 ---
 
