@@ -102,7 +102,9 @@ export const ComponentPreview: Component<Props> = (props) => {
                 </button>
             ) : props.spec?.name?.toLowerCase().includes('button') ? (
                 <button
-                    onClick={() => !props.context.disabled && !props.context.loading && props.onAction('click')}
+                    onMouseDown={() => !props.context.disabled && !props.context.loading && props.onAction('pressDown')}
+                    onMouseUp={() => !props.context.disabled && !props.context.loading && props.onAction('pressUp')}
+                    onMouseLeave={() => props.context.pressed && props.onAction('cancelPress')}
                     style={{
                         padding: '12px 24px',
                         'border-radius': '6px',
