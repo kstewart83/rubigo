@@ -5,3 +5,4 @@ export { useTooltip, type UseTooltipOptions, type UseTooltipReturn } from './use
 export { useDialog, type UseDialogOptions, type UseDialogReturn } from './useDialog';
 export { useSelect, type UseSelectOptions, type UseSelectReturn } from './useSelect';
 export { useSlider, type UseSliderOptions, type UseSliderReturn } from './useSlider';
+export { useInput, type UseInputOptions, type UseInputReturn } from './useInput';
