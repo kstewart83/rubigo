@@ -5,7 +5,7 @@ use axum::{
     response::Json,
     http::StatusCode,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::path::PathBuf;
 use glob::glob;
 use gray_matter::Pod;

@@ -4,11 +4,10 @@
 //! 1. Validate required binaries (cue, just) are available with acceptable versions
 //! 2. Find all spec files matching SPEC_SUFFIX
 //! 3. Parse YAML frontmatter for spec type (component vs schema)
-//! 4. Validate spec structure using pulldown-cmark (component specs only)
+//! 4. Validate spec structure (component specs only)
 //! 5. Validate specs with `cue vet`
 //! 6. Export specs to JSON with `cue export`
 
-use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
 use std::collections::HashSet;
 use std::env;
 use std::fs;

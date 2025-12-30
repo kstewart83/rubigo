@@ -5,15 +5,11 @@
 use axum::{
     Router,
     routing::get,
-    extract::Path,
-    response::Json,
     http::{Request, StatusCode, Uri},
     body::Body,
 };
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
 use http_body_util::BodyExt;
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
