@@ -17,6 +17,7 @@ use rubigo_statechart::{ActionConfig, Event, Machine, MachineConfig};
 /// Root structure of generated switch.json
 #[derive(Debug, Deserialize)]
 struct GeneratedSpec {
+    #[allow(dead_code)]
     context: Value,
     machine: MachineConfigPartial,
     guards: std::collections::HashMap<String, String>,
@@ -86,7 +87,7 @@ fn load_switch_spec() -> GeneratedSpec {
 
 fn create_machine_from_spec(spec: &GeneratedSpec, ctx: &TestContext) -> Machine {
     // Build MachineConfig from the spec, overriding context
-    let mut context = serde_json::json!({
+    let context = serde_json::json!({
         "checked": ctx.checked,
         "disabled": ctx.disabled,
         "readOnly": ctx.read_only,
@@ -107,7 +108,7 @@ fn create_machine_from_spec(spec: &GeneratedSpec, ctx: &TestContext) -> Machine 
 
 fn make_guard_fn<'a>(spec: &'a GeneratedSpec, ctx: &'a TestContext) -> impl Fn(&str) -> bool + 'a {
     move |guard_name: &str| {
-        if let Some(guard_expr) = spec.guards.get(guard_name) {
+        if spec.guards.contains_key(guard_name) {
             // Evaluate simple guard: "!context.disabled && !context.readOnly"
             !ctx.disabled && !ctx.read_only
         } else {
