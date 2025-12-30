@@ -85,6 +85,7 @@ module button {
   var disabled: bool
   var loading: bool
   var pressed: bool
+  var state: str  // "idle" | "pressed" | "loading" - matches CUE state machine
   var _action: str  // Tracks action name for ITF traces
   
   // Initialize
@@ -92,6 +93,7 @@ module button {
     disabled' = false,
     loading' = false,
     pressed' = false,
+    state' = "idle",
     _action' = "init"
   }
   
@@ -102,6 +104,7 @@ module button {
     pressed' = true,
     disabled' = disabled,
     loading' = loading,
+    state' = "pressed",
     _action' = "PRESS_DOWN"
   }
   
@@ -111,31 +114,39 @@ module button {
     pressed' = false,
     disabled' = disabled,
     loading' = loading,
+    state' = "idle",
     _action' = "PRESS_UP"
   }
   
   // Cancel press (mouse leaves while pressed)
   action cancelPress = all {
+    pressed,  // guard: can only cancel when pressed
     pressed' = false,
     disabled' = disabled,
     loading' = loading,
-    _action' = "CANCEL_PRESS"
+    state' = "idle",
+    _action' = "PRESS_CANCEL"
   }
   
   // Start loading (async operation)
   action startLoading = all {
     not(disabled),
+    not(loading),  // guard: can only start loading when not already loading
+    not(pressed),  // guard: can only start loading from idle state
     loading' = true,
     pressed' = false,
     disabled' = disabled,
+    state' = "loading",
     _action' = "START_LOADING"
   }
   
   // Stop loading (async complete)
   action stopLoading = all {
+    loading,  // guard: can only stop when loading
     loading' = false,
     disabled' = disabled,
-    pressed' = pressed,
+    pressed' = false,
+    state' = "idle",
     _action' = "STOP_LOADING"
   }
   
@@ -152,6 +163,7 @@ module button {
   val pressed_is_boolean = pressed == true or pressed == false
   val loading_is_boolean = loading == true or loading == false
   val disabled_is_boolean = disabled == true or disabled == false
+  val state_is_valid = state == "idle" or state == "pressed" or state == "loading"
 }
 ```
 

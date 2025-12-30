@@ -920,10 +920,20 @@ fn parse_itf_trace(spec_name: &str, itf_file: &Path) -> Vec<serde_json::Value> {
             .map(|s| s.to_uppercase())
             .unwrap_or_else(|| infer_event_from_change(&before_ctx, &after_ctx));
 
+        // Extract state from Quint's state variable (if present, otherwise default to idle)
+        let before_state = before
+            .get("state")
+            .and_then(|v| v.as_str())
+            .unwrap_or("idle");
+        let after_state = after
+            .get("state")
+            .and_then(|v| v.as_str())
+            .unwrap_or("idle");
+
         steps.push(serde_json::json!({
             "event": event,
-            "before": { "context": before_ctx, "state": "idle" },
-            "after": { "context": after_ctx, "state": "idle" }
+            "before": { "context": before_ctx, "state": before_state },
+            "after": { "context": after_ctx, "state": after_state }
         }));
     }
 

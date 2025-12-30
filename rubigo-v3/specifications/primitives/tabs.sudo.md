@@ -78,12 +78,14 @@ module tabs {
   // State variables - string for selected tab ID
   var selectedId: str
   var focusedId: str
+  var state: str  // always "idle" - matches CUE state machine
   var _action: str  // Tracks action name for ITF traces
   
   // Initialize (first tab selected)
   action init = all {
     selectedId' = "tab-0",
     focusedId' = "tab-0",
+    state' = "idle",
     _action' = "init"
   }
   
@@ -91,12 +93,14 @@ module tabs {
   action selectTab0 = all {
     selectedId' = "tab-0",
     focusedId' = "tab-0",
+    state' = "idle",
     _action' = "SELECT_TAB"
   }
   
   action selectTab1 = all {
     selectedId' = "tab-1",
     focusedId' = "tab-1",
+    state' = "idle",
     _action' = "SELECT_TAB"
   }
   
@@ -104,12 +108,14 @@ module tabs {
   action focusNext = all {
     focusedId' = "tab-1",
     selectedId' = selectedId,
+    state' = "idle",
     _action' = "FOCUS_NEXT"
   }
   
   action focusPrev = all {
     focusedId' = "tab-0",
     selectedId' = selectedId,
+    state' = "idle",
     _action' = "FOCUS_PREV"
   }
   
@@ -117,6 +123,7 @@ module tabs {
   action activate = all {
     selectedId' = focusedId,
     focusedId' = focusedId,
+    state' = "idle",
     _action' = "ACTIVATE"
   }
   
@@ -132,6 +139,7 @@ module tabs {
   // Invariants
   val selected_is_valid = selectedId == "tab-0" or selectedId == "tab-1"
   val focused_is_valid = focusedId == "tab-0" or focusedId == "tab-1"
+  val state_is_idle = state == "idle"
 }
 ```
 
