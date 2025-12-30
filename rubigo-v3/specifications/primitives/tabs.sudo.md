@@ -127,12 +127,30 @@ module tabs {
     _action' = "ACTIVATE"
   }
   
+  // Focus first tab (keyboard shortcut: Home)
+  action focusFirst = all {
+    focusedId' = "tab-0",
+    selectedId' = selectedId,
+    state' = "idle",
+    _action' = "FOCUS_FIRST"
+  }
+  
+  // Focus last tab (keyboard shortcut: End)
+  action focusLast = all {
+    focusedId' = "tab-1",
+    selectedId' = selectedId,
+    state' = "idle",
+    _action' = "FOCUS_LAST"
+  }
+  
   // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
     selectTab0,
     selectTab1,
     focusNext,
     focusPrev,
+    focusFirst,
+    focusLast,
     activate
   }
   
