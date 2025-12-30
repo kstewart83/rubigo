@@ -73,9 +73,14 @@ const App: Component = () => {
         setContext(prev => {
             const next = { ...prev };
             switch (name) {
-                // Toggle actions (switch, checkbox)
+                // Toggle actions (switch, checkbox, collapsible)
                 case 'toggle':
-                    next.checked = !prev.checked;
+                    // Collapsible uses 'open', switch/checkbox use 'checked'
+                    if (spec?.name?.toLowerCase().includes('collapsible')) {
+                        next.open = !prev.open;
+                    } else {
+                        next.checked = !prev.checked;
+                    }
                     break;
                 case 'check':
                     next.checked = true;
