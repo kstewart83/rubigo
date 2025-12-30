@@ -1699,3 +1699,146 @@ fn conformance_slider_spec() {
 
     println!("✅ All {} slider scenarios passed", vectors.scenarios.len());
 }
+
+// ===== INPUT CONFORMANCE TESTS =====
+
+fn load_input_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("input.json");
+    let content = fs::read_to_string(&spec_path)
+        .expect(&format!("Failed to read input spec at {:?}", spec_path));
+    serde_json::from_str(&content).expect("Failed to parse input spec")
+}
+
+fn create_input_machine(spec: &GeneratedSpec, ctx: &Value, state: &str) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(state.to_string()),
+        context: ctx.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_input_guard_fn(context: &Value) -> impl Fn(&str) -> bool + '_ {
+    move |name: &str| -> bool {
+        let disabled = context
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let focused = context
+            .get("focused")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let read_only = context
+            .get("readOnly")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        match name {
+            "canFocus" => !disabled,
+            "canEdit" => focused && !disabled && !read_only,
+            _ => true,
+        }
+    }
+}
+
+fn execute_input_actions(
+    actions: &[String],
+    spec: &GeneratedSpec,
+    context: &mut Value,
+    _payload: Option<&Value>,
+) {
+    for action_name in actions {
+        if let Some(action) = spec.actions.get(action_name) {
+            let mutation = &action.mutation;
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+                    if let Some(field) = left.strip_prefix("context.") {
+                        if right == "true" {
+                            context[field] = true.into();
+                        } else if right == "false" {
+                            context[field] = false.into();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_input_spec() {
+    let spec = load_input_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("input.unified.json");
+
+    if !vectors_path.exists() {
+        eprintln!(
+            "No unified vectors found at {:?}. Run: cargo build",
+            vectors_path
+        );
+        return;
+    }
+
+    let content = fs::read_to_string(&vectors_path).expect("Failed to read vectors");
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse vectors");
+
+    println!(
+        "Running {} input conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine = create_input_machine(&spec, &step.before.context, &step.before.state);
+
+            let guard_fn = make_input_guard_fn(&step.before.context);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: step.payload.clone().unwrap_or(Value::Null),
+                },
+                guard_fn,
+            );
+
+            execute_input_actions(
+                &result.actions,
+                &spec,
+                &mut machine.context,
+                step.payload.as_ref(),
+            );
+
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!("✅ All {} input scenarios passed", vectors.scenarios.len());
+}
