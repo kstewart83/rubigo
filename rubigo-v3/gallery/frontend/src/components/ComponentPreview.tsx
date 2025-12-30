@@ -16,11 +16,17 @@ interface Props {
 export const ComponentPreview: Component<Props> = (props) => {
     // For Switch component, render a styled toggle
     const isSwitch = () => props.spec?.name?.toLowerCase().includes('switch');
+    const isCheckbox = () => props.spec?.name?.toLowerCase().includes('checkbox');
 
     const handleToggle = () => {
         if (props.context.disabled || props.context.readOnly) return;
         props.onAction('toggle');
         // Toggle the checked state (in real implementation, this would go through the state machine)
+    };
+
+    const handleCheckboxToggle = () => {
+        if (props.context.disabled) return;
+        props.onAction('toggle');
     };
 
     return (
@@ -71,6 +77,28 @@ export const ComponentPreview: Component<Props> = (props) => {
                         transition: 'left 0.2s',
                         'box-shadow': '0 2px 4px rgba(0,0,0,0.2)'
                     }} />
+                </button>
+            ) : isCheckbox() ? (
+                <button
+                    onClick={handleCheckboxToggle}
+                    style={{
+                        width: '24px',
+                        height: '24px',
+                        'border-radius': '4px',
+                        border: `2px solid ${props.context.checked || props.context.indeterminate ? 'var(--accent)' : 'var(--border)'}`,
+                        background: props.context.checked || props.context.indeterminate ? 'var(--accent)' : 'transparent',
+                        cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                        opacity: props.context.disabled ? 0.5 : 1,
+                        transition: 'all 0.15s',
+                        display: 'flex',
+                        'align-items': 'center',
+                        'justify-content': 'center',
+                        color: '#fff',
+                        'font-size': '16px',
+                        'font-weight': 'bold'
+                    }}
+                >
+                    {props.context.indeterminate ? '−' : props.context.checked ? '✓' : ''}
                 </button>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
