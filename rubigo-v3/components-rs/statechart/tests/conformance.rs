@@ -1075,3 +1075,162 @@ fn conformance_collapsible_spec() {
         vectors.scenarios.len()
     );
 }
+
+// === Tooltip Spec Conformance ===
+
+fn load_tooltip_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("tooltip.json");
+    let content = fs::read_to_string(&spec_path)
+        .expect(&format!("Failed to read tooltip spec at {:?}", spec_path));
+    serde_json::from_str(&content).expect("Failed to parse tooltip spec")
+}
+
+fn create_tooltip_machine(spec: &GeneratedSpec, context: &Value, initial_state: &str) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_tooltip_guard_fn<'a>(context: &'a Value) -> impl Fn(&str) -> bool + 'a {
+    move |_guard_name: &str| {
+        let disabled = context
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        !disabled
+    }
+}
+
+fn execute_tooltip_actions(
+    actions: &[String],
+    spec: &GeneratedSpec,
+    context: &mut Value,
+    _payload: Option<&Value>,
+) {
+    for action_name in actions {
+        if let Some(action) = spec.actions.get(action_name) {
+            let mutation = &action.mutation;
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+                    if let Some(field) = left.strip_prefix("context.") {
+                        if right == "true" {
+                            context[field] = true.into();
+                        } else if right == "false" {
+                            context[field] = false.into();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_tooltip_spec() {
+    let spec = load_tooltip_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("tooltip.unified.json");
+
+    if !vectors_path.exists() {
+        eprintln!(
+            "No unified vectors found at {:?}. Run: cargo build",
+            vectors_path
+        );
+        return;
+    }
+
+    let content = fs::read_to_string(&vectors_path).expect("Failed to read vectors");
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse vectors");
+
+    println!(
+        "Running {} tooltip conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            // Ensure 'open' field exists in initial context (infer from state for ITF traces)
+            let mut initial_context = step.before.context.clone();
+            if initial_context.get("open").is_none() {
+                let open_val = step.before.state == "open";
+                initial_context["open"] = open_val.into();
+            }
+
+            let mut machine = create_tooltip_machine(&spec, &initial_context, &step.before.state);
+
+            let guard_fn = make_tooltip_guard_fn(&initial_context);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: step.payload.clone().unwrap_or(Value::Null),
+                },
+                guard_fn,
+            );
+
+            execute_tooltip_actions(
+                &result.actions,
+                &spec,
+                &mut machine.context,
+                step.payload.as_ref(),
+            );
+
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            // For ITF traces, infer 'open' from state if missing
+            // Tooltip is visible ("open") in both "open" and "closing" states
+            let mut expected_context = step.after.context.clone();
+            if expected_context.get("open").is_none() {
+                let open_val = step.after.state == "open" || step.after.state == "closing";
+                expected_context["open"] = open_val.into();
+            }
+
+            assert_eq!(
+                machine.context,
+                expected_context,
+                "Scenario '{}' step {} ({}) failed: context mismatch\nExpected: {:?}\nActual: {:?}",
+                scenario.name,
+                i + 1,
+                step.event,
+                expected_context,
+                machine.context
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!(
+        "✅ All {} tooltip scenarios passed",
+        vectors.scenarios.len()
+    );
+}
