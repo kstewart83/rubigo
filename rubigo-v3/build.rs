@@ -930,11 +930,30 @@ fn parse_itf_trace(spec_name: &str, itf_file: &Path) -> Vec<serde_json::Value> {
             .and_then(|v| v.as_str())
             .unwrap_or("idle");
 
-        steps.push(serde_json::json!({
+        // Derive payload for actions that need it (e.g., SELECT_TAB needs id)
+        let payload = if event == "SELECT_TAB" {
+            // For tabs, derive payload.id from the selectedId in the after state
+            after
+                .get("selectedId")
+                .map(|id| serde_json::json!({"id": id}))
+        } else {
+            None
+        };
+
+        let mut step = serde_json::json!({
             "event": event,
             "before": { "context": before_ctx, "state": before_state },
             "after": { "context": after_ctx, "state": after_state }
-        }));
+        });
+
+        // Add payload if present
+        if let Some(p) = payload {
+            step.as_object_mut()
+                .unwrap()
+                .insert("payload".to_string(), p);
+        }
+
+        steps.push(step);
     }
 
     vec![serde_json::json!({
