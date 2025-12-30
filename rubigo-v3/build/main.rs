@@ -31,6 +31,7 @@ macro_rules! warn {
 use rubigo_build::{
     cross_reference_events,
     extract_cue_blocks,
+    extract_cue_version,
     extract_quint_block,
     extract_test_vectors,
     // Interactions
@@ -114,16 +115,6 @@ fn validate_binaries() {
             warn!("Install with: npm install -g @informalsystems/quint");
         }
     }
-}
-
-/// Extract version number from cue version output
-fn extract_cue_version(output: &str) -> Option<String> {
-    // "cue version v0.15.1" -> "0.15.1"
-    output
-        .lines()
-        .next()
-        .and_then(|line| line.split_whitespace().nth(2))
-        .map(|v| v.trim_start_matches('v').to_string())
 }
 
 /// Process all spec files in the spec directory
