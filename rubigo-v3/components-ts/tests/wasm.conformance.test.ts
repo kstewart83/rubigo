@@ -254,3 +254,101 @@ describe('WASM Checkbox Conformance Tests', () => {
         console.log(`✅ All ${vectors.scenarios.length} WASM checkbox scenarios passed`);
     });
 });
+
+// === Button WASM Conformance ===
+
+const BUTTON_VECTORS_PATH = '../../generated/test-vectors/button.unified.json';
+const BUTTON_SPEC_PATH = '../../generated/button.json';
+
+interface ButtonContext {
+    disabled: boolean;
+    loading: boolean;
+    pressed: boolean;
+}
+
+interface ButtonStep {
+    event: string;
+    before: { context: ButtonContext; state: string };
+    after: { context: ButtonContext; state: string };
+}
+
+interface ButtonScenario {
+    name: string;
+    source: string;
+    steps: ButtonStep[];
+}
+
+interface ButtonVectors {
+    component: string;
+    scenarios: ButtonScenario[];
+}
+
+interface ButtonSpec {
+    context: ButtonContext;
+    machine: any;
+    guards: Record<string, string>;
+    actions: Record<string, { mutation: string }>;
+}
+
+describe('WASM Button Conformance Tests', () => {
+    test('runs all button scenarios from unified vectors', () => {
+        if (!wasmInitialized) {
+            console.log('WASM not initialized, skipping button tests');
+            return;
+        }
+
+        // Load spec and vectors
+        const specPath = join(import.meta.dir, BUTTON_SPEC_PATH);
+        const vectorsPath = join(import.meta.dir, BUTTON_VECTORS_PATH);
+
+        const spec: ButtonSpec = JSON.parse(readFileSync(specPath, 'utf-8'));
+        const vectors: ButtonVectors = JSON.parse(readFileSync(vectorsPath, 'utf-8'));
+
+        console.log(`Running ${vectors.scenarios.length} WASM button conformance scenarios...`);
+
+        for (const scenario of vectors.scenarios) {
+            for (let i = 0; i < scenario.steps.length; i++) {
+                const step = scenario.steps[i];
+
+                // Build machine config from spec with before context and state
+                const machineConfig = {
+                    id: spec.machine.id,
+                    initial: step.before.state,
+                    context: {
+                        disabled: step.before.context.disabled,
+                        loading: step.before.context.loading,
+                        pressed: step.before.context.pressed,
+                    },
+                    states: spec.machine.states,
+                    actions: spec.actions,
+                    guards: spec.guards,
+                };
+
+                // Create WASM machine
+                const machine = new WasmMachine(JSON.stringify(machineConfig));
+
+                // Send the event
+                machine.send(step.event);
+
+                // Get context and compare
+                const actualContext = machine.getContext();
+
+                const expected = step.after.context;
+                const actual = {
+                    disabled: actualContext.disabled,
+                    loading: actualContext.loading,
+                    pressed: actualContext.pressed,
+                };
+
+                expect(actual).toEqual(expected);
+
+                console.log(`  ✓ [${scenario.source}] ${scenario.name} - Step ${i + 1}: ${step.event}`);
+
+                // Clean up
+                machine.free();
+            }
+        }
+
+        console.log(`✅ All ${vectors.scenarios.length} WASM button scenarios passed`);
+    });
+});
