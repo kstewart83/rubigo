@@ -12,7 +12,13 @@
         "noEmit": true,
         "isolatedModules": true,
         "esModuleInterop": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "paths": {
+            "@rubigo/components/*": [
+                "../../components-ts/*"
+            ]
+        }
     },
     "include": [
         "src/**/*"
