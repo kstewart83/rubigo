@@ -23,6 +23,10 @@ export interface UseButtonReturn {
     startLoading: () => void;
     stopLoading: () => void;
     setDisabled: (disabled: boolean) => void;
+    /** Reset to initial state, optionally with context overrides */
+    reset: (contextOverrides?: Partial<{ disabled: boolean; loading: boolean; pressed: boolean }>) => void;
+    /** Send an event to the state machine (for testing/replay) */
+    send: (event: string, payload?: Record<string, unknown>) => { handled: boolean };
     rootProps: () => {
         role: 'button';
         'aria-disabled': boolean;
@@ -101,6 +105,19 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
         bump();
     };
 
+    /** Reset to initial state with optional context overrides */
+    const reset = (contextOverrides?: Partial<ButtonContext>) => {
+        machine.reset(contextOverrides);
+        bump();
+    };
+
+    /** Send an event to the machine (for testing/replay) */
+    const send = (event: string, payload?: Record<string, unknown>) => {
+        const result = machine.send({ name: event, payload });
+        bump();
+        return { handled: result.handled };
+    };
+
     const rootProps = createMemo(() => ({
         role: 'button' as const,
         'aria-disabled': disabled(),
@@ -126,5 +143,5 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
         },
     }));
 
-    return { disabled, loading, pressed, state, click, startLoading, stopLoading, setDisabled, rootProps };
+    return { disabled, loading, pressed, state, click, startLoading, stopLoading, setDisabled, reset, send, rootProps };
 }

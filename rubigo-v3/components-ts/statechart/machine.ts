@@ -110,6 +110,18 @@ export class Machine<TContext extends object = Record<string, unknown>> {
     }
 
     /**
+     * Reset the machine to initial state and context.
+     * Optionally provide context overrides for testing scenarios.
+     */
+    reset(contextOverrides?: Partial<TContext>): void {
+        this.currentState = this.config.initial;
+        this.context = {
+            ...this.config.context,
+            ...contextOverrides,
+        };
+    }
+
+    /**
      * Send an event to the machine
      * Returns the transition result
      */
