@@ -912,3 +912,166 @@ fn conformance_togglegroup_spec() {
         vectors.scenarios.len()
     );
 }
+
+// === Collapsible Spec Conformance ===
+
+fn load_collapsible_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("collapsible.json");
+    let content = fs::read_to_string(&spec_path).expect(&format!(
+        "Failed to read collapsible spec at {:?}",
+        spec_path
+    ));
+    serde_json::from_str(&content).expect("Failed to parse collapsible spec")
+}
+
+fn create_collapsible_machine(
+    spec: &GeneratedSpec,
+    context: &Value,
+    initial_state: &str,
+) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_collapsible_guard_fn<'a>(context: &'a Value) -> impl Fn(&str) -> bool + 'a {
+    move |_guard_name: &str| {
+        // Collapsible guard: "!context.disabled"
+        let disabled = context
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        !disabled
+    }
+}
+
+fn execute_collapsible_actions(
+    actions: &[String],
+    spec: &GeneratedSpec,
+    context: &mut Value,
+    _payload: Option<&Value>,
+) {
+    for action_name in actions {
+        if let Some(action) = spec.actions.get(action_name) {
+            let mutation = &action.mutation;
+
+            // Parse simple mutations: "context.open = true"
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+
+                    if let Some(field) = left.strip_prefix("context.") {
+                        if right == "true" {
+                            context[field] = true.into();
+                        } else if right == "false" {
+                            context[field] = false.into();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_collapsible_spec() {
+    let spec = load_collapsible_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("collapsible.unified.json");
+
+    if !vectors_path.exists() {
+        eprintln!(
+            "No unified vectors found at {:?}. Run: cargo build",
+            vectors_path
+        );
+        return;
+    }
+
+    let content = fs::read_to_string(&vectors_path).expect("Failed to read vectors");
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse vectors");
+
+    println!(
+        "Running {} collapsible conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine =
+                create_collapsible_machine(&spec, &step.before.context, &step.before.state);
+
+            let guard_fn = make_collapsible_guard_fn(&step.before.context);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: step.payload.clone().unwrap_or(Value::Null),
+                },
+                guard_fn,
+            );
+
+            execute_collapsible_actions(
+                &result.actions,
+                &spec,
+                &mut machine.context,
+                step.payload.as_ref(),
+            );
+
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            // For ITF traces, expected context may be missing 'open' - infer from state
+            let mut expected_context = step.after.context.clone();
+            if expected_context.get("open").is_none() {
+                let open_val = step.after.state == "expanded";
+                expected_context["open"] = open_val.into();
+            }
+
+            assert_eq!(
+                machine.context,
+                expected_context,
+                "Scenario '{}' step {} ({}) failed: context mismatch\nExpected: {:?}\nActual: {:?}",
+                scenario.name,
+                i + 1,
+                step.event,
+                expected_context,
+                machine.context
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!(
+        "✅ All {} collapsible scenarios passed",
+        vectors.scenarios.len()
+    );
+}
