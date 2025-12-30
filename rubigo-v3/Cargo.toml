@@ -18,6 +18,7 @@ publish = false
 pulldown-cmark = "0.10"
 chrono = "0.4"
 serde_json = "1"
+regex = "1"
 
 [workspace.package]
 version = "0.1.0"
