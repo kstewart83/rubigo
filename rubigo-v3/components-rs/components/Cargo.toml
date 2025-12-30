@@ -1,0 +1,32 @@
+[package]
+name = "rubigo-v3-components"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+# Switch component - compiles to its own WASM file
+[[bin]]
+name = "switch"
+path = "switch/src/main.rs"
+
+[dependencies]
+wasm-bindgen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+serde_json.workspace = true
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[features]
+default = []
+console_error_panic_hook = []
+
+[profile.release]
+lto = true
+opt-level = "z"

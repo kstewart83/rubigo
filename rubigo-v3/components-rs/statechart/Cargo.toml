@@ -1,0 +1,27 @@
+[package]
+name = "rubigo-statechart"
+version.workspace = true
+edition.workspace = true
+description = "Minimal statechart interpreter with parallel regions and component communication"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[features]
+default = []
+wasm = ["wasm-bindgen", "serde-wasm-bindgen", "js-sys"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen = { workspace = true, optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+[dev-dependencies]
+pretty_assertions = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "statechart_bench"
+harness = false

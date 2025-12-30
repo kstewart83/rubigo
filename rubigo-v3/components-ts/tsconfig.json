@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "outDir": "./dist",
+        "rootDir": "./",
+        "resolveJsonModule": true,
+        "types": [
+            "bun-types"
+        ]
+    },
+    "include": [
+        "statechart/**/*",
+        "switch/**/*",
+        "solid/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
