@@ -1,0 +1,3 @@
+[test]
+# Only run tests in source directories, not compiled dist
+root = "."

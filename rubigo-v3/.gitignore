@@ -1,0 +1,12 @@
+
+# Generated files
+generated/
+
+# Node modules
+components-ts/node_modules/
+components-ts/dist/
+
+target/
+frontend/node_modules/
+backend/target/
+components-rs/target/

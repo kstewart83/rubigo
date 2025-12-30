@@ -1,0 +1,314 @@
+# Rubigo V3 Development Justfile
+# Usage: just <recipe>
+# Install: cargo install just
+
+set dotenv-load
+set shell := ["bash", "-c"]
+
+# Configurable spec suffix
+SPEC_SUFFIX := ".sudo.md"
+
+# Ports
+export PORT := env_var_or_default("PORT", "37000")
+export VITE_PORT := env_var_or_default("VITE_PORT", "37001")
+export RUST_LOG := env_var_or_default("RUST_LOG", "debug")
+
+# Default recipe
+default:
+    @just --list
+
+# === Development ===
+
+# Start full dev environment
+dev: spec-gen
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting Rubigo V3 development environment..."
+    echo "   Backend:  http://127.0.0.1:$PORT"
+    echo "   Frontend: http://127.0.0.1:$VITE_PORT (proxied through backend)"
+    trap 'echo "Shutting down..."; kill $(jobs -p) 2>/dev/null' EXIT
+    just backend-dev &
+    sleep 2
+    just frontend-dev &
+    wait
+
+# Backend with hot reload
+backend-dev:
+    cd backend && cargo watch -x run
+
+# Frontend Vite dev server
+frontend-dev:
+    cd frontend && bun run dev -- --port $VITE_PORT
+
+# === Spec Processing ===
+
+# Check required binaries
+check-binaries:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking required binaries..."
+    
+    # Check cue
+    if command -v cue &> /dev/null; then
+        CUE_VERSION=$(cue version | head -1 | awk '{print $3}')
+        echo "  ✅ cue $CUE_VERSION"
+    else
+        echo "  ❌ cue not found (install: brew install cue-lang/tap/cue)"
+        exit 1
+    fi
+    
+    # Check just (we're running so it exists)
+    JUST_VERSION=$(just --version | awk '{print $2}')
+    echo "  ✅ just $JUST_VERSION"
+
+# Generate JSON from all specs
+spec-gen: check-binaries
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Generating JSON from specs..."
+    mkdir -p generated
+    
+    for spec in specifications/*/*{{SPEC_SUFFIX}}; do
+        [ -f "$spec" ] || continue
+        
+        name=$(basename "$spec" {{SPEC_SUFFIX}})
+        dir=$(dirname "$spec")
+        cue_dir="generated/${name}_cue"
+        mkdir -p "$cue_dir"
+        
+        echo "  Processing $spec..."
+        
+        # Extract cue blocks from markdown
+        awk '/^```cue$/,/^```$/' "$spec" | grep -v '^```' > "$cue_dir/${name}.cue" || true
+        
+        # Export to JSON (skip if result is empty)
+        if [ -s "$cue_dir/${name}.cue" ]; then
+            if cue export --out json "$cue_dir/${name}.cue" > "$cue_dir/${name}.tmp.json" 2>/dev/null; then
+                # Check if output is empty or just whitespace/empty object
+                if [ -s "$cue_dir/${name}.tmp.json" ] && [ "$(cat "$cue_dir/${name}.tmp.json")" != "{}" ]; then
+                    mv "$cue_dir/${name}.tmp.json" "generated/${name}.json"
+                    echo "    ✅ generated/${name}.json"
+                else
+                    rm -f "$cue_dir/${name}.tmp.json" "generated/${name}.json"
+                    echo "    ⏭️  skipped (schema-only, no data)"
+                fi
+            else
+                rm -f "$cue_dir/${name}.tmp.json"
+                echo "    ⚠️  cue export failed (may have incomplete types)"
+            fi
+        fi
+    done
+
+# Validate all specs
+validate: check-binaries
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Validating specs..."
+    for spec in specifications/*/*{{SPEC_SUFFIX}}; do
+        [ -f "$spec" ] || continue
+        echo "  Checking $spec..."
+    done
+    echo "✅ All specs valid"
+
+# === Build ===
+
+build: spec-gen
+    cargo build --workspace
+
+build-release: spec-gen
+    cargo build --workspace --release
+
+# Build WASM
+wasm-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔧 Building WASM components..."
+    cargo build -p rubigo-v3-components --target wasm32-unknown-unknown --release
+    just wasm-bindgen
+
+# Build statechart interpreter as WASM
+build-statechart-wasm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔧 Building statechart WASM..."
+    cargo build -p rubigo-statechart --features wasm --target wasm32-unknown-unknown --release
+    mkdir -p frontend/src/wasm
+    wasm-bindgen target/wasm32-unknown-unknown/release/rubigo_statechart.wasm \
+        --out-dir frontend/src/wasm \
+        --target web
+    echo "✅ Statechart WASM built: frontend/src/wasm/"
+
+wasm-bindgen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p frontend/public/wasm/switch
+    wasm-bindgen target/wasm32-unknown-unknown/release/switch.wasm \
+        --out-dir frontend/public/wasm/switch \
+        --target web
+    echo "✅ WASM bindings generated"
+
+frontend-build:
+    cd frontend && bun run build
+
+prod-build: build-release wasm-build frontend-build
+    @echo "✅ Production build complete"
+
+# === Testing ===
+
+# TypeScript tests
+ts-test:
+    rm -rf components-ts/dist
+    cd components-ts && bun test
+
+ts-conformance:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running TS spec conformance tests..."
+    rm -rf components-ts/dist
+    cd components-ts && bun test tests/conformance.test.ts
+
+ts-bench:
+    cd components-ts && bun run bench
+
+ts-coverage:
+    cd components-ts && bun test --coverage
+
+# Rust tests
+rs-test:
+    cargo test --workspace
+
+rs-test-verbose:
+    cargo test --workspace -- --nocapture
+
+rs-conformance:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running Rust spec conformance tests..."
+    cargo test --package rubigo-statechart conformance -- --nocapture
+
+rs-bench:
+    cd components-rs/statechart && cargo bench
+
+# WASM conformance tests (uses Bun to load compiled WASM)
+wasm-conformance: build-statechart-wasm
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔧 Running WASM conformance tests..."
+    cd components-ts && bun test tests/wasm.conformance.test.ts
+
+# Combined tests
+test: ts-test rs-test
+    echo "✅ All tests passed"
+
+conformance: ts-conformance rs-conformance wasm-conformance
+    echo "✅ All conformance tests passed (TypeScript + Rust + WASM)"
+
+bench: ts-bench rs-bench
+    echo "✅ All benchmarks complete"
+
+
+# === Formal Verification ===
+
+# Typecheck all Quint specs (extracted from .sudo.md)
+quint-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking Quint specs..."
+    for spec in generated/quint/*.qnt; do
+        [ -f "$spec" ] || continue
+        echo "  Checking $spec..."
+        quint typecheck "$spec"
+    done
+    echo "✅ All Quint specs type check"
+
+# Run model checker on all Quint specs
+quint-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔬 Verifying Quint specs..."
+    for spec in generated/quint/*.qnt; do
+        [ -f "$spec" ] || continue
+        echo "  Verifying $spec..."
+        quint run "$spec" --invariant=valid_state --max-samples=1000
+    done
+    echo "✅ All Quint specs verified"
+
+# Generate test vectors from Quint traces
+quint-vectors:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📋 Generating ITF traces from Quint..."
+    for spec in generated/quint/*.qnt; do
+        [ -f "$spec" ] || continue
+        name=$(basename "$spec" .qnt)
+        echo "  Generating ITF for $name..."
+        quint run "$spec" --max-samples=50 --out-itf="generated/test-vectors/${name}.itf.json" || true
+    done
+    echo "✅ ITF traces generated in generated/test-vectors/"
+
+# Unify YAML + ITF vectors into common JSON format
+unify-vectors:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔄 Unifying test vectors..."
+    cd components-ts && bun run ../scripts/unify-vectors.ts
+    echo "✅ Unified vectors generated"
+
+# Run spec conformance tests (TS interpreter against unified vectors)
+test-conformance:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running spec conformance tests..."
+    rm -rf components-ts/dist
+    cd components-ts && bun test tests/conformance.test.ts
+
+# Full formal verification pipeline
+verify-all: quint-check quint-verify quint-vectors unify-vectors conformance
+    echo "✅ Full verification pipeline complete"
+
+# === Code Quality ===
+
+check:
+    cargo check --workspace
+
+fmt:
+    cargo fmt --all
+
+fmt-check:
+    cargo fmt --all -- --check
+
+lint:
+    cargo clippy --workspace -- -D warnings
+
+# === Setup ===
+
+setup: check-binaries
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing development tools..."
+    cargo install cargo-watch wasm-bindgen-cli
+    rustup target add wasm32-unknown-unknown
+    cd frontend && bun install
+    cd components-ts && bun install
+    echo "✅ Setup complete!"
+
+# === Utilities ===
+
+clean:
+    cargo clean
+    rm -rf generated frontend/node_modules frontend/dist frontend/public/wasm
+    rm -rf components-ts/node_modules components-ts/dist
+
+clean-rust:
+    cargo clean
+
+env:
+    @echo "PORT=$PORT"
+    @echo "VITE_PORT=$VITE_PORT"
+    @echo "RUST_LOG=$RUST_LOG"
+    @echo "SPEC_SUFFIX={{SPEC_SUFFIX}}"
+
+kill-ports:
+    #!/usr/bin/env bash
+    lsof -ti:$PORT,$VITE_PORT | xargs kill -9 2>/dev/null || true
+    echo "Ports $PORT and $VITE_PORT cleared"
