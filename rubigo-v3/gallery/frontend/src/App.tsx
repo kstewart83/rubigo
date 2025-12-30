@@ -109,14 +109,21 @@ const App: Component = () => {
                     }
                     break;
 
-                // Button actions
-                case 'click':
-                case 'press':
+                // Button actions (matching button.sudo.md spec)
+                case 'pressDown':
                     next.pressed = true;
-                    // Auto-release after 150ms to simulate real button click
-                    setTimeout(() => {
-                        setContext(c => ({ ...c, pressed: false }));
-                    }, 150);
+                    next.state = 'pressed';
+                    break;
+                case 'pressUp':
+                    next.pressed = false;
+                    next.state = 'idle';
+                    break;
+                case 'cancelPress':
+                    next.pressed = false;
+                    next.state = 'idle';
+                    break;
+                case 'click':
+                    // Instant click (like Enter key) - no pressed state
                     break;
                 case 'release':
                     next.pressed = false;
