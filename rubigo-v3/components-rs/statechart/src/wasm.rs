@@ -347,11 +347,21 @@ fn get_value(expr: &str, context: &serde_json::Value) -> serde_json::Value {
 
     serde_json::Value::Null
 }
-
-/// Execute a mutation like "context.checked = !context.checked"
+/// Execute a mutation like "context.checked = !context.checked" or multi-statement
+/// "context.checked = true; context.indeterminate = false"
 fn execute_mutation(mutation: &str, context: &mut serde_json::Value) {
-    let mutation = mutation.trim();
+    // Handle multi-statement mutations separated by ';'
+    for stmt in mutation.split(';') {
+        let stmt = stmt.trim();
+        if stmt.is_empty() {
+            continue;
+        }
+        execute_single_mutation(stmt, context);
+    }
+}
 
+/// Execute a single mutation statement
+fn execute_single_mutation(mutation: &str, context: &mut serde_json::Value) {
     // Parse "context.X = Y" pattern
     if let Some(eq_pos) = mutation.find('=') {
         let left = mutation[..eq_pos].trim();
