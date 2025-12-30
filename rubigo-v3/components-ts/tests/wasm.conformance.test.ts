@@ -318,6 +318,7 @@ describe('WASM Button Conformance Tests', () => {
                         disabled: step.before.context.disabled,
                         loading: step.before.context.loading,
                         pressed: step.before.context.pressed,
+                        focused: step.before.context.focused,
                     },
                     states: spec.machine.states,
                     actions: spec.actions,
@@ -338,6 +339,7 @@ describe('WASM Button Conformance Tests', () => {
                     disabled: actualContext.disabled,
                     loading: actualContext.loading,
                     pressed: actualContext.pressed,
+                    focused: actualContext.focused,
                 };
 
                 expect(actual).toEqual(expected);

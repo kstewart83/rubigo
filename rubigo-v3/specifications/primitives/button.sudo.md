@@ -85,6 +85,7 @@ module button {
   var disabled: bool
   var loading: bool
   var pressed: bool
+  var focused: bool  // Visual focus state
   var state: str  // "idle" | "pressed" | "loading" - matches CUE state machine
   var _action: str  // Tracks action name for ITF traces
   
@@ -93,8 +94,22 @@ module button {
     disabled' = false,
     loading' = false,
     pressed' = false,
+    focused' = false,
     state' = "idle",
     _action' = "init"
+  }
+  
+  // Click action - high-level composite event (triggers from idle)
+  action click = all {
+    not(disabled),
+    not(loading),
+    state == "idle",  // Can only click from idle state
+    pressed' = false,
+    disabled' = disabled,
+    loading' = loading,
+    focused' = focused,
+    state' = "idle",
+    _action' = "CLICK"
   }
   
   // Press down (mouse down or space key down)
@@ -104,6 +119,7 @@ module button {
     pressed' = true,
     disabled' = disabled,
     loading' = loading,
+    focused' = focused,
     state' = "pressed",
     _action' = "PRESS_DOWN"
   }
@@ -114,6 +130,7 @@ module button {
     pressed' = false,
     disabled' = disabled,
     loading' = loading,
+    focused' = focused,
     state' = "idle",
     _action' = "PRESS_UP"
   }
@@ -124,6 +141,7 @@ module button {
     pressed' = false,
     disabled' = disabled,
     loading' = loading,
+    focused' = focused,
     state' = "idle",
     _action' = "PRESS_CANCEL"
   }
@@ -136,6 +154,7 @@ module button {
     loading' = true,
     pressed' = false,
     disabled' = disabled,
+    focused' = focused,
     state' = "loading",
     _action' = "START_LOADING"
   }
@@ -146,23 +165,48 @@ module button {
     loading' = false,
     disabled' = disabled,
     pressed' = false,
+    focused' = focused,
     state' = "idle",
     _action' = "STOP_LOADING"
   }
   
+  // Focus the button
+  action focus = all {
+    focused' = true,
+    pressed' = pressed,
+    disabled' = disabled,
+    loading' = loading,
+    state' = state,
+    _action' = "FOCUS"
+  }
+  
+  // Blur the button (lose focus)
+  action blur = all {
+    focused' = false,
+    pressed' = pressed,
+    disabled' = disabled,
+    loading' = loading,
+    state' = state,
+    _action' = "BLUR"
+  }
+  
   // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
+    click,
     pressDown,
     pressUp,
     cancelPress,
     startLoading,
-    stopLoading
+    stopLoading,
+    focus,
+    blur
   }
   
   // Invariants
   val pressed_is_boolean = pressed == true or pressed == false
   val loading_is_boolean = loading == true or loading == false
   val disabled_is_boolean = disabled == true or disabled == false
+  val focused_is_boolean = focused == true or focused == false
   val state_is_valid = state == "idle" or state == "pressed" or state == "loading"
 }
 ```
@@ -176,65 +220,65 @@ module button {
 
 - scenario: "click triggers action"
   given:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
   when: CLICK
   then:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
 
 - scenario: "disabled blocks click"
   given:
-    context: { disabled: true, loading: false, pressed: false }
+    context: { disabled: true, loading: false, pressed: false, focused: false }
     state: "idle"
   when: CLICK
   then:
-    context: { disabled: true, loading: false, pressed: false }
+    context: { disabled: true, loading: false, pressed: false, focused: false }
     state: "idle"
 
 - scenario: "press down shows pressed"
   given:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
   when: PRESS_DOWN
   then:
-    context: { disabled: false, loading: false, pressed: true }
+    context: { disabled: false, loading: false, pressed: true, focused: false }
     state: "pressed"
 
 - scenario: "press up clears pressed"
   given:
-    context: { disabled: false, loading: false, pressed: true }
+    context: { disabled: false, loading: false, pressed: true, focused: false }
     state: "pressed"
   when: PRESS_UP
   then:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
 
 - scenario: "loading blocks press"
   given:
-    context: { disabled: false, loading: true, pressed: false }
+    context: { disabled: false, loading: true, pressed: false, focused: false }
     state: "loading"
   when: PRESS_DOWN
   then:
-    context: { disabled: false, loading: true, pressed: false }
+    context: { disabled: false, loading: true, pressed: false, focused: false }
     state: "loading"
 
 - scenario: "start loading"
   given:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
   when: START_LOADING
   then:
-    context: { disabled: false, loading: true, pressed: false }
+    context: { disabled: false, loading: true, pressed: false, focused: false }
     state: "loading"
 
 - scenario: "stop loading returns to idle"
   given:
-    context: { disabled: false, loading: true, pressed: false }
+    context: { disabled: false, loading: true, pressed: false, focused: false }
     state: "loading"
   when: STOP_LOADING
   then:
-    context: { disabled: false, loading: false, pressed: false }
+    context: { disabled: false, loading: false, pressed: false, focused: false }
     state: "idle"
 ```
 
@@ -247,6 +291,7 @@ context: {
     disabled: false   // Whether button is disabled
     loading:  false   // Whether async operation is in progress
     pressed:  false   // Whether button is currently pressed down
+    focused:  false   // Whether button has visual focus
 }
 ```
 
@@ -273,11 +318,15 @@ machine: {
             on: {
                 PRESS_UP:      {target: "idle", actions: ["setPressedFalse", "triggerAction"]}
                 PRESS_CANCEL:  {target: "idle", actions: ["setPressedFalse"]}
+                FOCUS:         {target: "pressed", actions: ["setFocused"]}
+                BLUR:          {target: "pressed", actions: ["clearFocused"]}
             }
         }
         loading: {
             on: {
                 STOP_LOADING:  {target: "idle", actions: ["setLoadingFalse"]}
+                FOCUS:         {target: "loading", actions: ["setFocused"]}
+                BLUR:          {target: "loading", actions: ["clearFocused"]}
             }
         }
     }
