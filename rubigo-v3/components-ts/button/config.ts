@@ -24,6 +24,7 @@ export const buttonConfig: MachineConfig<ButtonContext> = {
     initial: buttonSpec.machine.initial,
     context: buttonSpec.context as ButtonContext,
     states: buttonSpec.machine.states,
+    global: buttonSpec.machine.global,
     guards: buttonSpec.guards,
     actions: buttonSpec.actions,
 };
