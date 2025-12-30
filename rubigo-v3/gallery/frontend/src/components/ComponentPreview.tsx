@@ -385,6 +385,70 @@ export const ComponentPreview: Component<Props> = (props) => {
                         </div>
                     )}
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('slider') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    'align-items': 'center',
+                    gap: '16px',
+                    width: '100%',
+                    'max-width': '300px'
+                }}>
+                    <div style={{
+                        width: '100%',
+                        height: '8px',
+                        background: 'var(--bg-secondary)',
+                        'border-radius': '4px',
+                        position: 'relative',
+                        cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                        opacity: props.context.disabled ? 0.5 : 1
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: `${((props.context.value - props.context.min) / (props.context.max - props.context.min)) * 100}%`,
+                            background: 'var(--accent)',
+                            'border-radius': '4px'
+                        }} />
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: `${((props.context.value - props.context.min) / (props.context.max - props.context.min)) * 100}%`,
+                            transform: 'translate(-50%, -50%)',
+                            width: '20px',
+                            height: '20px',
+                            background: 'var(--accent)',
+                            'border-radius': '50%',
+                            'box-shadow': props.context.dragging ? '0 0 0 4px rgba(var(--accent-rgb), 0.3)' : 'none',
+                            transition: 'box-shadow 0.15s'
+                        }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        <button
+                            onClick={() => props.onAction('decrement', {})}
+                            style={{
+                                padding: '6px 12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                'border-radius': '4px',
+                                cursor: 'pointer'
+                            }}
+                        >−</button>
+                        <span style={{ color: 'var(--text-primary)', 'font-weight': 'bold' }}>{props.context.value}</span>
+                        <button
+                            onClick={() => props.onAction('increment', {})}
+                            style={{
+                                padding: '6px 12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                'border-radius': '4px',
+                                cursor: 'pointer'
+                            }}
+                        >+</button>
+                    </div>
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}

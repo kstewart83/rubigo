@@ -4,3 +4,4 @@ export { useCollapsible, type UseCollapsibleOptions, type UseCollapsibleReturn }
 export { useTooltip, type UseTooltipOptions, type UseTooltipReturn } from './useTooltip';
 export { useDialog, type UseDialogOptions, type UseDialogReturn } from './useDialog';
 export { useSelect, type UseSelectOptions, type UseSelectReturn } from './useSelect';
+export { useSlider, type UseSliderOptions, type UseSliderReturn } from './useSlider';
