@@ -135,6 +135,9 @@ fn main() {
     let spec_dir = manifest_dir.join("specifications");
     if spec_dir.exists() {
         process_specs(&spec_dir, &generated_dir);
+
+        // 3. Generate interactions manifest for all specs
+        generate_interactions_manifest(&spec_dir, &generated_dir);
     }
 
     // Re-run triggers
@@ -1266,4 +1269,180 @@ fn infer_event_from_change(before: &serde_json::Value, after: &serde_json::Value
     }
 
     "UNKNOWN".into()
+}
+
+/// Generate interactions manifest from all specs
+/// Outputs generated/interactions.json with events and keyboard mappings for each component
+fn generate_interactions_manifest(spec_dir: &Path, generated_dir: &Path) {
+    use serde_json::{json, Map, Value};
+
+    let mut components: Map<String, Value> = Map::new();
+
+    // Find all spec files
+    if let Ok(entries) = fs::read_dir(spec_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Ok(files) = fs::read_dir(&path) {
+                    for file in files.filter_map(|f| f.ok()) {
+                        let file_path = file.path();
+                        if file_path.to_string_lossy().ends_with(SPEC_SUFFIX) {
+                            if let Ok(content) = fs::read_to_string(&file_path) {
+                                let spec_name = file_path
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.replace(".sudo", ""))
+                                    .unwrap_or_default();
+
+                                if let Some(component_info) =
+                                    extract_component_interactions(&content)
+                                {
+                                    components.insert(spec_name, component_info);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Write interactions.json
+    let manifest = json!({
+        "version": "1.0",
+        "generated": chrono_lite_now(),
+        "components": components
+    });
+
+    let manifest_path = generated_dir.join("interactions.json");
+    if let Ok(json_str) = serde_json::to_string_pretty(&manifest) {
+        fs::write(&manifest_path, json_str).ok();
+        println!(
+            "cargo:warning=Generated interactions manifest: {}",
+            manifest_path.display()
+        );
+    }
+}
+
+/// Get current timestamp in ISO format (simple implementation)
+fn chrono_lite_now() -> String {
+    // Use build-time env var for reproducibility, or fallback
+    std::env::var("SOURCE_DATE_EPOCH")
+        .ok()
+        .unwrap_or_else(|| "2024-01-01T00:00:00Z".to_string())
+}
+
+/// Extract component interactions from spec content
+fn extract_component_interactions(content: &str) -> Option<serde_json::Value> {
+    use serde_json::{json, Map, Value};
+
+    let (meta, _) = parse_frontmatter(content);
+
+    // Skip presentational and schema types - they don't have interactions
+    if meta.spec_type == SpecType::Presentational || meta.spec_type == SpecType::Schema {
+        return None;
+    }
+
+    let mut info: Map<String, Value> = Map::new();
+
+    // Extract events from Quint model
+    let events = extract_quint_events(content);
+    if !events.is_empty() {
+        info.insert("events".to_string(), json!(events));
+    }
+
+    // Extract keyboard mappings from Keyboard Interaction section
+    let keyboard = extract_keyboard_mappings(content);
+    if !keyboard.is_empty() {
+        info.insert("keyboard".to_string(), json!(keyboard));
+    }
+
+    // Extract mouse events from Requirements/Design sections
+    let mouse = extract_mouse_events(content);
+    if !mouse.is_empty() {
+        info.insert("mouse".to_string(), json!(mouse));
+    }
+
+    if info.is_empty() {
+        None
+    } else {
+        Some(Value::Object(info))
+    }
+}
+
+/// Extract event names from Quint 'action' definitions
+fn extract_quint_events(content: &str) -> Vec<String> {
+    let mut events = Vec::new();
+
+    if let Some(quint_code) = extract_quint_block(content) {
+        // Find all 'action NAME = ' definitions
+        let action_re = regex::Regex::new(r"action\s+(\w+)\s*=").unwrap();
+        for cap in action_re.captures_iter(&quint_code) {
+            let action_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+            // Skip init and step actions (internal)
+            if action_name != "init" && action_name != "step" && !action_name.is_empty() {
+                events.push(action_name.to_string());
+            }
+        }
+    }
+
+    events.sort();
+    events.dedup();
+    events
+}
+
+/// Extract keyboard mappings from "Keyboard Interaction" section
+fn extract_keyboard_mappings(content: &str) -> serde_json::Map<String, serde_json::Value> {
+    use serde_json::json;
+
+    let mut keyboard: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+
+    // Find Keyboard Interaction section
+    let section_re = regex::Regex::new(r"(?m)^Keyboard Interaction:\s*\n((?:  - .+\n?)+)").unwrap();
+
+    if let Some(caps) = section_re.captures(content) {
+        let section_content = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+
+        // Parse each line like "  - Tab: Focus/unfocus"
+        let line_re = regex::Regex::new(r"  - ([^:]+):\s*(.+)").unwrap();
+        for line_cap in line_re.captures_iter(section_content) {
+            let key = line_cap.get(1).map(|m| m.as_str().trim()).unwrap_or("");
+            let action = line_cap.get(2).map(|m| m.as_str().trim()).unwrap_or("");
+
+            if !key.is_empty() && !action.is_empty() {
+                keyboard.insert(key.to_string(), json!(action));
+            }
+        }
+    }
+
+    keyboard
+}
+
+/// Extract mouse events mentioned in content
+fn extract_mouse_events(content: &str) -> Vec<String> {
+    let mut mouse_events = Vec::new();
+
+    // Common mouse event patterns
+    let patterns = [
+        ("click", "click"),
+        ("mousedown", "mouseDown"),
+        ("mouseup", "mouseUp"),
+        ("pointer_enter", "pointerEnter"),
+        ("pointer_leave", "pointerLeave"),
+        ("mouseleave", "mouseLeave"),
+        ("mouseenter", "mouseEnter"),
+        ("drag", "drag"),
+        ("hover", "hover"),
+    ];
+
+    let content_lower = content.to_lowercase();
+    for (pattern, name) in patterns {
+        if content_lower.contains(pattern) {
+            mouse_events.push(name.to_string());
+        }
+    }
+
+    mouse_events.sort();
+    mouse_events.dedup();
+    mouse_events
 }
