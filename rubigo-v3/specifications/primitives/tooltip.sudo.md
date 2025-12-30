@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Tooltip with hover/focus trigger and configurable delays
 ---
 

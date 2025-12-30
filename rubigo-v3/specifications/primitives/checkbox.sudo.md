@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: A tri-state checkbox primitive with checked, unchecked, and indeterminate states
 ---
 

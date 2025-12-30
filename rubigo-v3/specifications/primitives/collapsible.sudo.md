@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Collapsible panel with expand/collapse animation
 ---
 

@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Radio-style toggle group with exclusive selection
 ---
 

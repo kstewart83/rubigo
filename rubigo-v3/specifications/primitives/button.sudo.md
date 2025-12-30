@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Interactive button with loading, disabled, and pressed states
 ---
 

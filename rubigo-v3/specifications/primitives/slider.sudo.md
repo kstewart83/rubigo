@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Slider for selecting numeric values with drag and keyboard support
 ---
 

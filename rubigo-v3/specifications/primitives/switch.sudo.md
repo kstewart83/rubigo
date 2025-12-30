@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Binary toggle switch for forms and interactive UIs
 ---
 

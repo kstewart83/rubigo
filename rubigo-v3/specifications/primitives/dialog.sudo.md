@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Modal dialog with focus trap and backdrop interaction
 ---
 
