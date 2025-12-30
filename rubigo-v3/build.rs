@@ -626,7 +626,14 @@ fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
         errors.push("Missing 'action step' (required for 'quint run' to generate traces)".into());
     }
 
-    // 5. Check for invariants (val with some condition)
+    // 5. Check for _action variable (required for ITF trace event names)
+    if !quint_code.contains("var _action: str") && !quint_code.contains("var _action:str") {
+        errors.push(
+            "Missing 'var _action: str' (required for ITF traces to include action names)".into(),
+        );
+    }
+
+    // 6. Check for invariants (val with some condition)
     if !quint_code.contains("val ") {
         errors.push("Missing invariant definitions (val)".into());
     }
