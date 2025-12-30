@@ -113,9 +113,8 @@ module tabs {
     focusedId' = focusedId
   }
   
-  // Step action for simulation
+  // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
-    init,
     selectTab0,
     selectTab1,
     focusNext,

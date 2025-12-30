@@ -63,12 +63,14 @@ module checkbox {
   var disabled: bool
   var indeterminate: bool
   var state: str  // "unchecked" | "checked" | "indeterminate"
+  var _action: str  // Tracks action name for ITF traces
 
   action init = all {
     checked' = false,
     disabled' = false,
     indeterminate' = false,
-    state' = "unchecked"
+    state' = "unchecked",
+    _action' = "init"
   }
 
   action toggle = all {
@@ -76,7 +78,8 @@ module checkbox {
     state' = if (state == "checked") "unchecked" else "checked",
     checked' = if (state == "checked") false else true,
     indeterminate' = false,
-    disabled' = disabled
+    disabled' = disabled,
+    _action' = "TOGGLE"
   }
 
   action setChecked = all {
@@ -84,7 +87,8 @@ module checkbox {
     state' = "checked",
     checked' = true,
     indeterminate' = false,
-    disabled' = disabled
+    disabled' = disabled,
+    _action' = "SET_CHECKED"
   }
 
   action setUnchecked = all {
@@ -92,7 +96,8 @@ module checkbox {
     state' = "unchecked",
     checked' = false,
     indeterminate' = false,
-    disabled' = disabled
+    disabled' = disabled,
+    _action' = "SET_UNCHECKED"
   }
 
   action setIndeterminate = all {
@@ -100,12 +105,12 @@ module checkbox {
     state' = "indeterminate",
     indeterminate' = true,
     checked' = checked,
-    disabled' = disabled
+    disabled' = disabled,
+    _action' = "SET_INDETERMINATE"
   }
 
-  // Step action for simulation
+  // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
-    init,
     toggle,
     setChecked,
     setUnchecked,

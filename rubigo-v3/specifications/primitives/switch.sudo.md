@@ -119,7 +119,6 @@ module switch {
   }
 
   action step = any {
-    init,
     toggle,
     focus,
     blur
