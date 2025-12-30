@@ -55,7 +55,7 @@ function createSliderConfig(initial: Partial<SliderContext>, initialState: strin
             },
             dragging: {
                 on: {
-                    DRAG_END: { target: 'idle', actions: ['clearDragging'] },
+                    DRAG_END: { target: 'focused', actions: ['clearDragging', 'setFocused'] },
                     SET_MIN: { target: 'dragging', actions: ['setMin'] },
                     SET_MAX: { target: 'dragging', actions: ['setMax'] },
                 },
