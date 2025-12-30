@@ -1,5 +1,5 @@
 ---
-type: component
+type: primitive
 description: Template and example for creating component specifications
 ---
 
@@ -9,6 +9,18 @@ This template demonstrates the required structure for Rubigo component specifica
 Copy this file when creating a new component and replace the example content.
 
 > **Note:** This template itself is a valid spec that passes `just build` validation.
+
+## Spec Types
+
+| Type | Description | Required Sections |
+|------|-------------|-------------------|
+| `primitive` | Full statechart + Quint model (default) | Context, Machine, Guards, Actions |
+| `compound` | Composes primitives, may have orchestration state | Composition, Context |
+| `presentational` | Styling only, no state machine | Design Guidelines |
+| `schema` | Data types only, no UI | Context Schema |
+
+**Forbidden for presentational/schema:** State Machine, Guards, Actions, Formal Model, Test Vectors
+
 
 ## Language References
 

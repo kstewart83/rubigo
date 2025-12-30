@@ -31,14 +31,68 @@ macro_rules! warn {
 /// Configurable suffix for spec files
 const SPEC_SUFFIX: &str = ".sudo.md";
 
-/// Required H2 sections that must have ```cue blocks (for component specs)
-const REQUIRED_SECTIONS: &[&str] = &["Context Schema", "State Machine", "Guards", "Actions"];
+// Required sections for primitive specs (full statechart)
+const PRIMITIVE_SECTIONS: &[&str] = &["Context Schema", "State Machine", "Guards", "Actions"];
+// Required sections for compound specs (orchestration + imports)
+const COMPOUND_SECTIONS: &[&str] = &["Composition", "Context Schema"];
+// Required sections for presentational specs (design only)
+const PRESENTATIONAL_SECTIONS: &[&str] = &["Design Guidelines"];
+// Required sections for schema specs (types only)
+const SCHEMA_SECTIONS: &[&str] = &["Context Schema"];
 
 /// Spec type determined from frontmatter
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum SpecType {
-    Component, // Full validation (default)
-    Schema,    // Schema-only, no required sections
+    Primitive,      // Full statechart + Quint (default for components)
+    Compound,       // Orchestration state + child imports
+    Presentational, // Design/styling only, no state machine
+    Schema,         // Data types only, no UI
+}
+
+impl SpecType {
+    /// Get required sections for this spec type
+    fn required_sections(&self) -> &'static [&'static str] {
+        match self {
+            SpecType::Primitive => PRIMITIVE_SECTIONS,
+            SpecType::Compound => COMPOUND_SECTIONS,
+            SpecType::Presentational => PRESENTATIONAL_SECTIONS,
+            SpecType::Schema => SCHEMA_SECTIONS,
+        }
+    }
+
+    /// Get forbidden sections for this spec type (statechart sections not allowed)
+    fn forbidden_sections(&self) -> &'static [&'static str] {
+        match self {
+            SpecType::Primitive => &[], // All sections allowed
+            SpecType::Compound => &[],  // All sections allowed (may have orchestration state)
+            SpecType::Presentational => &[
+                "State Machine",
+                "Guards",
+                "Actions",
+                "Formal Model",
+                "Test Vectors",
+            ],
+            SpecType::Schema => &[
+                "State Machine",
+                "Guards",
+                "Actions",
+                "Formal Model",
+                "Test Vectors",
+            ],
+        }
+    }
+
+    /// Parse from frontmatter type string
+    fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "primitive" => SpecType::Primitive,
+            "compound" => SpecType::Compound,
+            "presentational" => SpecType::Presentational,
+            "schema" => SpecType::Schema,
+            "component" => SpecType::Primitive, // Legacy: treat component as primitive
+            _ => SpecType::Primitive,
+        }
+    }
 }
 
 /// Frontmatter metadata
@@ -51,7 +105,7 @@ struct SpecMeta {
 impl Default for SpecMeta {
     fn default() -> Self {
         Self {
-            spec_type: SpecType::Component,
+            spec_type: SpecType::Primitive,
             description: None,
         }
     }
@@ -171,10 +225,7 @@ fn parse_frontmatter(content: &str) -> (SpecMeta, &str) {
             let line = line.trim();
             if line.starts_with("type:") {
                 let value = line.trim_start_matches("type:").trim();
-                meta.spec_type = match value {
-                    "schema" => SpecType::Schema,
-                    "component" | _ => SpecType::Component,
-                };
+                meta.spec_type = SpecType::from_str(value);
             } else if line.starts_with("description:") {
                 let value = line.trim_start_matches("description:").trim();
                 meta.description = Some(value.to_string());
@@ -210,14 +261,16 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
     // Parse frontmatter
     let (meta, rest_content) = parse_frontmatter(&content);
     let type_str = match meta.spec_type {
-        SpecType::Component => "component",
+        SpecType::Primitive => "primitive",
+        SpecType::Compound => "compound",
+        SpecType::Presentational => "presentational",
         SpecType::Schema => "schema",
     };
     info!("Spec type: {} ({})", spec_name, type_str);
 
-    // Validate spec structure (only for component specs)
-    if meta.spec_type == SpecType::Component {
-        if let Err(errors) = validate_spec_structure(rest_content) {
+    // Validate spec structure (skip for schema-only specs without state machine)
+    if meta.spec_type != SpecType::Schema {
+        if let Err(errors) = validate_spec_structure(rest_content, meta.spec_type) {
             for error in errors {
                 warn!("Spec validation error in {}: {}", spec_name, error);
             }
@@ -307,12 +360,16 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
 
 /// Validate spec markdown structure
 ///
-/// Checks (for component specs):
+/// Checks based on spec type:
 /// 1. H1 title exists
 /// 2. Required H2 sections exist (with fuzzy matching for typos)
 /// 3. Each required section has ```cue block (not json/yaml)
-fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
+/// 4. Forbidden sections are not present (for presentational/schema types)
+fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
+
+    let required_sections = spec_type.required_sections();
+    let forbidden_sections = spec_type.forbidden_sections();
 
     // Track what we find
     let mut found_h1 = false;
@@ -337,7 +394,7 @@ fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
             let block_type = line.trim().trim_start_matches("```").trim();
             if let Some(ref section) = current_h2 {
                 // Check if this is a required section that should have cue
-                if REQUIRED_SECTIONS.contains(&section.as_str()) && block_type != "cue" {
+                if required_sections.contains(&section.as_str()) && block_type != "cue" {
                     sections_with_wrong_block.push((section.clone(), block_type.to_string()));
                 }
             }
@@ -355,8 +412,27 @@ fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
         ));
     }
 
+    // Check for forbidden sections (presentational/schema shouldn't have statechart sections)
+    for &forbidden in forbidden_sections {
+        if found_sections.contains(forbidden) {
+            let type_name = match spec_type {
+                SpecType::Presentational => "presentational",
+                SpecType::Schema => "schema",
+                _ => "this type",
+            };
+            errors.push(format!(
+                "SPEC ERROR: Section '{}' is not allowed for {} specs\n\
+                 \n\
+                 FIX: Remove this section, or change the frontmatter type:\n\
+                 - For statechart components, use: type: primitive\n\
+                 - For composed components, use: type: compound",
+                forbidden, type_name
+            ));
+        }
+    }
+
     // Check required sections exist and have cue blocks
-    for &required in REQUIRED_SECTIONS {
+    for &required in required_sections {
         if !found_sections.contains(required) {
             // Check for fuzzy matches
             let suggestion = find_similar_section(&found_sections, required);
