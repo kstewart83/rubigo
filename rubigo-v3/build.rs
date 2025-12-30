@@ -299,8 +299,8 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
 ///
 /// Checks (for component specs):
 /// 1. H1 title exists
-/// 2. Required H2 sections exist
-/// 3. Each required section has at least one ```cue block
+/// 2. Required H2 sections exist (with fuzzy matching for typos)
+/// 3. Each required section has ```cue block (not json/yaml)
 fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
 
@@ -308,6 +308,7 @@ fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
     let mut found_h1 = false;
     let mut current_h2: Option<String> = None;
     let mut sections_with_cue: HashSet<String> = HashSet::new();
+    let mut sections_with_wrong_block: Vec<(String, String)> = Vec::new(); // (section, block_type)
     let mut found_sections: HashSet<String> = HashSet::new();
 
     for line in content.lines() {
@@ -321,20 +322,102 @@ fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
             if let Some(ref section) = current_h2 {
                 sections_with_cue.insert(section.clone());
             }
+        } else if line.trim().starts_with("```") && line.trim() != "```" {
+            // Detected a code block with a language tag
+            let block_type = line.trim().trim_start_matches("```").trim();
+            if let Some(ref section) = current_h2 {
+                // Check if this is a required section that should have cue
+                if REQUIRED_SECTIONS.contains(&section.as_str()) && block_type != "cue" {
+                    sections_with_wrong_block.push((section.clone(), block_type.to_string()));
+                }
+            }
         }
     }
 
     // Check H1 exists
     if !found_h1 {
-        errors.push("Missing H1 title (# Component Name)".to_string());
+        errors.push(format!(
+            "SPEC ERROR: Missing H1 title\n\
+             \n\
+             FIX: Add a title at the top of your spec:\n\
+             \n\
+                 # Component Name"
+        ));
     }
 
     // Check required sections exist and have cue blocks
     for &required in REQUIRED_SECTIONS {
         if !found_sections.contains(required) {
-            errors.push(format!("Missing required section: ## {}", required));
+            // Check for fuzzy matches
+            let suggestion = find_similar_section(&found_sections, required);
+            let fix = if let Some(similar) = suggestion {
+                format!("FIX: Rename '## {}' to '## {}'", similar, required)
+            } else {
+                format!(
+                    "FIX: Add this section with a ```cue block:\n\
+                     \n\
+                         ## {}\n\
+                     \n\
+                         ```cue\n\
+                         {}: {{\n\
+                             // your config here\n\
+                         }}\n\
+                         ```",
+                    required,
+                    section_key(required)
+                )
+            };
+            errors.push(format!(
+                "SPEC ERROR: Missing required section: ## {}\n\
+                 \n\
+                 {}",
+                required, fix
+            ));
         } else if !sections_with_cue.contains(required) {
-            errors.push(format!("Section '{}' missing ```cue code block", required));
+            // Check if it has a wrong block type
+            let wrong_type = sections_with_wrong_block
+                .iter()
+                .find(|(s, _)| s == required)
+                .map(|(_, t)| t.as_str());
+
+            if let Some(bad_type) = wrong_type {
+                errors.push(format!(
+                    "SPEC ERROR: Section '{}' uses wrong block type\n\
+                     \n\
+                     Found:    ```{}\n\
+                     Expected: ```cue\n\
+                     \n\
+                     FIX: Convert {} to CUE syntax:\n\
+                     - Remove quotes around keys\n\
+                     - Remove commas between fields\n\
+                     - Use colons for assignment\n\
+                     \n\
+                     Example:\n\
+                         ```cue\n\
+                         {}: {{\n\
+                             key: \"value\"\n\
+                         }}\n\
+                         ```",
+                    required,
+                    bad_type,
+                    bad_type,
+                    section_key(required)
+                ));
+            } else {
+                errors.push(format!(
+                    "SPEC ERROR: Section '{}' missing ```cue code block\n\
+                     \n\
+                     FIX: Add a cue block to this section:\n\
+                     \n\
+                         ```cue\n\
+                         {}: {{\n\
+                             // your config here\n\
+                         }}\n\
+                         ```",
+                    required,
+                    section_key(required)
+                ));
+            }
         }
     }
 
@@ -342,6 +425,46 @@ fn validate_spec_structure(content: &str) -> Result<(), Vec<String>> {
         Ok(())
     } else {
         Err(errors)
+    }
+}
+
+/// Find a section name that's similar to the required one (fuzzy match)
+fn find_similar_section(found: &HashSet<String>, target: &str) -> Option<String> {
+    let target_lower = target.to_lowercase();
+    let target_words: HashSet<&str> = target_lower.split_whitespace().collect();
+
+    for section in found {
+        let section_lower = section.to_lowercase();
+
+        // Check if section contains key words from target
+        let section_words: HashSet<&str> = section_lower.split_whitespace().collect();
+        let common: HashSet<_> = target_words.intersection(&section_words).collect();
+
+        // If there's significant word overlap, suggest it
+        if !common.is_empty() && common.len() >= target_words.len() / 2 {
+            return Some(section.clone());
+        }
+
+        // Check for common substitutions
+        if (target == "State Machine" && section.contains("Machine"))
+            || (target == "Context Schema" && section.contains("Context"))
+            || (target == "Guards" && section.contains("Guard"))
+            || (target == "Actions" && section.contains("Action"))
+        {
+            return Some(section.clone());
+        }
+    }
+    None
+}
+
+/// Convert section name to CUE key
+fn section_key(section: &str) -> &str {
+    match section {
+        "Context Schema" => "context",
+        "State Machine" => "machine",
+        "Guards" => "guards",
+        "Actions" => "actions",
+        _ => "config",
     }
 }
 

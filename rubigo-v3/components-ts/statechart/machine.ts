@@ -7,13 +7,25 @@
 
 // === Types ===
 
+/** Guard function signature - receives context, returns boolean */
+export type GuardFn<TContext> = (ctx: TContext, event?: Event) => boolean;
+
+/** Action function signature - receives context, mutates it, optionally returns emitted events */
+export type ActionFn<TContext> = (ctx: TContext, event?: Event) => void | string[];
+
+/** Action can be a closure OR a config with mutation string (for simple cases) */
+export type ActionDef<TContext> = ActionFn<TContext> | ActionConfig;
+
+/** Guard can be a closure OR a string expression (for simple cases) */
+export type GuardDef<TContext> = GuardFn<TContext> | string;
+
 export interface MachineConfig<TContext extends object = Record<string, unknown>> {
     id: string;
     initial: string;
     context: TContext;
     states: Record<string, StateConfig>;
-    guards?: Record<string, string>;
-    actions?: Record<string, ActionConfig>;
+    guards?: Record<string, GuardDef<TContext>>;
+    actions?: Record<string, ActionDef<TContext>>;
 }
 
 export interface StateConfig {
@@ -43,6 +55,7 @@ export interface TransitionResult {
     handled: boolean;
     newState?: string;
     actionsExecuted: string[];
+    emittedEvents?: string[];
 }
 
 // === Machine Class ===
@@ -52,7 +65,8 @@ export class Machine<TContext extends object = Record<string, unknown>> {
     private currentState: string;
     private context: TContext;
     private readonly config: MachineConfig<TContext>;
-    private readonly mutationCache = new Map<string, (ctx: Record<string, unknown>) => unknown>();
+    private readonly actionCache = new Map<string, ActionFn<TContext>>();
+    private readonly guardCache = new Map<string, GuardFn<TContext>>();
 
     constructor(config: MachineConfig<TContext>) {
         this.id = config.id;
@@ -60,10 +74,22 @@ export class Machine<TContext extends object = Record<string, unknown>> {
         this.context = { ...config.context };
         this.config = config;
 
-        // Pre-compile all mutations
+        // Process guards: store closures or compile strings
+        for (const [name, guard] of Object.entries(config.guards || {})) {
+            if (typeof guard === 'function') {
+                this.guardCache.set(name, guard);
+            } else {
+                // Compile string expression to closure
+                this.guardCache.set(name, this.compileGuard(guard));
+            }
+        }
+
+        // Process actions: store closures or compile mutation strings
         for (const [name, action] of Object.entries(config.actions || {})) {
-            if (action.mutation) {
-                this.compileMutation(name, action.mutation);
+            if (typeof action === 'function') {
+                this.actionCache.set(name, action);
+            } else if (action.mutation) {
+                this.actionCache.set(name, this.compileMutation(action.mutation));
             }
         }
     }
@@ -154,74 +180,85 @@ export class Machine<TContext extends object = Record<string, unknown>> {
     }
 
     /**
-     * Evaluate a guard expression against the context
+     * Evaluate a guard by name
      */
-    private evaluateGuard(guardName: string): boolean {
-        // Look up guard expression
-        const guardExpr = this.config.guards?.[guardName];
-        if (!guardExpr) {
-            // Unknown guard, default to false (safe)
+    private evaluateGuard(guardName: string, event?: Event): boolean {
+        const guardFn = this.guardCache.get(guardName);
+        if (!guardFn) {
             console.warn(`Unknown guard: ${guardName}`);
             return false;
         }
 
-        return this.evaluateExpression(guardExpr);
-    }
-
-    /**
-     * Evaluate a boolean expression against the context
-     * Supports: context.X, &&, ||, !, ===, !==, parentheses
-     */
-    private evaluateExpression(expr: string): boolean {
-        const context = this.context as Record<string, unknown>;
-
         try {
-            const processed = expr.replace(/context\.(\w+)/g, (_, key: string) => {
-                const value = context[key];
-                return JSON.stringify(value);
-            });
-
-            const fn = new Function(`return (${processed})`);
-            return Boolean(fn());
+            return guardFn(this.context, event);
         } catch (e) {
-            console.warn(`Failed to evaluate expression: ${expr}`, e);
+            console.warn(`Guard ${guardName} threw error:`, e);
             return false;
         }
     }
 
     /**
-     * Pre-compile a mutation for fast execution
+     * Compile a string guard expression to a closure
      */
-    private compileMutation(actionName: string, mutation: string): void {
-        // Parse: "context.X = Y"
-        const match = mutation.match(/^context\.(\w+)\s*=\s*(.+)$/);
-        if (!match) {
-            console.warn(`Invalid mutation format: ${mutation}`);
-            return;
+    private compileGuard(expr: string): GuardFn<TContext> {
+        return (ctx: TContext) => {
+            try {
+                const context = ctx as Record<string, unknown>;
+                const processed = expr.replace(/context\.(\w+)/g, (_, key: string) => {
+                    return JSON.stringify(context[key]);
+                });
+                const fn = new Function(`return (${processed})`);
+                return Boolean(fn());
+            } catch (e) {
+                console.warn(`Failed to evaluate guard expression: ${expr}`, e);
+                return false;
+            }
+        };
+    }
+
+    /**
+     * Compile a mutation string to an action closure
+     * Supports: single assignment "context.X = Y" or multi-statement "context.X = Y; context.Z = W"
+     */
+    private compileMutation(mutation: string): ActionFn<TContext> {
+        const statements = mutation.split(';').map(s => s.trim()).filter(s => s);
+        const assignments: Array<{ key: string; valueExpr: string }> = [];
+
+        for (const stmt of statements) {
+            const match = stmt.match(/^context\.(\w+)\s*=\s*(.+)$/);
+            if (!match) {
+                console.warn(`Invalid mutation format: ${stmt}`);
+                continue;
+            }
+            assignments.push({ key: match[1], valueExpr: match[2] });
         }
 
-        const [, key, valueExpr] = match;
-
-        // Create a function that takes context and returns the new value
-        // We need to handle context.X references dynamically
-        const fn = new Function('ctx', `
-            return (${valueExpr.replace(/context\.(\w+)/g, 'ctx.$1')});
-        `) as (ctx: Record<string, unknown>) => unknown;
-
-        // Store with key info
-        this.mutationCache.set(actionName, (ctx) => {
-            ctx[key] = fn(ctx);
-            return ctx[key];
-        });
+        return (ctx: TContext) => {
+            const context = ctx as Record<string, unknown>;
+            for (const { key, valueExpr } of assignments) {
+                try {
+                    const fn = new Function('ctx', `
+                        return (${valueExpr.replace(/context\.(\w+)/g, 'ctx.$1')});
+                    `) as (ctx: Record<string, unknown>) => unknown;
+                    context[key] = fn(context);
+                } catch (e) {
+                    console.warn(`Failed to execute mutation for ${key}: ${valueExpr}`, e);
+                }
+            }
+        };
     }
 
     /**
      * Execute an action by name
      */
-    private executeAction(actionName: string): void {
-        const cachedMutation = this.mutationCache.get(actionName);
-        if (cachedMutation) {
-            cachedMutation(this.context as Record<string, unknown>);
+    private executeAction(actionName: string, event?: Event): string[] | void {
+        const actionFn = this.actionCache.get(actionName);
+        if (actionFn) {
+            try {
+                return actionFn(this.context, event);
+            } catch (e) {
+                console.warn(`Action ${actionName} threw error:`, e);
+            }
         }
     }
 

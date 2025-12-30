@@ -1,183 +1,204 @@
-# Rubigo Component Specification Template
+---
+type: component
+description: Template and example for creating component specifications
+---
 
-This document defines the structure of `.sudo.md` specification files.
-Specs use a **three-layer approach** combining Sudolang, Quint, and CUE.
+# Component Spec Template
+
+This template demonstrates the required structure for Rubigo component specifications.
+Copy this file when creating a new component and replace the example content.
+
+> **Note:** This template itself is a valid spec that passes `just build` validation.
 
 ## Language References
 
 | Language | Purpose | Reference |
 |----------|---------|-----------|
-| **Sudolang** | Human intent, requirements, accessibility | `references/sudolang-v2.0.md` |
-| **Quint** | Formal verification, invariants, state logic | `references/quint-lang.md` |
-| **CUE** | Runtime config generation, type constraints | `references/cuelang-v0.15.1.md` |
+| Sudolang | Human intent, requirements, accessibility | `references/sudolang-v2.0.md` |
+| Quint | Formal verification, invariants | `references/quint-lang.md` |
+| CUE | Runtime config, type constraints | `references/cuelang-v0.15.1.md` |
 
 ---
 
-## Frontmatter
+## Requirements
 
-Every spec starts with YAML frontmatter:
-
-```yaml
----
-type: component           # or "schema"
-description: Brief description
----
-```
-
-| Type | Description | Validation |
-|------|-------------|------------|
-| `component` | UI component with state machine | Full validation |
-| `schema` | Type definitions only | CUE syntax only |
-
----
-
-## Layer 1: Requirements (Sudolang)
-
-Natural language specification for humans and LLMs.
-Use Sudolang for intent, constraints, and UX requirements.
-
-**Best used for:**
-- User requirements and design intent
-- Accessibility guidelines
-- Edge cases and error handling
-- LLM implementation guidance
+Use Sudolang for human-readable requirements, constraints, and accessibility.
 
 ```sudolang
-The switch represents a binary on/off control.
-Users can toggle via click, touch, or keyboard.
+// TEMPLATE: Replace with your component's requirements
+
+The component provides [primary function].
+Users interact via [input methods].
 
 Constraints:
-  - Disabled switches cannot be toggled by any means
-  - Toggling must update checked state atomically
-  - Screen readers announce state changes
+  - Disabled state blocks all user interactions
+  - State changes are atomic
+  - Invalid states are unreachable
 
-Accessibility:
-  Role: switch
-  ARIA: aria-checked reflects checked state
-  Keyboard: Space and Enter trigger toggle
+Keyboard Interaction:
+  - Tab: Focus/unfocus
+  - Space/Enter: Primary action
+
+Error Handling:
+  - Failed actions leave state unchanged
+  - Screen readers announce errors
 ```
 
 ---
 
-## Layer 2: Formal Model (Quint)
+## Design Guidelines
 
-Verifiable behavioral specification. The model checker proves invariants
-and generates counterexamples when properties are violated.
+Optional section for visual design, responsive behavior, and usage guidance.
 
-**Best used for:**
-- State machine behavior
-- Guards and conditions
-- Invariants and properties
-- Temporal logic (always, eventually)
+```sudolang
+// TEMPLATE: Replace with your component's design guidelines
+
+Visual Design:
+  Touch target: minimum 44x44px
+  Transition: 200ms ease-out
+  Color contrast: WCAG AA minimum
+
+Responsive Behavior:
+  Mobile: Full-width, larger touch targets
+  Desktop: Compact sizing, hover states
+
+Usage Guidance:
+  USE for: [appropriate use cases]
+  DO NOT USE for: [inappropriate use cases]
+```
+
+---
+
+## Formal Model
+
+Use Quint for verifiable behavior specification and invariants.
 
 ```quint
-module switch {
+// TEMPLATE: Replace with your component's formal model
+module template {
   // State variables
-  var checked: bool
-  var disabled: bool
-  var readOnly: bool
-  var state: str  // "idle" | "focused"
+  var enabled: bool
+  var value: str
 
-  // Actions
+  // Initialize
   action init = all {
-    checked' = false,
-    disabled' = false,
-    readOnly' = false,
-    state' = "idle"
+    enabled' = true,
+    value' = ""
   }
 
-  action toggle = all {
-    not(disabled),
-    not(readOnly),
-    checked' = not(checked),
-    state' = state
-  }
-
-  action focus = all {
-    state' = "focused"
-  }
-
-  action blur = all {
-    state' = "idle"
+  // Primary action
+  action setValue(v: str) = all {
+    enabled,
+    value' = v,
+    enabled' = enabled
   }
 
   // Invariants (properties that must always hold)
-  val disabled_blocks_toggle = 
-    disabled implies unchanged(checked)
-
-  val state_is_valid = 
-    state == "idle" or state == "focused"
-
-  // Temporal property: focus always leads to eventual blur
-  temporal focus_blur_cycle = 
-    always(state == "focused" implies eventually(state == "idle"))
+  val enabled_is_boolean = enabled == true or enabled == false
+  val value_is_string = value == value
 }
 ```
-
-Run verification: `quint run switch.qnt --invariant=disabled_blocks_toggle`
 
 ---
 
-## Layer 3: Runtime Config (CUE)
+## Test Vectors
 
-Machine-readable configuration exported to JSON for interpreters.
+Test vectors validate interpreter implementations. Format: scenario/given/when/then.
 
-**Best used for:**
-- Concrete data structures
-- Default values
-- Type constraints
-- Generated config for TS/Rust interpreters
+```test-vectors
+# TEMPLATE: Replace with your component's test vectors
 
-### Context Schema
+- scenario: "basic action"
+  given:
+    context: { enabled: true, value: "" }
+    state: "idle"
+  when: SET_VALUE
+  then:
+    context: { enabled: true, value: "new" }
+    state: "idle"
+
+- scenario: "disabled blocks action"
+  given:
+    context: { enabled: false, value: "" }
+    state: "idle"
+  when: SET_VALUE
+  then:
+    context: { enabled: false, value: "" }
+    state: "idle"
+```
+
+---
+
+## Context Schema
+
+Define the runtime context variables. Use CUE syntax.
 
 ```cue
+// TEMPLATE: Replace with your component's context
+// CUE syntax: no quotes on keys, no commas, uses colons
 context: {
-    checked:  false   // Current toggle state
-    disabled: false   // If true, all interactions blocked
-    readOnly: false   // If true, user cannot change value
-    focused:  false   // Currently has keyboard focus
+    enabled: true    // Whether interactions are allowed
+    value:   ""      // Current value
 }
 ```
 
-### State Machine
+---
+
+## State Machine
+
+Define states and transitions. Use CUE syntax.
 
 ```cue
+// TEMPLATE: Replace with your component's state machine
 machine: {
-    id:      "switch"
+    id:      "template"
     initial: "idle"
     
     states: {
         idle: {
             on: {
-                FOCUS:  { target: "focused", actions: ["setFocused"] }
-                TOGGLE: { target: "idle", actions: ["toggle"], guard: "canToggle" }
+                SET_VALUE: {target: "idle", actions: ["setValue"], guard: "canAct"}
+                FOCUS:     {target: "focused", actions: ["setFocused"]}
             }
         }
         focused: {
             on: {
-                BLUR:   { target: "idle", actions: ["clearFocused"] }
-                TOGGLE: { target: "focused", actions: ["toggle"], guard: "canToggle" }
+                BLUR:      {target: "idle", actions: ["clearFocused"]}
+                SET_VALUE: {target: "focused", actions: ["setValue"], guard: "canAct"}
             }
         }
     }
 }
 ```
 
-### Guards
+---
+
+## Guards
+
+Define conditions that must be true for transitions. Use CUE syntax.
 
 ```cue
+// TEMPLATE: Replace with your component's guards
+// Guards are string expressions evaluated against context
 guards: {
-    canToggle: "!context.disabled && !context.readOnly"
+    canAct: "context.enabled"
 }
 ```
 
-### Actions
+---
+
+## Actions
+
+Define mutations and emitted events. Use CUE syntax.
 
 ```cue
+// TEMPLATE: Replace with your component's actions
+// Each action has a description and mutation expression
 actions: {
-    toggle: {
-        mutation: "context.checked = !context.checked"
-        emits:    ["onCheckedChange"]
+    setValue: {
+        description: "Update the value"
+        mutation:    "context.value = event.payload.value"
+        emits:       ["onValueChange"]
     }
     setFocused: {
         mutation: "context.focused = true"
@@ -190,89 +211,38 @@ actions: {
 
 ---
 
-## Validation Rules
+## Accessibility
 
-The build system validates specs at compile time:
+Optional but recommended. Use Sudolang for accessibility requirements.
 
-| Check | Description |
-|-------|-------------|
-| Frontmatter | Type must be `component` or `schema` |
-| Title (H1) | Required for all specs |
-| CUE blocks | Must pass `cue vet` |
-| Quint blocks | Must pass `quint typecheck` (optional) |
+```sudolang
+// TEMPLATE: Replace with your component's accessibility
 
-For `component` specs, required sections:
-- Context Schema
-- State Machine
-- Guards
-- Actions
+Role: [appropriate ARIA role]
+ARIA attributes:
+  - aria-disabled: reflects context.enabled
+  - aria-label: descriptive label
 
----
+Focus Management:
+  - Must be focusable via Tab when enabled
+  - Focus ring visible on keyboard focus
 
-## Complete Example Structure
-
-```markdown
----
-type: component
-description: Binary toggle switch control
----
-
-# Switch Component
-
-## Requirements
-
-\`\`\`sudolang
-The switch represents a binary on/off control.
-[... constraints, accessibility, etc.]
-\`\`\`
-
-## Formal Model
-
-\`\`\`quint
-module switch {
-  var checked: bool
-  var disabled: bool
-  // [... actions, invariants ...]
-}
-\`\`\`
-
-## Context Schema
-
-\`\`\`cue
-context: {
-    checked:  false
-    disabled: false
-}
-\`\`\`
-
-## State Machine
-
-\`\`\`cue
-machine: { ... }
-\`\`\`
-
-## Guards
-
-\`\`\`cue
-guards: { ... }
-\`\`\`
-
-## Actions
-
-\`\`\`cue
-actions: { ... }
-\`\`\`
+Screen Reader:
+  - Announce role and state
+  - Announce state changes
 ```
 
 ---
 
-## When to Use Each Layer
+## State Diagram
 
-| Question | Use |
-|----------|-----|
-| "What should this feel like to users?" | Sudolang |
-| "Will this always be true?" | Quint invariant |
-| "What happens when X then Y?" | Quint action/temporal |
-| "What's the JSON structure?" | CUE |
-| "What's the default value?" | CUE |
-| "How do we handle screen readers?" | Sudolang |
+Optional Mermaid diagram for visual documentation.
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> focused: FOCUS
+    idle --> idle: SET_VALUE [canAct]
+    focused --> idle: BLUR
+    focused --> focused: SET_VALUE [canAct]
+```
