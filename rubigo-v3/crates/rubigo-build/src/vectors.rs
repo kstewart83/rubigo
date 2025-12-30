@@ -279,7 +279,7 @@ pub fn parse_inline_json(s: &str) -> Result<Value, ()> {
 }
 
 /// Extract context from ITF state
-fn extract_itf_context(state: &Value) -> Value {
+pub fn extract_itf_context(state: &Value) -> Value {
     let mut ctx = Map::new();
 
     for field in [
@@ -302,7 +302,7 @@ fn extract_itf_context(state: &Value) -> Value {
 }
 
 /// Infer event name from context changes
-fn infer_event_from_change(before: &Value, after: &Value) -> String {
+pub fn infer_event_from_change(before: &Value, after: &Value) -> String {
     if before.get("checked") != after.get("checked") {
         return "TOGGLE".into();
     }
