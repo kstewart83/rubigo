@@ -573,3 +573,129 @@ fn conformance_button_spec() {
 
     println!("✅ All {} button scenarios passed", vectors.scenarios.len());
 }
+
+// === Tabs Conformance Test ===
+
+fn load_tabs_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("tabs.json");
+    let content = fs::read_to_string(&spec_path)
+        .expect(&format!("Failed to read tabs spec at {:?}", spec_path));
+    serde_json::from_str(&content).expect("Failed to parse tabs spec")
+}
+
+fn create_tabs_machine(spec: &GeneratedSpec, context: &Value, initial_state: &str) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn execute_tabs_actions(actions: &[String], spec: &GeneratedSpec, context: &mut Value) {
+    for action_name in actions {
+        if let Some(action_config) = spec.actions.get(action_name) {
+            let mutation: &str = &action_config.mutation;
+            if mutation.is_empty() {
+                continue;
+            }
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+
+                    if let Some(key) = left.strip_prefix("context.") {
+                        let key = key.trim();
+                        let new_value = if right.starts_with('\'') && right.ends_with('\'') {
+                            serde_json::Value::String(right[1..right.len() - 1].to_string())
+                        } else if right == "context.focusedId" {
+                            context
+                                .get("focusedId")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null)
+                        } else {
+                            serde_json::Value::String(right.to_string())
+                        };
+                        if let Some(obj) = context.as_object_mut() {
+                            obj.insert(key.to_string(), new_value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_tabs_spec() {
+    let spec = load_tabs_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("tabs.unified.json");
+    let content = fs::read_to_string(&vectors_path).expect(&format!(
+        "Failed to read tabs vectors at {:?}",
+        vectors_path
+    ));
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse tabs vectors");
+
+    println!(
+        "Running {} tabs conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine = create_tabs_machine(&spec, &step.before.context, &step.before.state);
+
+            let guard_fn = |_: &str| true;
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: Value::Null,
+                },
+                guard_fn,
+            );
+
+            execute_tabs_actions(&result.actions, &spec, &mut machine.context);
+
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            assert_eq!(
+                machine.context,
+                step.after.context,
+                "Scenario '{}' step {} ({}) failed: context mismatch",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!("✅ All {} tabs scenarios passed", vectors.scenarios.len());
+}

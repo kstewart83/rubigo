@@ -352,3 +352,93 @@ describe('WASM Button Conformance Tests', () => {
         console.log(`✅ All ${vectors.scenarios.length} WASM button scenarios passed`);
     });
 });
+
+// === Tabs WASM Conformance ===
+
+const TABS_VECTORS_PATH = '../../generated/test-vectors/tabs.unified.json';
+const TABS_SPEC_PATH = '../../generated/tabs.json';
+
+interface TabsContext {
+    selectedId: string;
+    focusedId: string;
+}
+
+interface TabsStep {
+    event: string;
+    before: { context: TabsContext; state: string };
+    after: { context: TabsContext; state: string };
+}
+
+interface TabsScenario {
+    name: string;
+    source: string;
+    steps: TabsStep[];
+}
+
+interface TabsVectors {
+    component: string;
+    scenarios: TabsScenario[];
+}
+
+interface TabsSpec {
+    context: TabsContext;
+    machine: any;
+    guards: Record<string, string>;
+    actions: Record<string, { mutation: string }>;
+}
+
+describe('WASM Tabs Conformance Tests', () => {
+    test('runs all tabs scenarios from unified vectors', () => {
+        if (!wasmInitialized) {
+            console.log('WASM not initialized, skipping tabs tests');
+            return;
+        }
+
+        const specPath = join(import.meta.dir, TABS_SPEC_PATH);
+        const vectorsPath = join(import.meta.dir, TABS_VECTORS_PATH);
+
+        const spec: TabsSpec = JSON.parse(readFileSync(specPath, 'utf-8'));
+        const vectors: TabsVectors = JSON.parse(readFileSync(vectorsPath, 'utf-8'));
+
+        console.log(`Running ${vectors.scenarios.length} WASM tabs conformance scenarios...`);
+
+        for (const scenario of vectors.scenarios) {
+            for (let i = 0; i < scenario.steps.length; i++) {
+                const step = scenario.steps[i];
+
+                const machineConfig = {
+                    id: spec.machine.id,
+                    initial: step.before.state,
+                    context: {
+                        selectedId: step.before.context.selectedId,
+                        focusedId: step.before.context.focusedId,
+                    },
+                    states: spec.machine.states,
+                    actions: spec.actions,
+                    guards: spec.guards,
+                };
+
+                const machine = new WasmMachine(JSON.stringify(machineConfig));
+
+                machine.send(step.event);
+
+                const actualContext = machine.getContext();
+
+                const expected = step.after.context;
+                const actual = {
+                    selectedId: actualContext.selectedId,
+                    focusedId: actualContext.focusedId,
+                };
+
+                expect(actual).toEqual(expected);
+
+                console.log(`  ✓ [${scenario.source}] ${scenario.name} - Step ${i + 1}: ${step.event}`);
+
+                machine.free();
+            }
+        }
+
+        console.log(`✅ All ${vectors.scenarios.length} WASM tabs scenarios passed`);
+    });
+});
+
