@@ -190,6 +190,16 @@ module button {
     _action' = "BLUR"
   }
   
+  // Reset to initial state (global event - works from any state)
+  action reset = all {
+    disabled' = false,
+    loading' = false,
+    pressed' = false,
+    focused' = false,
+    state' = "idle",
+    _action' = "RESET"
+  }
+  
   // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
     click,
@@ -199,7 +209,8 @@ module button {
     startLoading,
     stopLoading,
     focus,
-    blur
+    blur,
+    reset
   }
   
   // Invariants
@@ -304,6 +315,11 @@ machine: {
     id:      "button"
     initial: "idle"
     
+    // Global events apply from any state
+    global: {
+        RESET: {target: "idle", actions: ["resetContext"]}
+    }
+    
     states: {
         idle: {
             on: {
@@ -375,6 +391,10 @@ actions: {
     }
     clearFocused: {
         mutation: "context.focused = false"
+    }
+    resetContext: {
+        description: "Reset all context to initial values"
+        mutation:    "context.disabled = false; context.loading = false; context.pressed = false; context.focused = false"
     }
 }
 ```

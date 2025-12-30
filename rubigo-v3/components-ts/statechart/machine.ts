@@ -24,6 +24,7 @@ export interface MachineConfig<TContext extends object = Record<string, unknown>
     initial: string;
     context: TContext;
     states: Record<string, StateConfig>;
+    global?: Record<string, TransitionConfig | string>;  // Global events apply from any state
     guards?: Record<string, GuardDef<TContext>>;
     actions?: Record<string, ActionDef<TContext>>;
 }
@@ -138,8 +139,14 @@ export class Machine<TContext extends object = Record<string, unknown>> {
             return result;
         }
 
-        // 2. Find transition for this event
-        const transitionDef = stateConfig.on[eventObj.name];
+        // 2. Find transition for this event (state-specific first, then global)
+        let transitionDef = stateConfig.on[eventObj.name];
+
+        // 2b. If not found in state, check global events
+        if (!transitionDef && this.config.global) {
+            transitionDef = this.config.global[eventObj.name];
+        }
+
         if (!transitionDef) {
             return result;
         }

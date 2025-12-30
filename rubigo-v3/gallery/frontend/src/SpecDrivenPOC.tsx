@@ -93,21 +93,18 @@ const SpecDrivenPOC: Component = () => {
                     </div>
                 </section>
 
-                {/* Reset & Event Replay (Option B exploration) */}
+                {/* Reset & Event Replay (Global Events from Spec) */}
                 <section>
                     <h2 style={{ 'font-size': '16px', 'margin-bottom': '12px' }}>Reset & Event Replay</h2>
+                    <p style={{ 'font-size': '12px', color: '#666', 'margin-bottom': '12px' }}>
+                        RESET is now a global event defined in the spec - works from any state!
+                    </p>
                     <div style={{ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'margin-bottom': '12px' }}>
                         <button
-                            onClick={() => { btn.reset(); logEvent('RESET'); }}
+                            onClick={() => { const r = btn.send('RESET'); logEvent('RESET (global)', { handled: r.handled }); }}
                             style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', 'border-radius': '4px' }}
                         >
-                            Reset to Initial
-                        </button>
-                        <button
-                            onClick={() => { btn.reset({ disabled: true }); logEvent('RESET', { disabled: true }); }}
-                            style={{ background: '#f97316', color: 'white', border: 'none', padding: '8px 12px', 'border-radius': '4px' }}
-                        >
-                            Reset (Disabled)
+                            Send RESET (Global Event)
                         </button>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', 'flex-wrap': 'wrap' }}>
