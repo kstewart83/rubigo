@@ -79,18 +79,27 @@ module template {
   // State variables
   var enabled: bool
   var value: str
+  var _action: str  // REQUIRED: Tracks action name for ITF traces
 
   // Initialize
   action init = all {
     enabled' = true,
-    value' = ""
+    value' = "",
+    _action' = "init"
   }
 
   // Primary action
   action setValue(v: str) = all {
     enabled,
     value' = v,
-    enabled' = enabled
+    enabled' = enabled,
+    _action' = "SET_VALUE"  // Use SCREAMING_SNAKE_CASE matching CUE events
+  }
+
+  // Step action for simulation (excludes init - that's for initialization only)
+  action step = any {
+    setValue("")
+    // Add all your actions here for quint run to explore
   }
 
   // Invariants (properties that must always hold)
