@@ -23,6 +23,7 @@ interface YamlVector {
         state: string;
     };
     when: string;
+    payload?: Record<string, unknown>;  // Optional event payload
     then: {
         context: Context;
         state: string;
@@ -31,6 +32,7 @@ interface YamlVector {
 
 interface Step {
     event: string;
+    payload?: Record<string, unknown>;  // Optional event payload
     before: { context: Context; state: string };
     after: { context: Context; state: string };
 }
@@ -69,6 +71,7 @@ function parseYamlVectors(yamlPath: string): Scenario[] {
         source: 'yaml' as const,
         steps: [{
             event: v.when,
+            ...(v.payload && { payload: v.payload }),
             before: { context: v.given.context, state: v.given.state },
             after: { context: v.then.context, state: v.then.state }
         }]

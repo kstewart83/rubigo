@@ -20,6 +20,7 @@ interface TabsContext {
 
 interface Step {
     event: string;
+    payload?: Record<string, unknown>;
     before: { context: TabsContext; state: string };
     after: { context: TabsContext; state: string };
 }
@@ -68,8 +69,12 @@ describe('Tabs Conformance Tests', () => {
                 const config = createTabsConfig(spec, step.before.context, step.before.state);
                 const machine = new Machine(config);
 
-                // Send the event
-                machine.send(step.event);
+                // Send the event (with payload if present)
+                if (step.payload) {
+                    machine.send({ name: step.event, payload: step.payload });
+                } else {
+                    machine.send(step.event);
+                }
 
                 // Check state
                 const actualState = machine.getState();

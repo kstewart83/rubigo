@@ -21,6 +21,10 @@ export class WasmMachine {
    */
   setContextBool(key: string, value: boolean): void;
   /**
+   * Send an event with payload to the machine and return the result as JSON
+   */
+  sendWithPayload(event_name: string, payload_js: any): any;
+  /**
    * Set a number value in the context
    */
   setContextNumber(key: string, value: number): void;
@@ -48,16 +52,17 @@ export interface InitOutput {
   readonly wasmmachine_getContext: (a: number) => [number, number, number];
   readonly wasmmachine_getContextJson: (a: number) => [number, number, number, number];
   readonly wasmmachine_send: (a: number, b: number, c: number) => [number, number, number];
+  readonly wasmmachine_sendWithPayload: (a: number, b: number, c: number, d: any) => [number, number, number];
   readonly wasmmachine_setContextBool: (a: number, b: number, c: number, d: number) => void;
   readonly wasmmachine_setContextNumber: (a: number, b: number, c: number, d: number) => void;
   readonly wasmmachine_setContextString: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly __wbindgen_malloc: (a: number, b: number) => number;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_start: () => void;
 }
 

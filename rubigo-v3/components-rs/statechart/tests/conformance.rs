@@ -284,6 +284,8 @@ struct GenericScenario {
 #[derive(Debug, Deserialize)]
 struct GenericStep {
     event: String,
+    #[serde(default)]
+    payload: Option<Value>, // Optional event payload
     before: GenericSnapshot,
     after: GenericSnapshot,
 }
@@ -596,7 +598,12 @@ fn create_tabs_machine(spec: &GeneratedSpec, context: &Value, initial_state: &st
     Machine::from_config(config)
 }
 
-fn execute_tabs_actions(actions: &[String], spec: &GeneratedSpec, context: &mut Value) {
+fn execute_tabs_actions(
+    actions: &[String],
+    spec: &GeneratedSpec,
+    context: &mut Value,
+    payload: Option<&Value>,
+) {
     for action_name in actions {
         if let Some(action_config) = spec.actions.get(action_name) {
             let mutation: &str = &action_config.mutation;
@@ -619,6 +626,12 @@ fn execute_tabs_actions(actions: &[String], spec: &GeneratedSpec, context: &mut 
                         } else if right == "context.focusedId" {
                             context
                                 .get("focusedId")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null)
+                        } else if right == "event.payload.id" {
+                            // Handle event.payload.id reference
+                            payload
+                                .and_then(|p| p.get("id"))
                                 .cloned()
                                 .unwrap_or(serde_json::Value::Null)
                         } else {
@@ -667,7 +680,12 @@ fn conformance_tabs_spec() {
                 guard_fn,
             );
 
-            execute_tabs_actions(&result.actions, &spec, &mut machine.context);
+            execute_tabs_actions(
+                &result.actions,
+                &spec,
+                &mut machine.context,
+                step.payload.as_ref(),
+            );
 
             assert_eq!(
                 machine.current_state().unwrap(),
