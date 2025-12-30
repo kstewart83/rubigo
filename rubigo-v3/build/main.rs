@@ -141,7 +141,9 @@ fn main() {
     }
 
     // Re-run triggers
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=build/main.rs");
+    println!("cargo:rerun-if-changed=.buildstamp");
+    println!("cargo:rerun-if-changed=build");
     println!("cargo:rerun-if-changed=specifications");
 }
 
@@ -198,6 +200,10 @@ fn extract_cue_version(output: &str) -> Option<String> {
 
 /// Process all spec files in the spec directory
 fn process_specs(spec_dir: &Path, generated_dir: &Path) {
+    println!(
+        "cargo::warning=Processing specs from: {}",
+        spec_dir.display()
+    );
     // Find all directories containing spec files
     if let Ok(entries) = fs::read_dir(spec_dir) {
         for entry in entries.filter_map(|e| e.ok()) {
@@ -208,6 +214,7 @@ fn process_specs(spec_dir: &Path, generated_dir: &Path) {
                     for file in files.filter_map(|f| f.ok()) {
                         let file_path = file.path();
                         if file_path.to_string_lossy().ends_with(SPEC_SUFFIX) {
+                            println!("cargo::warning=Processing: {}", file_path.display());
                             process_spec_file(&file_path, generated_dir);
                         }
                     }
@@ -741,10 +748,15 @@ fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
         );
     }
 
-    // 6. Check for _state variable (required for ITF trace state tracking)
-    if !quint_code.contains("var _state: str") && !quint_code.contains("var _state:str") {
+    // 6. Check for _state or state variable (required for ITF trace state tracking)
+    // Some specs use `state` directly (e.g., slider) while newer specs use `_state`
+    let has_state_var = quint_code.contains("var _state: str")
+        || quint_code.contains("var _state:str")
+        || quint_code.contains("var state: str")
+        || quint_code.contains("var state:str");
+    if !has_state_var {
         errors.push(
-            "Missing 'var _state: str' (required for ITF traces to track state transitions)".into(),
+            "Missing 'var _state: str' or 'var state: str' (required for ITF traces to track state transitions)".into(),
         );
     }
 
@@ -1160,13 +1172,15 @@ fn parse_itf_trace(spec_name: &str, itf_file: &Path) -> Vec<serde_json::Value> {
             .map(|s| s.to_uppercase())
             .unwrap_or_else(|| infer_event_from_change(&before_ctx, &after_ctx));
 
-        // Extract state from Quint's _state variable (if present, otherwise default to idle)
+        // Extract state from Quint's _state or state variable (fallback for backward compatibility)
         let before_state = before
             .get("_state")
+            .or_else(|| before.get("state"))
             .and_then(|v| v.as_str())
             .unwrap_or("idle");
         let after_state = after
             .get("_state")
+            .or_else(|| after.get("state"))
             .and_then(|v| v.as_str())
             .unwrap_or("idle");
 
