@@ -23,9 +23,13 @@ pub use extraction::{
     extract_cue_blocks, extract_quint_block, extract_test_vectors, parse_frontmatter,
 };
 pub use interactions::{
-    extract_keyboard_mappings, extract_quint_events, generate_interactions_manifest,
+    extract_component_interactions, extract_keyboard_mappings, extract_mouse_events,
+    extract_quint_events, generate_interactions_manifest,
 };
 pub use quint::{cross_reference_events, generate_itf_trace, write_quint_file};
 pub use types::{SpecMeta, SpecType, SPEC_SUFFIX};
 pub use validation::{validate_quint_model, validate_spec_structure};
-pub use vectors::{generate_unified_vectors, parse_itf_trace, parse_test_vectors_yaml};
+pub use vectors::{
+    extract_itf_context, generate_unified_vectors, infer_event_from_change, parse_inline_json,
+    parse_itf_trace, parse_test_vectors_yaml,
+};
