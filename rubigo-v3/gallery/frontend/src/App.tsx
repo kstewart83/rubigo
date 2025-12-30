@@ -59,9 +59,109 @@ const App: Component = () => {
         setContext(prev => ({ ...prev, [key]: value }));
     };
 
-    // Log an action
-    const logAction = (name: string, payload?: any) => {
+    // Handle an action - log it and execute mutations
+    const handleAction = (name: string, payload?: any) => {
+        // Log the action
         setActions(prev => [...prev, { timestamp: Date.now(), name, payload }]);
+
+        // Get the spec's actions definitions
+        const spec = currentSpec();
+        if (!spec?.machine) return;
+
+        // Execute common actions based on action name
+        // These align with standard statechart action names from specs
+        setContext(prev => {
+            const next = { ...prev };
+            switch (name) {
+                // Toggle actions (switch, checkbox)
+                case 'toggle':
+                    next.checked = !prev.checked;
+                    break;
+                case 'check':
+                    next.checked = true;
+                    break;
+                case 'uncheck':
+                    next.checked = false;
+                    break;
+                case 'setIndeterminate':
+                    next.indeterminate = true;
+                    next.checked = false;
+                    break;
+
+                // Focus actions
+                case 'focus':
+                    next.focused = true;
+                    break;
+                case 'blur':
+                    next.focused = false;
+                    break;
+                case 'setFocused':
+                    next.focused = true;
+                    break;
+                case 'clearFocused':
+                    next.focused = false;
+                    break;
+
+                // Input/change actions
+                case 'change':
+                    if (payload?.value !== undefined) {
+                        next.value = payload.value;
+                    }
+                    break;
+
+                // Button actions
+                case 'click':
+                case 'press':
+                    next.pressed = true;
+                    break;
+                case 'release':
+                    next.pressed = false;
+                    break;
+
+                // Collapsible actions
+                case 'open':
+                    next.open = true;
+                    break;
+                case 'close':
+                    next.open = false;
+                    break;
+                case 'toggleOpen':
+                    next.open = !prev.open;
+                    break;
+
+                // Select actions
+                case 'select':
+                    if (payload?.id !== undefined) {
+                        next.selectedId = payload.id;
+                    }
+                    if (payload?.value !== undefined) {
+                        next.value = payload.value;
+                    }
+                    break;
+
+                // Slider actions
+                case 'increment':
+                    next.value = Math.min(prev.max ?? 100, (prev.value ?? 0) + (prev.stepSize ?? prev.step ?? 1));
+                    break;
+                case 'decrement':
+                    next.value = Math.max(prev.min ?? 0, (prev.value ?? 0) - (prev.stepSize ?? prev.step ?? 1));
+                    break;
+                case 'setDragging':
+                    next.dragging = true;
+                    break;
+                case 'clearDragging':
+                    next.dragging = false;
+                    break;
+
+                // Tabs actions
+                case 'selectTab':
+                    if (payload?.id !== undefined) {
+                        next.activeTabId = payload.id;
+                    }
+                    break;
+            }
+            return next;
+        });
     };
 
     return (
@@ -233,7 +333,7 @@ const App: Component = () => {
                                         context={context()}
                                         currentState={currentState()}
                                         onStateChange={setCurrentState}
-                                        onAction={logAction}
+                                        onAction={handleAction}
                                     />
                                 </div>
 
