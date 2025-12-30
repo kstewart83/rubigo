@@ -5,6 +5,7 @@ members = [
     "components-rs/components",
     "components-rs/statechart",
     "gallery/backend",
+    "crates/rubigo-build",
 ]
 
 # Root package for build.rs

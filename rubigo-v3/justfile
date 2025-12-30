@@ -175,6 +175,74 @@ frontend-build:
 prod-build: build-release wasm-build frontend-build
     @echo "✅ Production build complete"
 
+# === Build System Validation ===
+
+# Test: Second build should NOT reprocess specs (caching works)
+build-test-cache:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing build cache efficiency..."
+    cargo build 2>&1 > /tmp/rubigo_build1.log
+    cargo build 2>&1 | tee /tmp/rubigo_build2.log
+    if grep -q "Processing:" /tmp/rubigo_build2.log; then
+        echo "❌ FAIL: Build re-ran when nothing changed"
+        exit 1
+    fi
+    echo "✅ Build correctly cached"
+
+# Test: Touching a spec file triggers rebuild
+build-test-spec-trigger:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing spec change detection..."
+    cargo build 2>&1 > /dev/null
+    touch specifications/primitives/switch.sudo.md
+    cargo build 2>&1 | tee /tmp/rubigo_build3.log
+    # After touching a spec, build.rs should recompile
+    if ! grep -q "Compiling rubigo-v3-workspace" /tmp/rubigo_build3.log; then
+        echo "❌ FAIL: Spec change not detected (no recompile)"
+        exit 1
+    fi
+    echo "✅ Spec change triggers rebuild"
+
+# Test: Generated outputs are correct
+build-test-outputs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing generated file correctness..."
+    cargo build
+    
+    # Check slider ITF has correct state - first step should be dragging
+    SLIDER_STATE=$(cat generated/test-vectors/slider.unified.json | python3 -c "import json,sys; d=json.load(sys.stdin); itf=[s for s in d['scenarios'] if s.get('source')=='itf'][0]; print(itf['steps'][0]['after']['state'])")
+    if [ "$SLIDER_STATE" != "dragging" ]; then
+        echo "❌ FAIL: slider state is '$SLIDER_STATE', expected 'dragging'"
+        exit 1
+    fi
+    echo "  ✓ slider.unified.json has correct state"
+    
+    # Check input unified exists with scenarios
+    INPUT_COUNT=$(cat generated/test-vectors/input.unified.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d['scenarios']))")
+    if [ "$INPUT_COUNT" -eq 0 ]; then
+        echo "❌ FAIL: input.unified.json has no scenarios"
+        exit 1
+    fi
+    echo "  ✓ input.unified.json has $INPUT_COUNT scenarios"
+    
+    echo "✅ Generated outputs correct"
+
+# Test: rubigo-build library crate unit tests
+build-test-lib:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running rubigo-build unit tests..."
+    cargo test -p rubigo-build
+    echo "✅ Library unit tests passed"
+
+# Run all build validation tests
+build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-outputs
+    @echo "═══════════════════════════════════"
+    @echo "✅ All build tests passed"
+
 # === Testing ===
 
 # TypeScript tests
