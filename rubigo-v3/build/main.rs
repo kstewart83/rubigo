@@ -741,7 +741,14 @@ fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
         );
     }
 
-    // 6. Check for invariants (val with some condition)
+    // 6. Check for _state variable (required for ITF trace state tracking)
+    if !quint_code.contains("var _state: str") && !quint_code.contains("var _state:str") {
+        errors.push(
+            "Missing 'var _state: str' (required for ITF traces to track state transitions)".into(),
+        );
+    }
+
+    // 7. Check for invariants (val with some condition)
     if !quint_code.contains("val ") {
         errors.push("Missing invariant definitions (val)".into());
     }
@@ -1153,13 +1160,13 @@ fn parse_itf_trace(spec_name: &str, itf_file: &Path) -> Vec<serde_json::Value> {
             .map(|s| s.to_uppercase())
             .unwrap_or_else(|| infer_event_from_change(&before_ctx, &after_ctx));
 
-        // Extract state from Quint's state variable (if present, otherwise default to idle)
+        // Extract state from Quint's _state variable (if present, otherwise default to idle)
         let before_state = before
-            .get("state")
+            .get("_state")
             .and_then(|v| v.as_str())
             .unwrap_or("idle");
         let after_state = after
-            .get("state")
+            .get("_state")
             .and_then(|v| v.as_str())
             .unwrap_or("idle");
 
