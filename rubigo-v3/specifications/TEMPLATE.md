@@ -91,12 +91,14 @@ module template {
   // State variables
   var enabled: bool
   var value: str
+  var _state: str   // REQUIRED: Tracks state machine state for ITF traces
   var _action: str  // REQUIRED: Tracks action name for ITF traces
 
   // Initialize
   action init = all {
     enabled' = true,
     value' = "",
+    _state' = "idle",
     _action' = "init"
   }
 
@@ -105,6 +107,7 @@ module template {
     enabled,
     value' = v,
     enabled' = enabled,
+    _state' = _state,
     _action' = "SET_VALUE"  // Use SCREAMING_SNAKE_CASE matching CUE events
   }
 
