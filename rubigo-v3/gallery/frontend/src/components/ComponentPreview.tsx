@@ -54,16 +54,26 @@ export const ComponentPreview: Component<Props> = (props) => {
             {isSwitch() ? (
                 <button
                     onClick={handleToggle}
+                    onKeyDown={(e) => {
+                        if (props.context.disabled || props.context.readOnly) return;
+                        if (e.key === ' ' || e.key === 'Enter') {
+                            e.preventDefault();
+                            props.onAction('toggle');
+                        }
+                    }}
+                    onFocus={() => !props.context.disabled && props.onAction('focus')}
+                    onBlur={() => props.onAction('blur')}
                     style={{
                         width: '56px',
                         height: '32px',
                         'border-radius': '16px',
-                        border: 'none',
+                        border: props.context.focused ? '2px solid var(--accent)' : 'none',
                         background: props.context.checked ? 'var(--accent)' : 'var(--bg-tertiary)',
                         cursor: props.context.disabled || props.context.readOnly ? 'not-allowed' : 'pointer',
                         opacity: props.context.disabled ? 0.5 : 1,
                         transition: 'background 0.2s',
-                        position: 'relative'
+                        position: 'relative',
+                        outline: 'none'
                     }}
                 >
                     <span style={{
@@ -81,6 +91,15 @@ export const ComponentPreview: Component<Props> = (props) => {
             ) : isCheckbox() ? (
                 <button
                     onClick={handleCheckboxToggle}
+                    onKeyDown={(e) => {
+                        if (props.context.disabled) return;
+                        if (e.key === ' ' || e.key === 'Enter') {
+                            e.preventDefault();
+                            props.onAction('toggle');
+                        }
+                    }}
+                    onFocus={() => !props.context.disabled && props.onAction('focus')}
+                    onBlur={() => props.onAction('blur')}
                     style={{
                         width: '24px',
                         height: '24px',
@@ -95,7 +114,9 @@ export const ComponentPreview: Component<Props> = (props) => {
                         'justify-content': 'center',
                         color: '#fff',
                         'font-size': '16px',
-                        'font-weight': 'bold'
+                        'font-weight': 'bold',
+                        outline: props.context.focused ? '2px solid var(--accent)' : 'none',
+                        'outline-offset': '2px'
                     }}
                 >
                     {props.context.indeterminate ? '−' : props.context.checked ? '✓' : ''}
@@ -105,6 +126,26 @@ export const ComponentPreview: Component<Props> = (props) => {
                     onMouseDown={() => !props.context.disabled && !props.context.loading && props.onAction('pressDown')}
                     onMouseUp={() => !props.context.disabled && !props.context.loading && props.onAction('pressUp')}
                     onMouseLeave={() => props.context.pressed && props.onAction('cancelPress')}
+                    onKeyDown={(e) => {
+                        if (props.context.disabled || props.context.loading) return;
+                        if (e.key === ' ') {
+                            e.preventDefault();
+                            props.onAction('pressDown');
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            props.onAction('click');
+                        }
+                    }}
+                    onKeyUp={(e) => {
+                        if (props.context.disabled || props.context.loading) return;
+                        if (e.key === ' ') {
+                            e.preventDefault();
+                            props.onAction('pressUp');
+                            props.onAction('click');
+                        }
+                    }}
+                    onFocus={() => !props.context.disabled && props.onAction('focus')}
+                    onBlur={() => props.onAction('blur')}
                     style={{
                         padding: '12px 24px',
                         'border-radius': '6px',
@@ -187,6 +228,15 @@ export const ComponentPreview: Component<Props> = (props) => {
                 }}>
                     <button
                         onClick={() => !props.context.disabled && props.onAction('toggle', {})}
+                        onKeyDown={(e) => {
+                            if (props.context.disabled) return;
+                            if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                props.onAction('toggle', {});
+                            }
+                        }}
+                        onFocus={() => !props.context.disabled && props.onAction('focus')}
+                        onBlur={() => props.onAction('blur')}
                         style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -199,7 +249,9 @@ export const ComponentPreview: Component<Props> = (props) => {
                             opacity: props.context.disabled ? 0.5 : 1,
                             color: 'var(--text-primary)',
                             'font-size': '14px',
-                            'font-weight': '500'
+                            'font-weight': '500',
+                            outline: props.context.focused ? '2px solid var(--accent)' : 'none',
+                            'outline-offset': '-2px'
                         }}
                     >
                         <span>Click to {props.context.open ? 'Collapse' : 'Expand'}</span>
@@ -388,14 +440,55 @@ export const ComponentPreview: Component<Props> = (props) => {
                     )}
                 </div>
             ) : props.spec?.name?.toLowerCase().includes('slider') ? (
-                <div style={{
-                    display: 'flex',
-                    'flex-direction': 'column',
-                    'align-items': 'center',
-                    gap: '16px',
-                    width: '100%',
-                    'max-width': '300px'
-                }}>
+                <div
+                    tabIndex={props.context.disabled ? -1 : 0}
+                    onKeyDown={(e) => {
+                        if (props.context.disabled) return;
+                        const step = props.context.stepSize ?? props.context.step ?? 1;
+                        const largeStep = step * 10;
+                        switch (e.key) {
+                            case 'ArrowRight':
+                            case 'ArrowUp':
+                                e.preventDefault();
+                                props.onAction('increment', {});
+                                break;
+                            case 'ArrowLeft':
+                            case 'ArrowDown':
+                                e.preventDefault();
+                                props.onAction('decrement', {});
+                                break;
+                            case 'PageUp':
+                                e.preventDefault();
+                                props.onAction('setValue', { value: Math.min(props.context.max ?? 100, (props.context.value ?? 0) + largeStep) });
+                                break;
+                            case 'PageDown':
+                                e.preventDefault();
+                                props.onAction('setValue', { value: Math.max(props.context.min ?? 0, (props.context.value ?? 0) - largeStep) });
+                                break;
+                            case 'Home':
+                                e.preventDefault();
+                                props.onAction('setValue', { value: props.context.min ?? 0 });
+                                break;
+                            case 'End':
+                                e.preventDefault();
+                                props.onAction('setValue', { value: props.context.max ?? 100 });
+                                break;
+                        }
+                    }}
+                    onFocus={() => !props.context.disabled && props.onAction('focus')}
+                    onBlur={() => props.onAction('blur')}
+                    style={{
+                        display: 'flex',
+                        'flex-direction': 'column',
+                        'align-items': 'center',
+                        gap: '16px',
+                        width: '100%',
+                        'max-width': '300px',
+                        outline: props.context.focused ? '2px solid var(--accent)' : 'none',
+                        'outline-offset': '4px',
+                        'border-radius': '4px'
+                    }}
+                >
                     <div style={{
                         width: '100%',
                         height: '8px',
