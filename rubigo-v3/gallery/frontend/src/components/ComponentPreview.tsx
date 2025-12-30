@@ -469,7 +469,7 @@ export const ComponentPreview: Component<Props> = (props) => {
                             padding: '12px 16px',
                             'border-radius': '6px',
                             border: `2px solid ${props.context.error ? 'var(--error, #ef4444)' :
-                                    props.context.focused ? 'var(--accent)' : 'var(--border)'
+                                props.context.focused ? 'var(--accent)' : 'var(--border)'
                                 }`,
                             background: props.context.disabled ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
                             color: 'var(--text-primary)',
@@ -526,6 +526,117 @@ export const ComponentPreview: Component<Props> = (props) => {
                             </span>
                         )}
                     </div>
+                </div>
+            ) : props.spec?.name?.toLowerCase().includes('card') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    gap: '16px',
+                    width: '280px'
+                }}>
+                    <div style={{
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border)',
+                        'border-radius': '8px',
+                        'box-shadow': '0 2px 8px rgba(0,0,0,0.08)',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            padding: '16px',
+                            'border-bottom': '1px solid var(--border)'
+                        }}>
+                            <div style={{ 'font-weight': '600', 'font-size': '14px' }}>Card Title</div>
+                            <div style={{ color: 'var(--text-secondary)', 'font-size': '12px', 'margin-top': '4px' }}>
+                                Card description text
+                            </div>
+                        </div>
+                        <div style={{ padding: '16px', color: 'var(--text-primary)', 'font-size': '14px' }}>
+                            Card body content goes here. Cards are presentational components for grouping content.
+                        </div>
+                        <div style={{
+                            padding: '12px 16px',
+                            background: 'var(--bg-secondary)',
+                            'font-size': '12px',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            Card footer
+                        </div>
+                    </div>
+                    <span style={{
+                        'font-size': '11px',
+                        color: 'var(--text-secondary)',
+                        'text-align': 'center'
+                    }}>
+                        📦 Presentational component (no state)
+                    </span>
+                </div>
+            ) : props.spec?.name?.toLowerCase().includes('separator') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    gap: '16px',
+                    width: '280px'
+                }}>
+                    <div style={{ color: 'var(--text-primary)', 'font-size': '14px' }}>
+                        Content above separator
+                    </div>
+                    <hr style={{
+                        width: '100%',
+                        border: 'none',
+                        'border-top': '1px solid var(--border)',
+                        margin: '8px 0'
+                    }} />
+                    <div style={{ color: 'var(--text-primary)', 'font-size': '14px' }}>
+                        Content below separator
+                    </div>
+                    <div style={{ display: 'flex', 'align-items': 'center', gap: '16px', 'margin-top': '16px' }}>
+                        <span style={{ color: 'var(--text-primary)', 'font-size': '13px' }}>Left</span>
+                        <div style={{
+                            width: '1px',
+                            height: '24px',
+                            background: 'var(--border)'
+                        }} />
+                        <span style={{ color: 'var(--text-primary)', 'font-size': '13px' }}>Right</span>
+                    </div>
+                    <span style={{
+                        'font-size': '11px',
+                        color: 'var(--text-secondary)',
+                        'text-align': 'center'
+                    }}>
+                        ➖ Horizontal & vertical variants
+                    </span>
+                </div>
+            ) : props.spec?.name?.toLowerCase().includes('scrollarea') || props.spec?.name?.toLowerCase().includes('scroll') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    gap: '12px',
+                    width: '280px'
+                }}>
+                    <div style={{
+                        height: '160px',
+                        overflow: 'auto',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border)',
+                        'border-radius': '6px',
+                        padding: '12px',
+                        'font-size': '13px',
+                        color: 'var(--text-primary)'
+                    }}>
+                        <p style={{ margin: '0 0 12px' }}>Scroll me! ↓</p>
+                        <p style={{ margin: '0 0 12px' }}>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                        <p style={{ margin: '0 0 12px' }}>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                        <p style={{ margin: '0 0 12px' }}>Ut enim ad minim veniam, quis nostrud exercitation.</p>
+                        <p style={{ margin: '0 0 12px' }}>Duis aute irure dolor in reprehenderit in voluptate.</p>
+                        <p style={{ margin: 0 }}>Excepteur sint occaecat cupidatat non proident.</p>
+                    </div>
+                    <span style={{
+                        'font-size': '11px',
+                        color: 'var(--text-secondary)',
+                        'text-align': 'center'
+                    }}>
+                        📜 Custom scrollbars with styling
+                    </span>
                 </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
