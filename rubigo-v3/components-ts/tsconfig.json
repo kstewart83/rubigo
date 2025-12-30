@@ -10,6 +10,8 @@
         "outDir": "./dist",
         "rootDir": "./",
         "resolveJsonModule": true,
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
         "types": [
             "bun-types"
         ]
@@ -17,7 +19,10 @@
     "include": [
         "statechart/**/*",
         "switch/**/*",
-        "solid/**/*"
+        "solid/**/*",
+        "button/**/*",
+        "checkbox/**/*",
+        "tabs/**/*"
     ],
     "exclude": [
         "node_modules",

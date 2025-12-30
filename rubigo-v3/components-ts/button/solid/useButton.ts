@@ -1,0 +1,130 @@
+/**
+ * useButton - SolidJS hook for a spec-driven button
+ *
+ * Based on the button.sudo.md specification.
+ */
+
+import { createSignal, createMemo } from 'solid-js';
+import { createMachine } from '../../statechart';
+import { createButtonConfig, type ButtonContext } from '../config';
+
+export interface UseButtonOptions {
+    disabled?: boolean;
+    loading?: boolean;
+    onClick?: () => void;
+}
+
+export interface UseButtonReturn {
+    disabled: () => boolean;
+    loading: () => boolean;
+    pressed: () => boolean;
+    state: () => string;
+    click: () => void;
+    startLoading: () => void;
+    stopLoading: () => void;
+    setDisabled: (disabled: boolean) => void;
+    rootProps: () => {
+        role: 'button';
+        'aria-disabled': boolean;
+        'aria-busy': boolean;
+        tabIndex: number;
+        onClick: () => void;
+        onMouseDown: () => void;
+        onMouseUp: () => void;
+        onMouseLeave: () => void;
+        onKeyDown: (e: KeyboardEvent) => void;
+        onKeyUp: (e: KeyboardEvent) => void;
+    };
+}
+
+/**
+ * useButton - SolidJS hook for a spec-driven button
+ */
+export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
+    const machine = createMachine(createButtonConfig({
+        disabled: options.disabled ?? false,
+        loading: options.loading ?? false,
+        pressed: false,
+    }));
+
+    const [version, setVersion] = createSignal(0);
+    const bump = () => setVersion((v) => v + 1);
+
+    const getContext = createMemo(() => {
+        version();
+        return machine.getContext();
+    });
+
+    const disabled = () => getContext().disabled;
+    const loading = () => getContext().loading;
+    const pressed = () => getContext().pressed;
+    const state = () => { version(); return machine.getState(); };
+
+    const click = () => {
+        const result = machine.send('CLICK');
+        if (result.handled) {
+            options.onClick?.();
+            bump();
+        }
+    };
+
+    const pressDown = () => {
+        machine.send('PRESS_DOWN');
+        bump();
+    };
+
+    const pressUp = () => {
+        const result = machine.send('PRESS_UP');
+        if (result.handled) {
+            options.onClick?.();
+        }
+        bump();
+    };
+
+    const pressCancel = () => {
+        machine.send('PRESS_CANCEL');
+        bump();
+    };
+
+    const startLoading = () => {
+        machine.send('START_LOADING');
+        bump();
+    };
+
+    const stopLoading = () => {
+        machine.send('STOP_LOADING');
+        bump();
+    };
+
+    const setDisabled = (value: boolean) => {
+        (machine as any).context.disabled = value;
+        bump();
+    };
+
+    const rootProps = createMemo(() => ({
+        role: 'button' as const,
+        'aria-disabled': disabled(),
+        'aria-busy': loading(),
+        tabIndex: disabled() ? -1 : 0,
+        onClick: click,
+        onMouseDown: pressDown,
+        onMouseUp: pressUp,
+        onMouseLeave: pressCancel,
+        onKeyDown: (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                pressDown();
+            } else if (e.key === 'Enter') {
+                click();
+            }
+        },
+        onKeyUp: (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                pressUp();
+            }
+        },
+    }));
+
+    return { disabled, loading, pressed, state, click, startLoading, stopLoading, setDisabled, rootProps };
+}
