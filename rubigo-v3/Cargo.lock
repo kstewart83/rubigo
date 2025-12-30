@@ -1062,6 +1062,7 @@ dependencies = [
  "chrono",
  "pulldown-cmark",
  "regex",
+ "rubigo-build",
  "serde_json",
 ]
 
