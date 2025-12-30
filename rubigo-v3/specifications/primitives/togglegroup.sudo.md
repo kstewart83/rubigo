@@ -296,6 +296,11 @@ machine: {
             on: {
                 SELECT:       {target: "idle", actions: ["selectItem"], guard: "canInteract"}
                 FOCUS:        {target: "focused", actions: []}
+                FOCUS_NEXT:   {target: "focused", actions: ["focusNextItem"], guard: "canInteract"}
+                FOCUS_PREV:   {target: "focused", actions: ["focusPrevItem"], guard: "canInteract"}
+                FOCUS_FIRST:  {target: "focused", actions: ["focusFirstItem"], guard: "canInteract"}
+                FOCUS_LAST:   {target: "focused", actions: ["focusLastItem"], guard: "canInteract"}
+                ACTIVATE:     {target: "idle", actions: ["activateItem"], guard: "canInteract"}
             }
         }
         focused: {
