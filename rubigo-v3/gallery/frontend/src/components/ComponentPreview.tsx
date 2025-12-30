@@ -218,6 +218,53 @@ export const ComponentPreview: Component<Props> = (props) => {
                         </div>
                     </div>
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('tooltip') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    'align-items': 'center',
+                    gap: '24px',
+                    position: 'relative'
+                }}>
+                    <button
+                        onMouseEnter={() => !props.context.disabled && props.onAction('pointer_enter', {})}
+                        onMouseLeave={() => props.onAction('pointer_leave', {})}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'var(--accent)',
+                            color: 'white',
+                            border: 'none',
+                            'border-radius': '6px',
+                            cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                            opacity: props.context.disabled ? 0.5 : 1,
+                            'font-size': '14px'
+                        }}
+                    >
+                        Hover me
+                    </button>
+                    <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        'margin-top': '8px',
+                        padding: '8px 12px',
+                        background: 'var(--text-primary)',
+                        color: 'var(--bg-primary)',
+                        'border-radius': '4px',
+                        'font-size': '12px',
+                        'white-space': 'nowrap',
+                        opacity: props.context.open ? 1 : 0,
+                        visibility: props.context.open ? 'visible' : 'hidden',
+                        transition: 'opacity 0.15s, visibility 0.15s',
+                        'box-shadow': '0 2px 8px rgba(0,0,0,0.2)'
+                    }}>
+                        This is a tooltip!
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', 'font-size': '11px' }}>
+                        Current state: {props.currentState}
+                    </div>
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
