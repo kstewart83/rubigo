@@ -178,6 +178,37 @@ const App: Component = () => {
                     </div>
                 </header>
 
+                {/* Tab Bar */}
+                <div style={{
+                    display: 'flex',
+                    gap: '2px',
+                    padding: '0 16px',
+                    'border-bottom': '1px solid var(--border)',
+                    background: 'var(--bg-tertiary)'
+                }}>
+                    <For each={['preview', 'docs', 'vectors', 'source'] as const}>
+                        {(tab) => (
+                            <button
+                                onClick={() => setActiveTab(tab)}
+                                style={{
+                                    padding: '10px 16px',
+                                    background: activeTab() === tab ? 'var(--bg-primary)' : 'transparent',
+                                    border: 'none',
+                                    'border-bottom': activeTab() === tab ? '2px solid var(--accent)' : '2px solid transparent',
+                                    color: activeTab() === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    'font-size': '13px',
+                                    'font-weight': activeTab() === tab ? '500' : '400',
+                                    'text-transform': 'capitalize',
+                                    'margin-bottom': '-1px'
+                                }}
+                            >
+                                {tab}
+                            </button>
+                        )}
+                    </For>
+                </div>
+
                 {/* Content Area */}
                 <div style={{ flex: 1, display: 'flex', 'flex-direction': 'column', overflow: 'hidden' }}>
                     <Show when={currentSpec()} fallback={
@@ -191,34 +222,108 @@ const App: Component = () => {
                             Select a component from the sidebar to begin
                         </div>
                     }>
-                        {/* Component Preview & Panels */}
-                        <div style={{ flex: 1, display: 'flex', gap: '16px', padding: '16px', overflow: 'auto' }}>
-                            {/* Left: Preview */}
-                            <div style={{ flex: 1, display: 'flex', 'flex-direction': 'column', gap: '16px' }}>
-                                <ComponentPreview
-                                    spec={currentSpec()!}
-                                    engine={engine()}
-                                    context={context()}
-                                    currentState={currentState()}
-                                    onStateChange={setCurrentState}
-                                    onAction={logAction}
-                                />
-                            </div>
+                        {/* Preview Tab */}
+                        <Show when={activeTab() === 'preview'}>
+                            <div style={{ flex: 1, display: 'flex', gap: '16px', padding: '16px', overflow: 'auto' }}>
+                                {/* Left: Preview */}
+                                <div style={{ flex: 1, display: 'flex', 'flex-direction': 'column', gap: '16px' }}>
+                                    <ComponentPreview
+                                        spec={currentSpec()!}
+                                        engine={engine()}
+                                        context={context()}
+                                        currentState={currentState()}
+                                        onStateChange={setCurrentState}
+                                        onAction={logAction}
+                                    />
+                                </div>
 
-                            {/* Right: Controls & State */}
-                            <div style={{ width: '300px', display: 'flex', 'flex-direction': 'column', gap: '16px' }}>
-                                <ControlsPanel
-                                    spec={currentSpec()!}
-                                    context={context()}
-                                    onUpdate={updateContext}
-                                />
-                                <StateInspector
-                                    state={currentState()}
-                                    context={context()}
-                                />
-                                <ActionsLog actions={actions()} />
+                                {/* Right: Controls & State */}
+                                <div style={{ width: '300px', display: 'flex', 'flex-direction': 'column', gap: '16px' }}>
+                                    <ControlsPanel
+                                        spec={currentSpec()!}
+                                        context={context()}
+                                        onUpdate={updateContext}
+                                    />
+                                    <StateInspector
+                                        state={currentState()}
+                                        context={context()}
+                                    />
+                                    <ActionsLog actions={actions()} />
+                                </div>
                             </div>
-                        </div>
+                        </Show>
+
+                        {/* Docs Tab */}
+                        <Show when={activeTab() === 'docs'}>
+                            <div style={{ flex: 1, padding: '16px', overflow: 'auto' }}>
+                                <div style={{
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    'border-radius': '8px',
+                                    padding: '16px'
+                                }}>
+                                    <h3 style={{ margin: '0 0 12px', 'font-size': '16px' }}>Documentation</h3>
+                                    <pre style={{
+                                        background: 'var(--bg-tertiary)',
+                                        padding: '12px',
+                                        'border-radius': '6px',
+                                        overflow: 'auto',
+                                        'font-size': '13px',
+                                        'line-height': '1.5'
+                                    }}>
+                                        {currentSpec()?.content || 'No documentation available'}
+                                    </pre>
+                                </div>
+                            </div>
+                        </Show>
+
+                        {/* Vectors Tab */}
+                        <Show when={activeTab() === 'vectors'}>
+                            <div style={{ flex: 1, padding: '16px', overflow: 'auto' }}>
+                                <div style={{
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    'border-radius': '8px',
+                                    padding: '16px'
+                                }}>
+                                    <h3 style={{ margin: '0 0 12px', 'font-size': '16px' }}>Test Vectors</h3>
+                                    <pre style={{
+                                        background: 'var(--bg-tertiary)',
+                                        padding: '12px',
+                                        'border-radius': '6px',
+                                        overflow: 'auto',
+                                        'font-size': '13px',
+                                        'line-height': '1.5'
+                                    }}>
+                                        {JSON.stringify(currentSpec()?.machine, null, 2) || 'No vectors available'}
+                                    </pre>
+                                </div>
+                            </div>
+                        </Show>
+
+                        {/* Source Tab */}
+                        <Show when={activeTab() === 'source'}>
+                            <div style={{ flex: 1, padding: '16px', overflow: 'auto' }}>
+                                <div style={{
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    'border-radius': '8px',
+                                    padding: '16px'
+                                }}>
+                                    <h3 style={{ margin: '0 0 12px', 'font-size': '16px' }}>State Machine Source</h3>
+                                    <pre style={{
+                                        background: 'var(--bg-tertiary)',
+                                        padding: '12px',
+                                        'border-radius': '6px',
+                                        overflow: 'auto',
+                                        'font-size': '13px',
+                                        'line-height': '1.5'
+                                    }}>
+                                        {JSON.stringify(currentSpec()?.machine, null, 2) || 'No source available'}
+                                    </pre>
+                                </div>
+                            </div>
+                        </Show>
                     </Show>
                 </div>
             </main>
