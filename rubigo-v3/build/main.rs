@@ -142,7 +142,6 @@ fn main() {
 
     // Re-run triggers
     println!("cargo:rerun-if-changed=build/main.rs");
-    println!("cargo:rerun-if-changed=.buildstamp");
     println!("cargo:rerun-if-changed=build");
     println!("cargo:rerun-if-changed=specifications");
 }
@@ -200,10 +199,7 @@ fn extract_cue_version(output: &str) -> Option<String> {
 
 /// Process all spec files in the spec directory
 fn process_specs(spec_dir: &Path, generated_dir: &Path) {
-    println!(
-        "cargo::warning=Processing specs from: {}",
-        spec_dir.display()
-    );
+    info!("Processing specs from: {}", spec_dir.display());
     // Find all directories containing spec files
     if let Ok(entries) = fs::read_dir(spec_dir) {
         for entry in entries.filter_map(|e| e.ok()) {
@@ -214,7 +210,7 @@ fn process_specs(spec_dir: &Path, generated_dir: &Path) {
                     for file in files.filter_map(|f| f.ok()) {
                         let file_path = file.path();
                         if file_path.to_string_lossy().ends_with(SPEC_SUFFIX) {
-                            println!("cargo::warning=Processing: {}", file_path.display());
+                            info!("Processing: {}", file_path.display());
                             process_spec_file(&file_path, generated_dir);
                         }
                     }
@@ -1338,8 +1334,8 @@ fn generate_interactions_manifest(spec_dir: &Path, generated_dir: &Path) {
     let manifest_path = generated_dir.join("interactions.json");
     if let Ok(json_str) = serde_json::to_string_pretty(&manifest) {
         fs::write(&manifest_path, json_str).ok();
-        println!(
-            "cargo:warning=Generated interactions manifest: {}",
+        info!(
+            "Generated interactions manifest: {}",
             manifest_path.display()
         );
     }

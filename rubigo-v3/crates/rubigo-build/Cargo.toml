@@ -1,0 +1,13 @@
+[package]
+name = "rubigo-build"
+version = "0.1.0"
+edition = "2021"
+description = "Build utilities for Rubigo V3 spec processing"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"
