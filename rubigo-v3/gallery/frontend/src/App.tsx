@@ -157,6 +157,11 @@ const App: Component = () => {
                 case 'decrement':
                     next.value = Math.max(prev.min ?? 0, (prev.value ?? 0) - (prev.stepSize ?? prev.step ?? 1));
                     break;
+                case 'setValue':
+                    if (payload?.value !== undefined) {
+                        next.value = Math.max(prev.min ?? 0, Math.min(prev.max ?? 100, payload.value));
+                    }
+                    break;
                 case 'setDragging':
                     next.dragging = true;
                     break;
