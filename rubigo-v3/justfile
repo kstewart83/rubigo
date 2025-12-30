@@ -40,6 +40,28 @@ backend-dev:
 frontend-dev:
     cd frontend && bun run dev -- --port $VITE_PORT
 
+# === Component Gallery (port 37002) ===
+
+# Start full gallery environment (Axum + Vite)
+gallery:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🖼️  Starting Component Gallery..."
+    echo "   Gallery:  http://127.0.0.1:37002"
+    trap 'echo "Shutting down gallery..."; kill $(jobs -p) 2>/dev/null' EXIT
+    just gallery-backend &
+    sleep 2
+    just gallery-frontend &
+    wait
+
+# Gallery backend (Axum with Vite proxy)
+gallery-backend:
+    cd gallery/backend && cargo run
+
+# Gallery frontend (Vite dev server)
+gallery-frontend:
+    cd gallery/frontend && bun run dev
+
 # === Spec Processing ===
 
 # Check required binaries
