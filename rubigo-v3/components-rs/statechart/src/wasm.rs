@@ -104,9 +104,26 @@ impl WasmMachine {
 
     /// Send an event to the machine and return the result as JSON
     pub fn send(&mut self, event_name: &str) -> Result<JsValue, JsError> {
+        self.send_with_payload(event_name, JsValue::NULL)
+    }
+
+    /// Send an event with payload to the machine and return the result as JSON
+    #[wasm_bindgen(js_name = "sendWithPayload")]
+    pub fn send_with_payload(
+        &mut self,
+        event_name: &str,
+        payload_js: JsValue,
+    ) -> Result<JsValue, JsError> {
+        // Parse payload from JS
+        let payload = if payload_js.is_null() || payload_js.is_undefined() {
+            serde_json::Value::Null
+        } else {
+            serde_wasm_bindgen::from_value(payload_js).unwrap_or(serde_json::Value::Null)
+        };
+
         let event = Event {
             name: event_name.to_string(),
-            payload: serde_json::Value::Null,
+            payload: payload.clone(),
         };
 
         // Get context for guard evaluation
@@ -122,11 +139,11 @@ impl WasmMachine {
             }
         });
 
-        // Execute action mutations
+        // Execute action mutations with payload
         for action_name in &result.actions {
             if let Some(action_config) = self.actions.get(action_name) {
                 if let Some(mutation) = &action_config.mutation {
-                    execute_mutation(mutation, &mut self.inner.context);
+                    execute_mutation(mutation, &mut self.inner.context, &payload);
                 }
             }
         }
@@ -349,19 +366,23 @@ fn get_value(expr: &str, context: &serde_json::Value) -> serde_json::Value {
 }
 /// Execute a mutation like "context.checked = !context.checked" or multi-statement
 /// "context.checked = true; context.indeterminate = false"
-fn execute_mutation(mutation: &str, context: &mut serde_json::Value) {
+fn execute_mutation(mutation: &str, context: &mut serde_json::Value, payload: &serde_json::Value) {
     // Handle multi-statement mutations separated by ';'
     for stmt in mutation.split(';') {
         let stmt = stmt.trim();
         if stmt.is_empty() {
             continue;
         }
-        execute_single_mutation(stmt, context);
+        execute_single_mutation(stmt, context, payload);
     }
 }
 
 /// Execute a single mutation statement
-fn execute_single_mutation(mutation: &str, context: &mut serde_json::Value) {
+fn execute_single_mutation(
+    mutation: &str,
+    context: &mut serde_json::Value,
+    payload: &serde_json::Value,
+) {
     // Parse "context.X = Y" pattern
     if let Some(eq_pos) = mutation.find('=') {
         let left = mutation[..eq_pos].trim();
@@ -383,6 +404,12 @@ fn execute_single_mutation(mutation: &str, context: &mut serde_json::Value) {
                 serde_json::Value::Bool(false)
             } else if let Some(path) = right.strip_prefix("context.") {
                 context
+                    .get(path)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null)
+            } else if let Some(path) = right.strip_prefix("event.payload.") {
+                // Handle event.payload.X references
+                payload
                     .get(path)
                     .cloned()
                     .unwrap_or(serde_json::Value::Null)

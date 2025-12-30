@@ -365,6 +365,7 @@ interface TabsContext {
 
 interface TabsStep {
     event: string;
+    payload?: Record<string, unknown>;
     before: { context: TabsContext; state: string };
     after: { context: TabsContext; state: string };
 }
@@ -420,7 +421,12 @@ describe('WASM Tabs Conformance Tests', () => {
 
                 const machine = new WasmMachine(JSON.stringify(machineConfig));
 
-                machine.send(step.event);
+                // Send event with payload if present
+                if (step.payload) {
+                    machine.sendWithPayload(step.event, step.payload);
+                } else {
+                    machine.send(step.event);
+                }
 
                 const actualContext = machine.getContext();
 

@@ -126,6 +126,26 @@ module tabs {
 ```test-vectors
 # Tabs conformance test scenarios
 
+- scenario: "select tab with payload (same tab)"
+  given:
+    context: { selectedId: "tab-0", focusedId: "tab-0" }
+    state: "idle"
+  when: SELECT_TAB
+  payload: { id: "tab-0" }
+  then:
+    context: { selectedId: "tab-0", focusedId: "tab-0" }
+    state: "idle"
+
+- scenario: "select tab with payload (different tab)"
+  given:
+    context: { selectedId: "tab-0", focusedId: "tab-0" }
+    state: "idle"
+  when: SELECT_TAB
+  payload: { id: "tab-1" }
+  then:
+    context: { selectedId: "tab-1", focusedId: "tab-1" }
+    state: "idle"
+
 - scenario: "focus next tab"
   given:
     context: { selectedId: "tab-0", focusedId: "tab-0" }
@@ -195,6 +215,7 @@ machine: {
     states: {
         idle: {
             on: {
+                SELECT_TAB:  {target: "idle", actions: ["setSelected"]}
                 FOCUS_NEXT:  {target: "idle", actions: ["focusNextTab"]}
                 FOCUS_PREV:  {target: "idle", actions: ["focusPrevTab"]}
                 FOCUS_FIRST: {target: "idle", actions: ["focusFirstTab"]}
@@ -222,6 +243,11 @@ guards: {
 
 ```cue
 actions: {
+    setSelected: {
+        description: "Set the selected tab from event payload"
+        mutation:    "context.selectedId = event.payload.id; context.focusedId = event.payload.id"
+        emits:       ["onTabChange"]
+    }
     focusNextTab: {
         description: "Move focus to next tab (wraps)"
         mutation:    "context.focusedId = 'tab-1'"

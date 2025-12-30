@@ -149,7 +149,7 @@ export class Machine<TContext extends object = Record<string, unknown>> {
         // 5. Execute exit actions
         if (stateConfig.exit) {
             for (const actionName of stateConfig.exit) {
-                this.executeAction(actionName);
+                this.executeAction(actionName, eventObj);
                 result.actionsExecuted.push(actionName);
             }
         }
@@ -157,7 +157,7 @@ export class Machine<TContext extends object = Record<string, unknown>> {
         // 6. Execute transition actions
         if (transition.actions) {
             for (const actionName of transition.actions) {
-                this.executeAction(actionName);
+                this.executeAction(actionName, eventObj);
                 result.actionsExecuted.push(actionName);
             }
         }
@@ -171,7 +171,7 @@ export class Machine<TContext extends object = Record<string, unknown>> {
         const newStateConfig = this.config.states[this.currentState];
         if (newStateConfig?.entry) {
             for (const actionName of newStateConfig.entry) {
-                this.executeAction(actionName);
+                this.executeAction(actionName, eventObj);
                 result.actionsExecuted.push(actionName);
             }
         }
@@ -219,6 +219,7 @@ export class Machine<TContext extends object = Record<string, unknown>> {
     /**
      * Compile a mutation string to an action closure
      * Supports: single assignment "context.X = Y" or multi-statement "context.X = Y; context.Z = W"
+     * Also supports event.payload.X references when event is passed
      */
     private compileMutation(mutation: string): ActionFn<TContext> {
         const statements = mutation.split(';').map(s => s.trim()).filter(s => s);
@@ -233,14 +234,27 @@ export class Machine<TContext extends object = Record<string, unknown>> {
             assignments.push({ key: match[1], valueExpr: match[2] });
         }
 
-        return (ctx: TContext) => {
+        // Return a closure that accepts both context and event
+        return (ctx: TContext, event?: Event) => {
             const context = ctx as Record<string, unknown>;
+            // Build event object for injection (with safe defaults)
+            const eventObj = {
+                name: event?.name ?? '',
+                payload: event?.payload ?? {},
+            };
+
             for (const { key, valueExpr } of assignments) {
                 try {
-                    const fn = new Function('ctx', `
-                        return (${valueExpr.replace(/context\.(\w+)/g, 'ctx.$1')});
-                    `) as (ctx: Record<string, unknown>) => unknown;
-                    context[key] = fn(context);
+                    // Transform both context.X and event.X references
+                    const transformed = valueExpr
+                        .replace(/context\.(\w+)/g, 'ctx.$1')
+                        .replace(/event\.payload\.(\w+)/g, 'event.payload.$1')
+                        .replace(/event\.name/g, 'event.name');
+
+                    const fn = new Function('ctx', 'event', `
+                        return (${transformed});
+                    `) as (ctx: Record<string, unknown>, event: { name: string; payload: Record<string, unknown> }) => unknown;
+                    context[key] = fn(context, eventObj);
                 } catch (e) {
                     console.warn(`Failed to execute mutation for ${key}: ${valueExpr}`, e);
                 }
