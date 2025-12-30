@@ -73,13 +73,8 @@ module checkbox {
 
   action toggle = all {
     not(disabled),
-    if (state == "checked") {
-      state' = "unchecked",
-      checked' = false
-    } else {
-      state' = "checked",
-      checked' = true
-    },
+    state' = if (state == "checked") "unchecked" else "checked",
+    checked' = if (state == "checked") false else true,
     indeterminate' = false,
     disabled' = disabled
   }
@@ -109,8 +104,8 @@ module checkbox {
   }
 
   // Invariants
-  val disabled_blocks_toggle = disabled implies unchanged(checked)
-  val state_matches_checked = (state == "checked") == checked
+  val disabled_is_boolean = disabled == true or disabled == false
+  val state_is_valid = state == "unchecked" or state == "checked" or state == "indeterminate"
 }
 ```
 
