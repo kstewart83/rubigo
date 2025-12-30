@@ -63,6 +63,7 @@ module input {
   var readOnly: bool
   var focused: bool
   var error: str
+  var _state: str
   var _action: str
 
   action init = all {
@@ -71,6 +72,7 @@ module input {
     readOnly' = false,
     focused' = false,
     error' = "",
+    _state' = "idle",
     _action' = "init"
   }
 
@@ -81,6 +83,7 @@ module input {
     disabled' = disabled,
     readOnly' = readOnly,
     error' = error,
+    _state' = "focused",
     _action' = "FOCUS"
   }
 
@@ -91,6 +94,7 @@ module input {
     disabled' = disabled,
     readOnly' = readOnly,
     error' = error,
+    _state' = "idle",
     _action' = "BLUR"
   }
 
@@ -103,6 +107,7 @@ module input {
     disabled' = disabled,
     readOnly' = readOnly,
     error' = error,
+    _state' = _state,
     _action' = "CHANGE"
   }
 
