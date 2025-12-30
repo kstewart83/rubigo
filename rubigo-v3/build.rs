@@ -245,6 +245,16 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
     // Extract Cue blocks (use full content to include any frontmatter cue blocks)
     let cue_blocks = extract_cue_blocks(&content);
 
+    // Cross-reference validate CUE events against Quint _action values
+    if let Some(quint_code) = extract_quint_block(&content) {
+        // Combine CUE blocks for cross-reference checking
+        let combined_cue: String = cue_blocks.iter().map(|(_, block)| block.as_str()).collect();
+        let xref_warnings = cross_reference_events(spec_name, &combined_cue, &quint_code);
+        for warning in &xref_warnings {
+            warn!("⚠️  Cross-reference mismatch in {}: {}", spec_name, warning);
+        }
+    }
+
     // Create temp directory for cue processing
     let cue_dir = generated_dir.join(format!("{}_cue", spec_name));
     fs::create_dir_all(&cue_dir).ok();
@@ -639,6 +649,80 @@ fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
     }
 
     errors
+}
+
+/// Cross-reference validate CUE events against Quint _action values
+/// Returns warnings if events don't match between CUE state machine and Quint formal model
+fn cross_reference_events(spec_name: &str, cue_content: &str, quint_code: &str) -> Vec<String> {
+    let mut warnings = Vec::new();
+
+    // Extract CUE events from state machine "on:" blocks
+    // Pattern: EVENT_NAME: {target: ...} with variable whitespace
+    let cue_events: std::collections::HashSet<String> = cue_content
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            // Skip comments
+            if trimmed.starts_with("//") {
+                return None;
+            }
+            // Look for lines that have UPPERCASE: followed by { somewhere
+            // e.g., "TOGGLE:            {target: ..." or "FOCUS: {"
+            if trimmed.contains(':') && trimmed.contains('{') {
+                let event = trimmed.split(':').next()?.trim();
+                // Only uppercase event names (not field names like "target", "actions", etc.)
+                if event.chars().all(|c| c.is_uppercase() || c == '_') && !event.is_empty() {
+                    return Some(event.to_string());
+                }
+            }
+            None
+        })
+        .collect();
+
+    // Extract Quint _action values
+    // Pattern: _action' = "EVENT_NAME"
+    let quint_actions: std::collections::HashSet<String> = quint_code
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.contains("_action'") && trimmed.contains("=") && trimmed.contains('"') {
+                // Extract the string value
+                let start = trimmed.find('"')? + 1;
+                let end = trimmed[start..].find('"')? + start;
+                let action = &trimmed[start..end];
+                // Skip "init" as it's not a user event
+                if action != "init" {
+                    return Some(action.to_uppercase());
+                }
+            }
+            None
+        })
+        .collect();
+
+    // Skip if we couldn't extract anything from either
+    if cue_events.is_empty() || quint_actions.is_empty() {
+        return warnings;
+    }
+
+    // Find events in CUE but not in Quint
+    let missing_in_quint: Vec<_> = cue_events.difference(&quint_actions).collect();
+    if !missing_in_quint.is_empty() {
+        warnings.push(format!(
+            "CUE events not found in Quint _action values: {:?}",
+            missing_in_quint
+        ));
+    }
+
+    // Find actions in Quint but not in CUE
+    let missing_in_cue: Vec<_> = quint_actions.difference(&cue_events).collect();
+    if !missing_in_cue.is_empty() {
+        warnings.push(format!(
+            "Quint _action values not found in CUE events: {:?}",
+            missing_in_cue
+        ));
+    }
+
+    warnings
 }
 
 /// Generate ITF trace from validated Quint model
