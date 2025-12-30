@@ -132,6 +132,49 @@ export const ComponentPreview: Component<Props> = (props) => {
                     ) : null}
                     {props.context.loading ? 'Loading...' : 'Click Me'}
                 </button>
+            ) : props.spec?.name?.toLowerCase().includes('toggle') ? (
+                <div style={{
+                    display: 'flex',
+                    gap: '2px',
+                    background: 'var(--bg-tertiary)',
+                    'border-radius': '6px',
+                    padding: '2px'
+                }}>
+                    <button
+                        onClick={() => !props.context.disabled && props.onAction('select', { id: 'item-0' })}
+                        style={{
+                            padding: '8px 16px',
+                            'border-radius': '4px',
+                            border: 'none',
+                            background: props.context.selectedId === 'item-0' ? 'var(--accent)' : 'transparent',
+                            color: props.context.selectedId === 'item-0' ? '#fff' : 'var(--text-primary)',
+                            cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                            opacity: props.context.disabled ? 0.5 : 1,
+                            transition: 'all 0.15s',
+                            'font-size': '13px',
+                            'font-weight': '500'
+                        }}
+                    >
+                        TypeScript
+                    </button>
+                    <button
+                        onClick={() => !props.context.disabled && props.onAction('select', { id: 'item-1' })}
+                        style={{
+                            padding: '8px 16px',
+                            'border-radius': '4px',
+                            border: 'none',
+                            background: props.context.selectedId === 'item-1' ? 'var(--accent)' : 'transparent',
+                            color: props.context.selectedId === 'item-1' ? '#fff' : 'var(--text-primary)',
+                            cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                            opacity: props.context.disabled ? 0.5 : 1,
+                            transition: 'all 0.15s',
+                            'font-size': '13px',
+                            'font-weight': '500'
+                        }}
+                    >
+                        WASM
+                    </button>
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
