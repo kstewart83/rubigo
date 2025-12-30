@@ -327,6 +327,64 @@ export const ComponentPreview: Component<Props> = (props) => {
                         </div>
                     )}
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('select') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    'align-items': 'center',
+                    gap: '8px',
+                    position: 'relative'
+                }}>
+                    <button
+                        onClick={() => props.context.open ? props.onAction('close', {}) : props.onAction('open', {})}
+                        style={{
+                            padding: '10px 16px',
+                            background: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border)',
+                            'border-radius': '6px',
+                            cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                            opacity: props.context.disabled ? 0.5 : 1,
+                            'min-width': '180px',
+                            display: 'flex',
+                            'justify-content': 'space-between',
+                            'align-items': 'center',
+                            'font-size': '14px'
+                        }}
+                    >
+                        <span>{props.context.selectedValue || 'Select...'}</span>
+                        <span style={{ transform: props.context.open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                    </button>
+                    {props.context.open && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            background: 'var(--bg-primary)',
+                            border: '1px solid var(--border)',
+                            'border-radius': '6px',
+                            'margin-top': '4px',
+                            'box-shadow': '0 4px 12px rgba(0,0,0,0.15)',
+                            overflow: 'hidden'
+                        }}>
+                            {['Option 1', 'Option 2', 'Option 3'].map((opt) => (
+                                <div
+                                    onClick={() => props.onAction('select', { value: opt })}
+                                    style={{
+                                        padding: '10px 16px',
+                                        cursor: 'pointer',
+                                        background: props.context.highlightedValue === opt ? 'var(--accent)' : 'transparent',
+                                        color: props.context.highlightedValue === opt ? 'white' : 'var(--text-primary)',
+                                        'font-size': '14px'
+                                    }}
+                                >
+                                    {opt}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
