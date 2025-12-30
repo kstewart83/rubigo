@@ -2,3 +2,4 @@ export { useSwitch, type UseSwitchOptions, type UseSwitchReturn } from './useSwi
 export { useToggleGroup, type UseToggleGroupOptions, type UseToggleGroupReturn } from './useToggleGroup';
 export { useCollapsible, type UseCollapsibleOptions, type UseCollapsibleReturn } from './useCollapsible';
 export { useTooltip, type UseTooltipOptions, type UseTooltipReturn } from './useTooltip';
+export { useDialog, type UseDialogOptions, type UseDialogReturn } from './useDialog';
