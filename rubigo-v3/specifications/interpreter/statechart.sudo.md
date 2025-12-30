@@ -62,6 +62,13 @@ Constraint: Actions are executed in order: exit → transition → entry.
     actions?: [...string]
     guard?: string
 } | string  // Shorthand: just target state
+
+#RegionConfig: {
+    initial: string
+    states: {
+        [string]: #StateConfig
+    }
+}
 ```
 
 ## Event Schema
@@ -91,8 +98,8 @@ interpreter: {
         resolving: {
             entry: ["findTransition"]
             on: {
-                TRANSITION_FOUND: {target: "executing", guard: "guardPasses"}
-                TRANSITION_FOUND: {target: "idle", guard: "guardFails"}
+                GUARD_PASSED: {target: "executing"}
+                GUARD_FAILED: {target: "idle"}
                 NO_TRANSITION: {target: "idle"}
             }
         }
