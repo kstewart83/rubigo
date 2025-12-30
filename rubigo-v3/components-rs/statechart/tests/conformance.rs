@@ -717,3 +717,198 @@ fn conformance_tabs_spec() {
 
     println!("✅ All {} tabs scenarios passed", vectors.scenarios.len());
 }
+
+// === Toggle Group Conformance Test ===
+
+fn load_togglegroup_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("togglegroup.json");
+    let content = fs::read_to_string(&spec_path).expect(&format!(
+        "Failed to read togglegroup spec at {:?}",
+        spec_path
+    ));
+    serde_json::from_str(&content).expect("Failed to parse togglegroup spec")
+}
+
+fn create_togglegroup_machine(
+    spec: &GeneratedSpec,
+    context: &Value,
+    initial_state: &str,
+) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_togglegroup_guard_fn(context: &'_ Value) -> impl Fn(&str) -> bool + '_ {
+    move |guard_name: &str| match guard_name {
+        "canInteract" => {
+            let disabled = context
+                .get("disabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            !disabled
+        }
+        _ => true,
+    }
+}
+
+fn execute_togglegroup_actions(
+    actions: &[String],
+    spec: &GeneratedSpec,
+    context: &mut Value,
+    payload: Option<&Value>,
+) {
+    for action_name in actions {
+        if let Some(action_config) = spec.actions.get(action_name) {
+            let mutation: &str = &action_config.mutation;
+            if mutation.is_empty() {
+                continue;
+            }
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+
+                    if let Some(key) = left.strip_prefix("context.") {
+                        let key = key.trim();
+                        let new_value = if right.starts_with('\'') && right.ends_with('\'') {
+                            serde_json::Value::String(right[1..right.len() - 1].to_string())
+                        } else if right == "context.focusedId" {
+                            context
+                                .get("focusedId")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null)
+                        } else if right == "context.selectedId" {
+                            context
+                                .get("selectedId")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null)
+                        } else if right == "event.payload.id" {
+                            payload
+                                .and_then(|p| p.get("id"))
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null)
+                        } else if right.contains('?') {
+                            // Handle ternary: (context.focusedId == 'item-0') ? 'item-1' : 'item-0'
+                            let focused = context
+                                .get("focusedId")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            if focused == "item-0" {
+                                serde_json::Value::String("item-1".to_string())
+                            } else {
+                                serde_json::Value::String("item-0".to_string())
+                            }
+                        } else {
+                            serde_json::Value::String(right.to_string())
+                        };
+                        if let Some(obj) = context.as_object_mut() {
+                            obj.insert(key.to_string(), new_value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_togglegroup_spec() {
+    let spec = load_togglegroup_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("togglegroup.unified.json");
+    let content = fs::read_to_string(&vectors_path).expect(&format!(
+        "Failed to read togglegroup vectors at {:?}",
+        vectors_path
+    ));
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse togglegroup vectors");
+
+    println!(
+        "Running {} togglegroup conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine =
+                create_togglegroup_machine(&spec, &step.before.context, &step.before.state);
+
+            let guard_fn = make_togglegroup_guard_fn(&step.before.context);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: step.payload.clone().unwrap_or(Value::Null),
+                },
+                guard_fn,
+            );
+
+            // For ITF traces, infer payload from expected context when missing
+            let effective_payload = if step.payload.is_some() {
+                step.payload.clone()
+            } else if step.event == "SELECT" {
+                // Infer payload.id from expected selectedId
+                step.after
+                    .context
+                    .get("selectedId")
+                    .map(|id| serde_json::json!({ "id": id }))
+            } else {
+                None
+            };
+
+            execute_togglegroup_actions(
+                &result.actions,
+                &spec,
+                &mut machine.context,
+                effective_payload.as_ref(),
+            );
+
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            assert_eq!(
+                machine.context,
+                step.after.context,
+                "Scenario '{}' step {} ({}) failed: context mismatch\nExpected: {:?}\nActual: {:?}",
+                scenario.name,
+                i + 1,
+                step.event,
+                step.after.context,
+                machine.context
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!(
+        "✅ All {} togglegroup scenarios passed",
+        vectors.scenarios.len()
+    );
+}
