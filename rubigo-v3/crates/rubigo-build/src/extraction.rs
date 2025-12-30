@@ -129,8 +129,19 @@ pub fn extract_test_vectors(content: &str) -> Option<String> {
     None
 }
 
+/// Extract version number from cue version output
+/// "cue version v0.15.1" -> "0.15.1"
+pub fn extract_cue_version(output: &str) -> Option<String> {
+    output
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(2))
+        .map(|v| v.trim_start_matches('v').to_string())
+}
+
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -209,5 +220,16 @@ states: idle: {}
 "#;
         let vectors = extract_test_vectors(content).unwrap();
         assert!(vectors.contains("scenario: focus when enabled"));
+    }
+
+    #[test]
+    fn extract_cue_version_parses_version() {
+        let output = "cue version v0.15.1\n\ngo version go1.21.5\n";
+        assert_eq!(extract_cue_version(output), Some("0.15.1".to_string()));
+    }
+
+    #[test]
+    fn extract_cue_version_handles_empty() {
+        assert_eq!(extract_cue_version(""), None);
     }
 }
