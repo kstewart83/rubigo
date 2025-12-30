@@ -449,6 +449,84 @@ export const ComponentPreview: Component<Props> = (props) => {
                         >+</button>
                     </div>
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('input') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    gap: '12px',
+                    'min-width': '280px'
+                }}>
+                    <input
+                        type="text"
+                        value={props.context.value || ''}
+                        placeholder="Type something..."
+                        disabled={props.context.disabled}
+                        readOnly={props.context.readOnly}
+                        onFocus={() => !props.context.disabled && props.onAction('focus')}
+                        onBlur={() => props.onAction('blur')}
+                        onInput={(e) => props.onAction('change', { value: (e.target as HTMLInputElement).value })}
+                        style={{
+                            padding: '12px 16px',
+                            'border-radius': '6px',
+                            border: `2px solid ${props.context.error ? 'var(--error, #ef4444)' :
+                                    props.context.focused ? 'var(--accent)' : 'var(--border)'
+                                }`,
+                            background: props.context.disabled ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            cursor: props.context.disabled ? 'not-allowed' : 'text',
+                            opacity: props.context.disabled ? 0.6 : 1,
+                            outline: 'none',
+                            'font-size': '14px',
+                            transition: 'border-color 0.15s'
+                        }}
+                    />
+                    {props.context.error && (
+                        <div style={{
+                            color: 'var(--error, #ef4444)',
+                            'font-size': '12px',
+                            'margin-top': '-4px'
+                        }}>
+                            {props.context.error}
+                        </div>
+                    )}
+                    <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        'justify-content': 'center'
+                    }}>
+                        <span style={{
+                            padding: '4px 8px',
+                            'border-radius': '4px',
+                            'font-size': '11px',
+                            background: props.context.focused ? 'var(--accent)' : 'var(--bg-tertiary)',
+                            color: props.context.focused ? '#fff' : 'var(--text-secondary)'
+                        }}>
+                            {props.context.focused ? '● Focused' : '○ Idle'}
+                        </span>
+                        {props.context.disabled && (
+                            <span style={{
+                                padding: '4px 8px',
+                                'border-radius': '4px',
+                                'font-size': '11px',
+                                background: 'var(--bg-tertiary)',
+                                color: 'var(--text-secondary)'
+                            }}>
+                                🚫 Disabled
+                            </span>
+                        )}
+                        {props.context.readOnly && (
+                            <span style={{
+                                padding: '4px 8px',
+                                'border-radius': '4px',
+                                'font-size': '11px',
+                                background: 'var(--bg-tertiary)',
+                                color: 'var(--text-secondary)'
+                            }}>
+                                🔒 Read-only
+                            </span>
+                        )}
+                    </div>
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
