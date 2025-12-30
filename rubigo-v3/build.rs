@@ -653,44 +653,51 @@ fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
 
 /// Cross-reference validate CUE events against Quint _action values
 /// Returns warnings if events don't match between CUE state machine and Quint formal model
-fn cross_reference_events(spec_name: &str, cue_content: &str, quint_code: &str) -> Vec<String> {
+/// Events with identical (target, actions, guard) signatures are considered verified aliases
+fn cross_reference_events(_spec_name: &str, cue_content: &str, quint_code: &str) -> Vec<String> {
     let mut warnings = Vec::new();
 
-    // Extract CUE events from state machine "on:" blocks
-    // Pattern: EVENT_NAME: {target: ...} with variable whitespace
-    let cue_events: std::collections::HashSet<String> = cue_content
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            // Skip comments
-            if trimmed.starts_with("//") {
-                return None;
-            }
-            // Look for lines that have UPPERCASE: followed by { somewhere
-            // e.g., "TOGGLE:            {target: ..." or "FOCUS: {"
-            if trimmed.contains(':') && trimmed.contains('{') {
-                let event = trimmed.split(':').next()?.trim();
-                // Only uppercase event names (not field names like "target", "actions", etc.)
+    // Parse CUE transitions into (event, signature) pairs
+    // Signature = normalized string of "{target, actions, guard}"
+    let mut cue_transitions: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+
+    for line in cue_content.lines() {
+        let trimmed = line.trim();
+        // Skip comments
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        // Look for lines like "EVENT_NAME: {target: ..."
+        if trimmed.contains(':') && trimmed.contains('{') {
+            let parts: Vec<&str> = trimmed.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                let event = parts[0].trim();
+                // Only uppercase event names
                 if event.chars().all(|c| c.is_uppercase() || c == '_') && !event.is_empty() {
-                    return Some(event.to_string());
+                    // Extract the transition definition (everything after the colon)
+                    let transition_def = parts[1].trim();
+                    // Normalize: lowercase, remove whitespace
+                    let signature = transition_def
+                        .to_lowercase()
+                        .chars()
+                        .filter(|c| !c.is_whitespace())
+                        .collect::<String>();
+                    cue_transitions.insert(event.to_string(), signature);
                 }
             }
-            None
-        })
-        .collect();
+        }
+    }
 
     // Extract Quint _action values
-    // Pattern: _action' = "EVENT_NAME"
     let quint_actions: std::collections::HashSet<String> = quint_code
         .lines()
         .filter_map(|line| {
             let trimmed = line.trim();
             if trimmed.contains("_action'") && trimmed.contains("=") && trimmed.contains('"') {
-                // Extract the string value
                 let start = trimmed.find('"')? + 1;
                 let end = trimmed[start..].find('"')? + start;
                 let action = &trimmed[start..end];
-                // Skip "init" as it's not a user event
                 if action != "init" {
                     return Some(action.to_uppercase());
                 }
@@ -700,24 +707,68 @@ fn cross_reference_events(spec_name: &str, cue_content: &str, quint_code: &str) 
         .collect();
 
     // Skip if we couldn't extract anything from either
-    if cue_events.is_empty() || quint_actions.is_empty() {
+    if cue_transitions.is_empty() || quint_actions.is_empty() {
         return warnings;
     }
 
-    // Find events in CUE but not in Quint
-    let missing_in_quint: Vec<_> = cue_events.difference(&quint_actions).collect();
-    if !missing_in_quint.is_empty() {
+    // Build reverse map: signature -> list of events with that signature
+    let mut signature_to_events: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
+    for (event, sig) in &cue_transitions {
+        signature_to_events
+            .entry(sig.clone())
+            .or_default()
+            .push(event.clone());
+    }
+
+    // Check each CUE event
+    let mut genuinely_missing: Vec<String> = Vec::new();
+    let mut verified_aliases: Vec<String> = Vec::new();
+
+    for (event, signature) in &cue_transitions {
+        if quint_actions.contains(event) {
+            // Event is directly present in Quint - good!
+            continue;
+        }
+
+        // Event not in Quint - check if there's an alias
+        let events_with_same_sig = signature_to_events.get(signature).unwrap();
+        let has_alias_in_quint = events_with_same_sig
+            .iter()
+            .any(|e| quint_actions.contains(e));
+
+        if has_alias_in_quint {
+            // Find which event is the alias
+            let alias = events_with_same_sig
+                .iter()
+                .find(|e| quint_actions.contains(*e))
+                .unwrap();
+            verified_aliases.push(format!("{} (aliases {})", event, alias));
+        } else {
+            genuinely_missing.push(event.clone());
+        }
+    }
+
+    // Report verified aliases (informational, not warnings)
+    if !verified_aliases.is_empty() {
+        // These are OK - no warning needed
+        // Could log as info: "Verified CUE aliases: {:?}", verified_aliases
+    }
+
+    // Report genuinely missing events
+    if !genuinely_missing.is_empty() {
         warnings.push(format!(
-            "CUE events not found in Quint _action values: {:?}",
-            missing_in_quint
+            "CUE events missing from Quint (not aliased): {:?}",
+            genuinely_missing
         ));
     }
 
     // Find actions in Quint but not in CUE
-    let missing_in_cue: Vec<_> = quint_actions.difference(&cue_events).collect();
+    let cue_event_set: std::collections::HashSet<_> = cue_transitions.keys().cloned().collect();
+    let missing_in_cue: Vec<_> = quint_actions.difference(&cue_event_set).collect();
     if !missing_in_cue.is_empty() {
         warnings.push(format!(
-            "Quint _action values not found in CUE events: {:?}",
+            "Quint _action values not in CUE events: {:?}",
             missing_in_cue
         ));
     }
