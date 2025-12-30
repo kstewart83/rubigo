@@ -239,7 +239,7 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
 
     // Extract and write test vectors
     if let Some(vectors) = extract_test_vectors(&content) {
-        write_test_vectors(spec_name, &vectors, generated_dir);
+        generate_unified_vectors(spec_name, &vectors, generated_dir);
     }
 
     // Extract Cue blocks (use full content to include any frontmatter cue blocks)
@@ -666,15 +666,338 @@ fn generate_itf_trace(spec_name: &str, quint_file: &Path, generated_dir: &Path) 
     }
 }
 
-/// Write extracted test vectors file
-fn write_test_vectors(spec_name: &str, vectors: &str, generated_dir: &Path) {
+/// Generate unified test vectors JSON from spec test-vectors block + ITF traces
+fn generate_unified_vectors(spec_name: &str, yaml_content: &str, generated_dir: &Path) {
     let vectors_dir = generated_dir.join("test-vectors");
     fs::create_dir_all(&vectors_dir).ok();
 
-    let vectors_file = vectors_dir.join(format!("{}.vectors.yaml", spec_name));
-    if let Err(e) = fs::write(&vectors_file, vectors) {
-        warn!("Failed to write test vectors: {}", e);
+    // Parse YAML test vectors (simple line-by-line parsing)
+    let yaml_scenarios = parse_test_vectors_yaml(spec_name, yaml_content);
+
+    // Load ITF traces if they exist
+    let itf_file = vectors_dir.join(format!("{}.itf.json", spec_name));
+    let itf_scenarios = if itf_file.exists() {
+        parse_itf_trace(spec_name, &itf_file)
     } else {
-        info!("Extracted test vectors: {}", vectors_file.display());
+        Vec::new()
+    };
+
+    // Build unified JSON structure
+    let unified = serde_json::json!({
+        "component": spec_name,
+        "generated": chrono::Utc::now().to_rfc3339(),
+        "sources": {
+            "yaml": yaml_scenarios.len(),
+            "itf": itf_scenarios.len()
+        },
+        "scenarios": yaml_scenarios.into_iter().chain(itf_scenarios).collect::<Vec<_>>()
+    });
+
+    let unified_file = vectors_dir.join(format!("{}.unified.json", spec_name));
+    match serde_json::to_string_pretty(&unified) {
+        Ok(json_str) => {
+            if let Err(e) = fs::write(&unified_file, json_str) {
+                warn!("Failed to write unified vectors: {}", e);
+            } else {
+                let total = unified["sources"]["yaml"].as_u64().unwrap_or(0)
+                    + unified["sources"]["itf"].as_u64().unwrap_or(0);
+                info!(
+                    "Generated unified vectors: {} ({} scenarios)",
+                    unified_file.display(),
+                    total
+                );
+            }
+        }
+        Err(e) => {
+            warn!("Failed to serialize unified vectors: {}", e);
+        }
     }
+}
+
+/// Parse YAML test vectors into scenario JSON objects
+fn parse_test_vectors_yaml(_spec_name: &str, yaml_content: &str) -> Vec<serde_json::Value> {
+    let mut scenarios = Vec::new();
+    let mut current_scenario: Option<serde_json::Map<String, serde_json::Value>> = None;
+    let mut in_given = false;
+    let mut in_then = false;
+    let mut given_context = serde_json::Value::Null;
+    let mut given_state = String::new();
+    let mut then_context = serde_json::Value::Null;
+    let mut then_state = String::new();
+    let mut event_name = String::new();
+    let mut payload: Option<serde_json::Value> = None;
+
+    for line in yaml_content.lines() {
+        let trimmed = line.trim();
+
+        // Skip comments and empty lines
+        if trimmed.starts_with('#') || trimmed.is_empty() {
+            continue;
+        }
+
+        // New scenario
+        if trimmed.starts_with("- scenario:") {
+            // Save previous scenario
+            if current_scenario.is_some() && !event_name.is_empty() {
+                let mut step = serde_json::json!({
+                    "event": event_name,
+                    "before": { "context": given_context, "state": given_state },
+                    "after": { "context": then_context, "state": then_state }
+                });
+                if let Some(p) = &payload {
+                    step["payload"] = p.clone();
+                }
+                let scenario_json = serde_json::json!({
+                    "name": current_scenario.as_ref().unwrap().get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                    "source": "yaml",
+                    "steps": [step]
+                });
+                scenarios.push(scenario_json);
+            }
+            // Start new scenario
+            let name = trimmed
+                .strip_prefix("- scenario:")
+                .unwrap()
+                .trim()
+                .trim_matches('"');
+            let mut map = serde_json::Map::new();
+            map.insert("name".into(), serde_json::Value::String(name.to_string()));
+            current_scenario = Some(map);
+            in_given = false;
+            in_then = false;
+            payload = None;
+            event_name.clear();
+        } else if trimmed.starts_with("given:") {
+            in_given = true;
+            in_then = false;
+        } else if trimmed.starts_with("when:") {
+            event_name = trimmed.strip_prefix("when:").unwrap().trim().to_uppercase();
+            in_given = false;
+            in_then = false;
+        } else if trimmed.starts_with("payload:") {
+            // Parse inline payload like: payload: { id: "tab-0" }
+            let payload_str = trimmed.strip_prefix("payload:").unwrap().trim();
+            if let Ok(v) = parse_inline_json(payload_str) {
+                payload = Some(v);
+            }
+            in_given = false;
+            in_then = false;
+        } else if trimmed.starts_with("then:") {
+            in_then = true;
+            in_given = false;
+        } else if trimmed.starts_with("context:") {
+            let ctx_str = trimmed.strip_prefix("context:").unwrap().trim();
+            if let Ok(ctx) = parse_inline_json(ctx_str) {
+                if in_given {
+                    given_context = ctx;
+                } else if in_then {
+                    then_context = ctx;
+                }
+            }
+        } else if trimmed.starts_with("state:") {
+            let state = trimmed
+                .strip_prefix("state:")
+                .unwrap()
+                .trim()
+                .trim_matches('"');
+            if in_given {
+                given_state = state.to_string();
+            } else if in_then {
+                then_state = state.to_string();
+            }
+        }
+    }
+
+    // Don't forget the last scenario
+    if current_scenario.is_some() && !event_name.is_empty() {
+        let mut step = serde_json::json!({
+            "event": event_name,
+            "before": { "context": given_context, "state": given_state },
+            "after": { "context": then_context, "state": then_state }
+        });
+        if let Some(p) = &payload {
+            step["payload"] = p.clone();
+        }
+        let scenario_json = serde_json::json!({
+            "name": current_scenario.as_ref().unwrap().get("name").and_then(|v| v.as_str()).unwrap_or(""),
+            "source": "yaml",
+            "steps": [step]
+        });
+        scenarios.push(scenario_json);
+    }
+
+    scenarios
+}
+
+/// Parse inline JSON-like object { key: value, ... }
+fn parse_inline_json(s: &str) -> Result<serde_json::Value, ()> {
+    // Convert { key: value } to { "key": value } for JSON parsing
+    let mut json_str = s.to_string();
+    // Add quotes around unquoted keys
+    json_str = json_str
+        .replace("{ ", "{")
+        .replace(" }", "}")
+        .replace(": ", ":");
+    // Use regex-like replacement for keys
+    let mut result = String::new();
+    let mut chars = json_str.chars().peekable();
+    let mut in_string = false;
+
+    while let Some(c) = chars.next() {
+        if c == '"' {
+            in_string = !in_string;
+            result.push(c);
+        } else if !in_string && (c.is_alphabetic() || c == '_') {
+            // Start of a key - collect it
+            let mut key = String::from(c);
+            while let Some(&next) = chars.peek() {
+                if next.is_alphanumeric() || next == '_' {
+                    key.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            }
+            // Check if followed by colon (it's a key)
+            if chars.peek() == Some(&':') {
+                result.push('"');
+                result.push_str(&key);
+                result.push('"');
+            } else {
+                // It's a value like true/false
+                result.push_str(&key);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    serde_json::from_str(&result).map_err(|_| ())
+}
+
+/// Parse ITF trace file into scenario JSON objects
+fn parse_itf_trace(spec_name: &str, itf_file: &Path) -> Vec<serde_json::Value> {
+    let content = match fs::read_to_string(itf_file) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    let itf: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    // ITF format has "states" array
+    let states = match itf.get("states").and_then(|s| s.as_array()) {
+        Some(s) => s,
+        None => return Vec::new(),
+    };
+
+    if states.len() < 2 {
+        return Vec::new();
+    }
+
+    // Convert ITF states to steps
+    let mut steps = Vec::new();
+    for i in 1..states.len() {
+        let before = &states[i - 1];
+        let after = &states[i];
+
+        // Extract context values (ITF uses different key names)
+        let before_ctx = extract_itf_context(before);
+        let after_ctx = extract_itf_context(after);
+
+        // Use _action from ITF state if present, otherwise infer from state changes
+        let event = after
+            .get("_action")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_uppercase())
+            .unwrap_or_else(|| infer_event_from_change(&before_ctx, &after_ctx));
+
+        steps.push(serde_json::json!({
+            "event": event,
+            "before": { "context": before_ctx, "state": "idle" },
+            "after": { "context": after_ctx, "state": "idle" }
+        }));
+    }
+
+    vec![serde_json::json!({
+        "name": format!("itf-trace-{}", spec_name),
+        "source": "itf",
+        "steps": steps
+    })]
+}
+
+/// Extract context from ITF state
+fn extract_itf_context(state: &serde_json::Value) -> serde_json::Value {
+    // ITF states have various formats - try to extract relevant fields
+    let mut ctx = serde_json::Map::new();
+
+    // Common fields across components
+    for field in [
+        "checked",
+        "disabled",
+        "readOnly",
+        "focused",
+        "indeterminate",
+        "loading",
+        "pressed",
+        "selectedId",
+        "focusedId",
+    ] {
+        if let Some(v) = state.get(field) {
+            ctx.insert(field.to_string(), v.clone());
+        }
+    }
+
+    serde_json::Value::Object(ctx)
+}
+
+/// Infer event name from context changes
+fn infer_event_from_change(before: &serde_json::Value, after: &serde_json::Value) -> String {
+    // Check for common state transitions
+    if before.get("checked") != after.get("checked") {
+        return "TOGGLE".into();
+    }
+    if before.get("focused") != after.get("focused") {
+        let focused_after = after
+            .get("focused")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        return if focused_after { "FOCUS" } else { "BLUR" }.into();
+    }
+    if before.get("pressed") != after.get("pressed") {
+        let pressed_after = after
+            .get("pressed")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        return if pressed_after {
+            "PRESS_DOWN"
+        } else {
+            "PRESS_UP"
+        }
+        .into();
+    }
+    if before.get("loading") != after.get("loading") {
+        let loading_after = after
+            .get("loading")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        return if loading_after {
+            "START_LOADING"
+        } else {
+            "STOP_LOADING"
+        }
+        .into();
+    }
+    if before.get("selectedId") != after.get("selectedId") {
+        return "SELECT_TAB".into();
+    }
+    if before.get("focusedId") != after.get("focusedId") {
+        return "FOCUS_NEXT".into();
+    }
+    if before.get("indeterminate") != after.get("indeterminate") {
+        return "SET_INDETERMINATE".into();
+    }
+
+    "UNKNOWN".into()
 }

@@ -132,9 +132,8 @@ module button {
     pressed' = pressed
   }
   
-  // Step action for simulation
+  // Step action for simulation (excludes init - that's for initialization only)
   action step = any {
-    init,
     pressDown,
     pressUp,
     cancelPress,
