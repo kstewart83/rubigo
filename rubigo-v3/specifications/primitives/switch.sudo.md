@@ -83,13 +83,15 @@ module switch {
   var readOnly: bool
   var focused: bool
   var state: str  // "idle" | "focused"
+  var _action: str  // Tracks action name for ITF traces
 
   action init = all {
     checked' = false,
     disabled' = false,
     readOnly' = false,
     focused' = false,
-    state' = "idle"
+    state' = "idle",
+    _action' = "init"
   }
 
   action toggle = all {
@@ -99,7 +101,8 @@ module switch {
     disabled' = disabled,
     readOnly' = readOnly,
     focused' = focused,
-    state' = state
+    state' = state,
+    _action' = "TOGGLE"
   }
 
   action focus = all {
@@ -107,7 +110,8 @@ module switch {
     focused' = true,
     checked' = checked,
     disabled' = disabled,
-    readOnly' = readOnly
+    readOnly' = readOnly,
+    _action' = "FOCUS"
   }
 
   action blur = all {
@@ -115,7 +119,8 @@ module switch {
     focused' = false,
     checked' = checked,
     disabled' = disabled,
-    readOnly' = readOnly
+    readOnly' = readOnly,
+    _action' = "BLUR"
   }
 
   action step = any {

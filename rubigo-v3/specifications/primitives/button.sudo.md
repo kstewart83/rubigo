@@ -85,12 +85,14 @@ module button {
   var disabled: bool
   var loading: bool
   var pressed: bool
+  var _action: str  // Tracks action name for ITF traces
   
   // Initialize
   action init = all {
     disabled' = false,
     loading' = false,
-    pressed' = false
+    pressed' = false,
+    _action' = "init"
   }
   
   // Press down (mouse down or space key down)
@@ -99,7 +101,8 @@ module button {
     not(loading),
     pressed' = true,
     disabled' = disabled,
-    loading' = loading
+    loading' = loading,
+    _action' = "PRESS_DOWN"
   }
   
   // Press up (mouse up or space key up) - triggers action
@@ -107,14 +110,16 @@ module button {
     pressed,
     pressed' = false,
     disabled' = disabled,
-    loading' = loading
+    loading' = loading,
+    _action' = "PRESS_UP"
   }
   
   // Cancel press (mouse leaves while pressed)
   action cancelPress = all {
     pressed' = false,
     disabled' = disabled,
-    loading' = loading
+    loading' = loading,
+    _action' = "CANCEL_PRESS"
   }
   
   // Start loading (async operation)
@@ -122,14 +127,16 @@ module button {
     not(disabled),
     loading' = true,
     pressed' = false,
-    disabled' = disabled
+    disabled' = disabled,
+    _action' = "START_LOADING"
   }
   
   // Stop loading (async complete)
   action stopLoading = all {
     loading' = false,
     disabled' = disabled,
-    pressed' = pressed
+    pressed' = pressed,
+    _action' = "STOP_LOADING"
   }
   
   // Step action for simulation (excludes init - that's for initialization only)

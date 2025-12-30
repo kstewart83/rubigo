@@ -78,39 +78,46 @@ module tabs {
   // State variables - string for selected tab ID
   var selectedId: str
   var focusedId: str
+  var _action: str  // Tracks action name for ITF traces
   
   // Initialize (first tab selected)
   action init = all {
     selectedId' = "tab-0",
-    focusedId' = "tab-0"
+    focusedId' = "tab-0",
+    _action' = "init"
   }
   
   // Select a specific tab
   action selectTab0 = all {
     selectedId' = "tab-0",
-    focusedId' = "tab-0"
+    focusedId' = "tab-0",
+    _action' = "SELECT_TAB"
   }
   
   action selectTab1 = all {
     selectedId' = "tab-1",
-    focusedId' = "tab-1"
+    focusedId' = "tab-1",
+    _action' = "SELECT_TAB"
   }
   
   // Focus without selecting
   action focusNext = all {
     focusedId' = "tab-1",
-    selectedId' = selectedId
+    selectedId' = selectedId,
+    _action' = "FOCUS_NEXT"
   }
   
   action focusPrev = all {
     focusedId' = "tab-0",
-    selectedId' = selectedId
+    selectedId' = selectedId,
+    _action' = "FOCUS_PREV"
   }
   
   // Activate focused tab
   action activate = all {
     selectedId' = focusedId,
-    focusedId' = focusedId
+    focusedId' = focusedId,
+    _action' = "ACTIVATE"
   }
   
   // Step action for simulation (excludes init - that's for initialization only)
