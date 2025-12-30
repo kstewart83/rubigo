@@ -9,7 +9,7 @@
  */
 
 import { Component, createSignal, For, Show } from 'solid-js';
-import { Button, useButton } from '@rubigo/components/button';
+import { useButton } from '@rubigo/components/button';
 
 // Simulated spec (would come from API in real gallery)
 const buttonSpec = {
@@ -57,7 +57,7 @@ const SpecDrivenPOC: Component = () => {
             }}>
                 <h1 style={{ margin: 0 }}>Spec-Driven Gallery POC</h1>
 
-                {/* Live Component Preview */}
+                {/* Live Component Preview - using hook directly */}
                 <section style={{
                     padding: '32px',
                     background: 'var(--bg-secondary, #f9fafb)',
@@ -67,14 +67,25 @@ const SpecDrivenPOC: Component = () => {
                     'justify-content': 'center',
                     'min-height': '120px',
                 }}>
-                    {/* Render the actual Button component */}
-                    <Button
-                        onClick={() => logEvent('click')}
-                        loading={btn.loading()}
-                        disabled={btn.disabled()}
+                    {/* Using hook's rootProps() directly on native button */}
+                    <button
+                        {...btn.rootProps()}
+                        style={{
+                            padding: '12px 24px',
+                            'font-size': '16px',
+                            'font-weight': '500',
+                            'border-radius': '8px',
+                            border: 'none',
+                            background: btn.disabled() ? '#9ca3af' : btn.loading() ? '#60a5fa' : '#3b82f6',
+                            color: 'white',
+                            cursor: btn.disabled() ? 'not-allowed' : btn.loading() ? 'wait' : 'pointer',
+                            opacity: btn.disabled() ? 0.5 : 1,
+                            transform: btn.pressed() ? 'scale(0.98)' : 'scale(1)',
+                            transition: 'all 150ms ease-out',
+                        }}
                     >
-                        Click Me
-                    </Button>
+                        {btn.loading() ? '⏳ Loading...' : 'Click Me'}
+                    </button>
                 </section>
 
                 {/* Controls - call component methods directly */}
