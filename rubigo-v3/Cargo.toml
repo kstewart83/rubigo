@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["backend", "components-rs/components", "components-rs/statechart"]
+members = [
+    "backend",
+    "components-rs/components",
+    "components-rs/statechart",
+    "gallery/backend",
+]
 
 # Root package for build.rs
 [package]
