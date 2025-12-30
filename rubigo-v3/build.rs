@@ -60,6 +60,16 @@ impl SpecType {
         }
     }
 
+    /// Get sections that require ```cue blocks (excludes presentational sections)
+    fn sections_requiring_cue(&self) -> &'static [&'static str] {
+        match self {
+            SpecType::Primitive => PRIMITIVE_SECTIONS, // All require cue
+            SpecType::Compound => &["Context Schema"], // Only Context Schema needs cue
+            SpecType::Presentational => &[],           // Design Guidelines uses sudolang
+            SpecType::Schema => SCHEMA_SECTIONS,       // Context Schema needs cue
+        }
+    }
+
     /// Get forbidden sections for this spec type (statechart sections not allowed)
     fn forbidden_sections(&self) -> &'static [&'static str] {
         match self {
@@ -369,6 +379,7 @@ fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec
     let mut errors = Vec::new();
 
     let required_sections = spec_type.required_sections();
+    let cue_required_sections = spec_type.sections_requiring_cue();
     let forbidden_sections = spec_type.forbidden_sections();
 
     // Track what we find
@@ -393,8 +404,8 @@ fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec
             // Detected a code block with a language tag
             let block_type = line.trim().trim_start_matches("```").trim();
             if let Some(ref section) = current_h2 {
-                // Check if this is a required section that should have cue
-                if required_sections.contains(&section.as_str()) && block_type != "cue" {
+                // Check if this is a section that should have cue (not all required sections need cue)
+                if cue_required_sections.contains(&section.as_str()) && block_type != "cue" {
                     sections_with_wrong_block.push((section.clone(), block_type.to_string()));
                 }
             }
@@ -431,14 +442,15 @@ fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec
         }
     }
 
-    // Check required sections exist and have cue blocks
+    // Check required sections exist
     for &required in required_sections {
         if !found_sections.contains(required) {
             // Check for fuzzy matches
             let suggestion = find_similar_section(&found_sections, required);
+            let needs_cue = cue_required_sections.contains(&required);
             let fix = if let Some(similar) = suggestion {
                 format!("FIX: Rename '## {}' to '## {}'", similar, required)
-            } else {
+            } else if needs_cue {
                 format!(
                     "FIX: Add this section with a ```cue block:\n\
                      \n\
@@ -452,6 +464,8 @@ fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec
                     required,
                     section_key(required)
                 )
+            } else {
+                format!("FIX: Add this section:\n\n    ## {}", required)
             };
             errors.push(format!(
                 "SPEC ERROR: Missing required section: ## {}\n\
@@ -459,7 +473,12 @@ fn validate_spec_structure(content: &str, spec_type: SpecType) -> Result<(), Vec
                  {}",
                 required, fix
             ));
-        } else if !sections_with_cue.contains(required) {
+        }
+    }
+
+    // Check cue blocks only for sections that require them
+    for &required in cue_required_sections {
+        if found_sections.contains(required) && !sections_with_cue.contains(required) {
             // Check if it has a wrong block type
             let wrong_type = sections_with_wrong_block
                 .iter()
