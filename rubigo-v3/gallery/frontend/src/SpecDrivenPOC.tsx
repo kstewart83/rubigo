@@ -93,6 +93,36 @@ const SpecDrivenPOC: Component = () => {
                     </div>
                 </section>
 
+                {/* Reset & Event Replay (Option B exploration) */}
+                <section>
+                    <h2 style={{ 'font-size': '16px', 'margin-bottom': '12px' }}>Reset & Event Replay</h2>
+                    <div style={{ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'margin-bottom': '12px' }}>
+                        <button
+                            onClick={() => { btn.reset(); logEvent('RESET'); }}
+                            style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', 'border-radius': '4px' }}
+                        >
+                            Reset to Initial
+                        </button>
+                        <button
+                            onClick={() => { btn.reset({ disabled: true }); logEvent('RESET', { disabled: true }); }}
+                            style={{ background: '#f97316', color: 'white', border: 'none', padding: '8px 12px', 'border-radius': '4px' }}
+                        >
+                            Reset (Disabled)
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', 'flex-wrap': 'wrap' }}>
+                        <button onClick={() => { const r = btn.send('PRESS_DOWN'); logEvent('send:PRESS_DOWN', { handled: r.handled }); }}>
+                            Send PRESS_DOWN
+                        </button>
+                        <button onClick={() => { const r = btn.send('PRESS_UP'); logEvent('send:PRESS_UP', { handled: r.handled }); }}>
+                            Send PRESS_UP
+                        </button>
+                        <button onClick={() => { const r = btn.send('START_LOADING'); logEvent('send:START_LOADING', { handled: r.handled }); }}>
+                            Send START_LOADING
+                        </button>
+                    </div>
+                </section>
+
                 {/* State Inspector - reads from component, not shadow context */}
                 <section>
                     <h2 style={{ 'font-size': '16px', 'margin-bottom': '12px' }}>State Inspector</h2>
