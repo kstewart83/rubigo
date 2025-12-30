@@ -14,6 +14,20 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Info message - only visible with `cargo build -vv`
+macro_rules! info {
+    ($($arg:tt)*) => {
+        eprintln!("[build.rs] {}", format!($($arg)*));
+    };
+}
+
+/// Warning/error message - always visible in build output
+macro_rules! warn {
+    ($($arg:tt)*) => {
+        println!("cargo:warning={}", format!($($arg)*));
+    };
+}
+
 /// Configurable suffix for spec files
 const SPEC_SUFFIX: &str = ".sudo.md";
 
@@ -71,12 +85,12 @@ fn validate_binaries() {
         Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
             if let Some(version) = extract_cue_version(&version_str) {
-                println!("cargo:warning=Found cue {}", version);
+                info!("Found cue {}", version);
             }
         }
         _ => {
-            println!("cargo:warning=cue CLI not found - spec validation will be skipped");
-            println!("cargo:warning=Install with: brew install cue-lang/tap/cue");
+            warn!("cue CLI not found - spec validation will be skipped");
+            warn!("Install with: brew install cue-lang/tap/cue");
         }
     }
 
@@ -84,11 +98,11 @@ fn validate_binaries() {
     match Command::new("just").arg("--version").output() {
         Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
-            println!("cargo:warning=Found {}", version_str.trim());
+            info!("Found {}", version_str.trim());
         }
         _ => {
-            println!("cargo:warning=just CLI not found");
-            println!("cargo:warning=Install with: cargo install just");
+            warn!("just CLI not found");
+            warn!("Install with: cargo install just");
         }
     }
 
@@ -96,11 +110,11 @@ fn validate_binaries() {
     match Command::new("quint").arg("--version").output() {
         Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
-            println!("cargo:warning=Found quint {}", version_str.trim());
+            info!("Found quint {}", version_str.trim());
         }
         _ => {
-            println!("cargo:warning=quint CLI not found - formal verification disabled");
-            println!("cargo:warning=Install with: npm install -g @informalsystems/quint");
+            warn!("quint CLI not found - formal verification disabled");
+            warn!("Install with: npm install -g @informalsystems/quint");
         }
     }
 }
@@ -182,17 +196,13 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
         .unwrap_or("unknown");
 
     println!("cargo:rerun-if-changed={}", spec_path.display());
-    println!("cargo:warning=Processing spec: {}", spec_path.display());
+    info!("Processing spec: {}", spec_path.display());
 
     // Read spec content
     let content = match fs::read_to_string(spec_path) {
         Ok(c) => c,
         Err(e) => {
-            println!(
-                "cargo:warning=Failed to read {}: {}",
-                spec_path.display(),
-                e
-            );
+            warn!("Failed to read {}: {}", spec_path.display(), e);
             return;
         }
     };
@@ -203,24 +213,21 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
         SpecType::Component => "component",
         SpecType::Schema => "schema",
     };
-    println!("cargo:warning=Spec type: {} ({})", spec_name, type_str);
+    info!("Spec type: {} ({})", spec_name, type_str);
 
     // Validate spec structure (only for component specs)
     if meta.spec_type == SpecType::Component {
         if let Err(errors) = validate_spec_structure(rest_content) {
             for error in errors {
-                println!(
-                    "cargo:warning=Spec validation error in {}: {}",
-                    spec_name, error
-                );
+                warn!("Spec validation error in {}: {}", spec_name, error);
             }
             // Continue anyway to allow incremental development
         } else {
-            println!("cargo:warning=Spec structure validated: {}", spec_name);
+            info!("Spec structure validated: {}", spec_name);
         }
     } else {
-        println!(
-            "cargo:warning=Skipping structure validation for schema spec: {}",
+        info!(
+            "Skipping structure validation for schema spec: {}",
             spec_name
         );
     }
@@ -253,7 +260,7 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
 
     let cue_file = cue_dir.join(format!("{}.cue", spec_name));
     if let Err(e) = fs::write(&cue_file, &combined_cue) {
-        println!("cargo:warning=Failed to write Cue file: {}", e);
+        warn!("Failed to write Cue file: {}", e);
         return;
     }
 
@@ -268,28 +275,22 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
             // Check if output is empty or just {}
             let json_str = String::from_utf8_lossy(&o.stdout);
             if json_str.trim() == "{}" || json_str.trim().is_empty() {
-                println!(
-                    "cargo:warning=Skipping empty JSON output for schema: {}",
-                    spec_name
-                );
+                info!("Skipping empty JSON output for schema: {}", spec_name);
             } else {
                 let json_path = generated_dir.join(format!("{}.json", spec_name));
                 if let Err(e) = fs::write(&json_path, &o.stdout) {
-                    println!("cargo:warning=Failed to write JSON: {}", e);
+                    warn!("Failed to write JSON: {}", e);
                 } else {
-                    println!("cargo:warning=Generated {}", json_path.display());
+                    info!("Generated {}", json_path.display());
                 }
             }
         }
         Ok(o) => {
             let stderr = String::from_utf8_lossy(&o.stderr);
-            println!(
-                "cargo:warning=cue export failed for {}: {}",
-                spec_name, stderr
-            );
+            warn!("cue export failed for {}: {}", spec_name, stderr);
         }
         Err(e) => {
-            println!("cargo:warning=Failed to run cue: {}", e);
+            warn!("Failed to run cue: {}", e);
         }
     }
 }
@@ -564,9 +565,9 @@ fn write_quint_file(spec_name: &str, quint_code: &str, generated_dir: &Path) {
 
     let quint_file = quint_dir.join(format!("{}.qnt", spec_name));
     if let Err(e) = fs::write(&quint_file, quint_code) {
-        println!("cargo:warning=Failed to write Quint file: {}", e);
+        warn!("Failed to write Quint file: {}", e);
     } else {
-        println!("cargo:warning=Extracted Quint: {}", quint_file.display());
+        info!("Extracted Quint: {}", quint_file.display());
 
         // Optionally run quint typecheck if available
         if let Ok(output) = Command::new("quint")
@@ -574,13 +575,10 @@ fn write_quint_file(spec_name: &str, quint_code: &str, generated_dir: &Path) {
             .output()
         {
             if output.status.success() {
-                println!("cargo:warning=Quint typecheck passed: {}", spec_name);
+                info!("Quint typecheck passed: {}", spec_name);
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                println!(
-                    "cargo:warning=Quint typecheck failed for {}: {}",
-                    spec_name, stderr
-                );
+                warn!("Quint typecheck failed for {}: {}", spec_name, stderr);
             }
         }
     }
@@ -593,11 +591,8 @@ fn write_test_vectors(spec_name: &str, vectors: &str, generated_dir: &Path) {
 
     let vectors_file = vectors_dir.join(format!("{}.vectors.yaml", spec_name));
     if let Err(e) = fs::write(&vectors_file, vectors) {
-        println!("cargo:warning=Failed to write test vectors: {}", e);
+        warn!("Failed to write test vectors: {}", e);
     } else {
-        println!(
-            "cargo:warning=Extracted test vectors: {}",
-            vectors_file.display()
-        );
+        info!("Extracted test vectors: {}", vectors_file.display());
     }
 }
