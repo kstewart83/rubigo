@@ -132,6 +132,16 @@ module button {
     pressed' = pressed
   }
   
+  // Step action for simulation
+  action step = any {
+    init,
+    pressDown,
+    pressUp,
+    cancelPress,
+    startLoading,
+    stopLoading
+  }
+  
   // Invariants
   val pressed_is_boolean = pressed == true or pressed == false
   val loading_is_boolean = loading == true or loading == false

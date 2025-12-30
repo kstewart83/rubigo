@@ -113,6 +113,16 @@ module tabs {
     focusedId' = focusedId
   }
   
+  // Step action for simulation
+  action step = any {
+    init,
+    selectTab0,
+    selectTab1,
+    focusNext,
+    focusPrev,
+    activate
+  }
+  
   // Invariants
   val selected_is_valid = selectedId == "tab-0" or selectedId == "tab-1"
   val focused_is_valid = focusedId == "tab-0" or focusedId == "tab-1"
