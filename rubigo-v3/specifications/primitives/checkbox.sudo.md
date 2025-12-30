@@ -103,6 +103,15 @@ module checkbox {
     disabled' = disabled
   }
 
+  // Step action for simulation
+  action step = any {
+    init,
+    toggle,
+    setChecked,
+    setUnchecked,
+    setIndeterminate
+  }
+
   // Invariants
   val disabled_is_boolean = disabled == true or disabled == false
   val state_is_valid = state == "unchecked" or state == "checked" or state == "indeterminate"

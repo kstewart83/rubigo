@@ -563,23 +563,105 @@ fn write_quint_file(spec_name: &str, quint_code: &str, generated_dir: &Path) {
     let quint_dir = generated_dir.join("quint");
     fs::create_dir_all(&quint_dir).ok();
 
+    // Validate Quint model structure first
+    let validation_errors = validate_quint_model(spec_name, quint_code);
+    if !validation_errors.is_empty() {
+        warn!("⚠️  Quint model validation warnings for {}:", spec_name);
+        for error in &validation_errors {
+            warn!("    - {}", error);
+        }
+    }
+
     let quint_file = quint_dir.join(format!("{}.qnt", spec_name));
     if let Err(e) = fs::write(&quint_file, quint_code) {
         warn!("Failed to write Quint file: {}", e);
     } else {
         info!("Extracted Quint: {}", quint_file.display());
 
-        // Optionally run quint typecheck if available
+        // Run quint typecheck if available
         if let Ok(output) = Command::new("quint")
             .args(["typecheck", quint_file.to_str().unwrap()])
             .output()
         {
             if output.status.success() {
                 info!("Quint typecheck passed: {}", spec_name);
+
+                // If model is valid and typecheck passes, generate ITF trace
+                if validation_errors.is_empty() {
+                    generate_itf_trace(spec_name, &quint_file, generated_dir);
+                }
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 warn!("Quint typecheck failed for {}: {}", spec_name, stderr);
             }
+        }
+    }
+}
+
+/// Validate Quint model has required elements for ITF generation
+fn validate_quint_model(spec_name: &str, quint_code: &str) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // 1. Check module declaration
+    let module_pattern = format!("module {}", spec_name);
+    if !quint_code.contains(&module_pattern) {
+        errors.push(format!(
+            "Missing 'module {} {{ ... }}' declaration",
+            spec_name
+        ));
+    }
+
+    // 2. Check for var declarations
+    if !quint_code.contains("var ") {
+        errors.push("Missing state variable declarations (var)".into());
+    }
+
+    // 3. Check for action init
+    if !quint_code.contains("action init") {
+        errors.push("Missing 'action init' for initial state".into());
+    }
+
+    // 4. Check for action step (required for quint run)
+    if !quint_code.contains("action step") {
+        errors.push("Missing 'action step' (required for 'quint run' to generate traces)".into());
+    }
+
+    // 5. Check for invariants (val with some condition)
+    if !quint_code.contains("val ") {
+        errors.push("Missing invariant definitions (val)".into());
+    }
+
+    errors
+}
+
+/// Generate ITF trace from validated Quint model
+fn generate_itf_trace(spec_name: &str, quint_file: &Path, generated_dir: &Path) {
+    let vectors_dir = generated_dir.join("test-vectors");
+    fs::create_dir_all(&vectors_dir).ok();
+
+    let itf_file = vectors_dir.join(format!("{}.itf.json", spec_name));
+
+    // Run quint simulation to generate ITF trace
+    if let Ok(output) = Command::new("quint")
+        .args([
+            "run",
+            quint_file.to_str().unwrap(),
+            "--max-samples=20",
+            "--out-itf",
+            itf_file.to_str().unwrap(),
+        ])
+        .output()
+    {
+        if output.status.success() {
+            info!("Generated ITF trace: {}", itf_file.display());
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            // Don't fail build, just warn - some models may have constraints that prevent traces
+            warn!(
+                "Could not generate ITF trace for {} (this may be normal): {}",
+                spec_name,
+                stderr.lines().next().unwrap_or("unknown error")
+            );
         }
     }
 }
