@@ -13,13 +13,8 @@ import { parse as parseYaml } from 'yaml';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, basename } from 'path';
 
-// Types
-interface Context {
-    checked: boolean;
-    disabled: boolean;
-    readOnly: boolean;
-    focused: boolean;
-}
+// Types - generic to support different component schemas
+type Context = Record<string, boolean | number | string>;
 
 interface YamlVector {
     scenario: string;

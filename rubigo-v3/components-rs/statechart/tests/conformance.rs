@@ -265,3 +265,163 @@ fn conformance_switch_spec() {
 
     println!("✅ All {} scenarios passed", vectors.scenarios.len());
 }
+
+// === Checkbox Conformance Test ===
+
+/// Generic vector format for checkbox (different context shape)
+#[derive(Debug, Deserialize)]
+struct GenericUnifiedVectors {
+    scenarios: Vec<GenericScenario>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GenericScenario {
+    name: String,
+    source: String,
+    steps: Vec<GenericStep>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GenericStep {
+    event: String,
+    before: GenericSnapshot,
+    after: GenericSnapshot,
+}
+
+#[derive(Debug, Deserialize)]
+struct GenericSnapshot {
+    context: Value,
+    #[allow(dead_code)]
+    state: String,
+}
+
+fn load_checkbox_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("checkbox.json");
+    let content = fs::read_to_string(&spec_path)
+        .expect(&format!("Failed to read checkbox spec at {:?}", spec_path));
+    serde_json::from_str(&content).expect("Failed to parse checkbox spec")
+}
+
+fn create_checkbox_machine(spec: &GeneratedSpec, context: &Value, initial_state: &str) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_checkbox_guard_fn<'a>(context: &'a Value) -> impl Fn(&str) -> bool + 'a {
+    move |_guard_name: &str| {
+        // Checkbox guard: "!context.disabled"
+        let disabled = context
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        !disabled
+    }
+}
+
+fn execute_checkbox_actions(machine: &mut Machine, actions: &[String], spec: &GeneratedSpec) {
+    for action_name in actions {
+        if let Some(action) = spec.actions.get(action_name) {
+            let mutation = &action.mutation;
+
+            // Handle multi-statement mutations: "context.x = val; context.y = val"
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+
+                // Parse: context.field = value
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+
+                    if let Some(field) = left.strip_prefix("context.") {
+                        if right == "true" {
+                            machine.context[field] = true.into();
+                        } else if right == "false" {
+                            machine.context[field] = false.into();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_checkbox_spec() {
+    let spec = load_checkbox_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("checkbox.unified.json");
+    if !vectors_path.exists() {
+        eprintln!(
+            "No unified vectors found at {:?}. Run: just unify-vectors",
+            vectors_path
+        );
+        return;
+    }
+
+    let content = fs::read_to_string(&vectors_path).expect("Failed to read vectors");
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse vectors");
+
+    println!(
+        "Running {} checkbox conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine =
+                create_checkbox_machine(&spec, &step.before.context, &step.before.state);
+
+            // Send event with guard evaluation
+            let context_for_guard = machine.context.clone();
+            let guard_fn = make_checkbox_guard_fn(&context_for_guard);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: Value::Null,
+                },
+                guard_fn,
+            );
+            execute_checkbox_actions(&mut machine, &result.actions, &spec);
+
+            // Compare context
+            assert_eq!(
+                machine.context,
+                step.after.context,
+                "Scenario '{}' step {} ({}) failed:\nExpected: {:?}\nActual: {:?}",
+                scenario.name,
+                i + 1,
+                step.event,
+                step.after.context,
+                machine.context
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!(
+        "✅ All {} checkbox scenarios passed",
+        vectors.scenarios.len()
+    );
+}
