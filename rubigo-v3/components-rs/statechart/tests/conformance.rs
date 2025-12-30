@@ -425,3 +425,151 @@ fn conformance_checkbox_spec() {
         vectors.scenarios.len()
     );
 }
+
+// === Button Conformance Test ===
+
+fn load_button_spec() -> GeneratedSpec {
+    let spec_path = project_root().join("generated").join("button.json");
+    let content = fs::read_to_string(&spec_path)
+        .expect(&format!("Failed to read button spec at {:?}", spec_path));
+    serde_json::from_str(&content).expect("Failed to parse button spec")
+}
+
+fn create_button_machine(spec: &GeneratedSpec, context: &Value, initial_state: &str) -> Machine {
+    let config = MachineConfig {
+        id: spec.machine.id.clone(),
+        initial: rubigo_statechart::InitialState::Single(initial_state.to_string()),
+        context: context.clone(),
+        states: spec.machine.states.clone(),
+        regions: std::collections::HashMap::new(),
+        actions: spec.actions.clone(),
+    };
+
+    Machine::from_config(config)
+}
+
+fn make_button_guard_fn<'a>(context: &'a Value) -> impl Fn(&str) -> bool + 'a {
+    move |_guard_name: &str| {
+        // Button guard: "canInteract" = !context.disabled && !context.loading
+        let disabled = context
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let loading = context
+            .get("loading")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        !disabled && !loading
+    }
+}
+
+fn execute_button_actions(actions: &[String], spec: &GeneratedSpec, context: &mut Value) {
+    for action_name in actions {
+        if let Some(action_config) = spec.actions.get(action_name) {
+            let mutation: &str = &action_config.mutation;
+            if mutation.is_empty() {
+                continue;
+            }
+            // Handle multi-statement mutations
+            for stmt in mutation.split(';') {
+                let stmt = stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                // Parse "context.X = Y"
+                if let Some(eq_pos) = stmt.find('=') {
+                    let left = stmt[..eq_pos].trim();
+                    let right = stmt[eq_pos + 1..].trim();
+
+                    if let Some(key) = left.strip_prefix("context.") {
+                        let key = key.trim();
+                        let new_value = if right == "true" {
+                            serde_json::Value::Bool(true)
+                        } else if right == "false" {
+                            serde_json::Value::Bool(false)
+                        } else {
+                            serde_json::Value::Null
+                        };
+                        if let Some(obj) = context.as_object_mut() {
+                            obj.insert(key.to_string(), new_value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conformance_button_spec() {
+    let spec = load_button_spec();
+
+    let vectors_path = project_root()
+        .join("generated")
+        .join("test-vectors")
+        .join("button.unified.json");
+    let content = fs::read_to_string(&vectors_path).expect(&format!(
+        "Failed to read button vectors at {:?}",
+        vectors_path
+    ));
+    let vectors: GenericUnifiedVectors =
+        serde_json::from_str(&content).expect("Failed to parse button vectors");
+
+    println!(
+        "Running {} button conformance scenarios...",
+        vectors.scenarios.len()
+    );
+
+    for scenario in &vectors.scenarios {
+        for (i, step) in scenario.steps.iter().enumerate() {
+            let mut machine =
+                create_button_machine(&spec, &step.before.context, &step.before.state);
+
+            // Send event with guard evaluation
+            let context_for_guard = machine.context.clone();
+            let guard_fn = make_button_guard_fn(&context_for_guard);
+            let result = machine.send_with_guards(
+                Event {
+                    name: step.event.clone(),
+                    payload: Value::Null,
+                },
+                guard_fn,
+            );
+
+            // Execute actions manually (update context based on actions)
+            execute_button_actions(&result.actions, &spec, &mut machine.context);
+
+            // Verify state
+            assert_eq!(
+                machine.current_state().unwrap(),
+                step.after.state,
+                "Scenario '{}' step {} ({}) failed: wrong state",
+                scenario.name,
+                i + 1,
+                step.event
+            );
+
+            // Verify context
+            assert_eq!(
+                machine.context,
+                step.after.context,
+                "Scenario '{}' step {} ({}) failed:\nExpected: {:?}\nActual: {:?}",
+                scenario.name,
+                i + 1,
+                step.event,
+                step.after.context,
+                machine.context
+            );
+
+            println!(
+                "  ✓ [{}] {} - Step {}: {}",
+                scenario.source,
+                scenario.name,
+                i + 1,
+                step.event
+            );
+        }
+    }
+
+    println!("✅ All {} button scenarios passed", vectors.scenarios.len());
+}

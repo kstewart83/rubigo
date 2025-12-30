@@ -100,6 +100,38 @@ export const ComponentPreview: Component<Props> = (props) => {
                 >
                     {props.context.indeterminate ? '−' : props.context.checked ? '✓' : ''}
                 </button>
+            ) : props.spec?.name?.toLowerCase().includes('button') ? (
+                <button
+                    onClick={() => !props.context.disabled && !props.context.loading && props.onAction('click')}
+                    style={{
+                        padding: '12px 24px',
+                        'border-radius': '6px',
+                        border: 'none',
+                        background: props.context.pressed ? 'var(--accent-dark, #0066cc)' : props.context.loading ? 'var(--bg-tertiary)' : 'var(--accent)',
+                        color: '#fff',
+                        cursor: props.context.disabled || props.context.loading ? 'not-allowed' : 'pointer',
+                        opacity: props.context.disabled ? 0.5 : 1,
+                        transform: props.context.pressed ? 'scale(0.98)' : 'scale(1)',
+                        transition: 'all 0.1s',
+                        'font-size': '14px',
+                        'font-weight': '500',
+                        display: 'flex',
+                        'align-items': 'center',
+                        gap: '8px'
+                    }}
+                >
+                    {props.context.loading ? (
+                        <span style={{
+                            width: '14px',
+                            height: '14px',
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            'border-top-color': '#fff',
+                            'border-radius': '50%',
+                            animation: 'spin 0.8s linear infinite'
+                        }} />
+                    ) : null}
+                    {props.context.loading ? 'Loading...' : 'Click Me'}
+                </button>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
