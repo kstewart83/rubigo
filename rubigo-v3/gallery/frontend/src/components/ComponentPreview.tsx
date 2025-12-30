@@ -265,6 +265,68 @@ export const ComponentPreview: Component<Props> = (props) => {
                         Current state: {props.currentState}
                     </div>
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('dialog') ? (
+                <div style={{
+                    display: 'flex',
+                    'flex-direction': 'column',
+                    'align-items': 'center',
+                    gap: '16px'
+                }}>
+                    <button
+                        onClick={() => props.onAction('open', {})}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'var(--accent)',
+                            color: 'white',
+                            border: 'none',
+                            'border-radius': '6px',
+                            cursor: 'pointer',
+                            'font-size': '14px'
+                        }}
+                    >
+                        Open Dialog
+                    </button>
+                    {props.context.open && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            'align-items': 'center',
+                            'justify-content': 'center',
+                            'z-index': 1000
+                        }} onClick={() => !props.context.preventClose && props.onAction('backdrop_click', {})}>
+                            <div style={{
+                                background: 'var(--bg-primary)',
+                                padding: '24px',
+                                'border-radius': '12px',
+                                'max-width': '400px',
+                                'box-shadow': '0 8px 32px rgba(0,0,0,0.3)'
+                            }} onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)' }}>Dialog Title</h3>
+                                <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', 'font-size': '14px' }}>
+                                    This is a modal dialog. Press Escape or click outside to close.
+                                </p>
+                                <button
+                                    onClick={() => props.onAction('close', {})}
+                                    style={{
+                                        padding: '8px 16px',
+                                        background: 'var(--accent)',
+                                        color: 'white',
+                                        border: 'none',
+                                        'border-radius': '6px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
