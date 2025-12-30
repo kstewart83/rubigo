@@ -17,6 +17,8 @@ interface SpecResponse {
     content: string;
     frontmatter: any;
     machine: any;
+    actions?: Record<string, { mutation: string; description?: string; emits?: string[] }>;
+    guards?: Record<string, string>;
 }
 
 const fetchSpecs = async (): Promise<SpecListItem[]> => {
@@ -59,131 +61,126 @@ const App: Component = () => {
         setContext(prev => ({ ...prev, [key]: value }));
     };
 
-    // Handle an action - log it and execute mutations
+    // Handle an action - log it and execute mutations from spec
     const handleAction = (name: string, payload?: any) => {
         // Log the action
         setActions(prev => [...prev, { timestamp: Date.now(), name, payload }]);
 
         // Get the spec's actions definitions
         const spec = currentSpec();
-        if (!spec?.machine) return;
+        if (!spec) return;
 
-        // Execute common actions based on action name
-        // These align with standard statechart action names from specs
+        // Get action definition - check both top-level actions and machine.actions
+        const actionDef = spec.actions?.[name] || spec.machine?.actions?.[name];
+
         setContext(prev => {
             const next = { ...prev };
-            switch (name) {
-                // Toggle actions (switch, checkbox, collapsible)
-                case 'toggle':
-                    // Collapsible uses 'open', switch/checkbox use 'checked'
-                    if (spec?.name?.toLowerCase().includes('collapsible')) {
-                        next.open = !prev.open;
-                    } else {
-                        next.checked = !prev.checked;
-                    }
-                    break;
-                case 'check':
-                    next.checked = true;
-                    break;
-                case 'uncheck':
-                    next.checked = false;
-                    break;
-                case 'setIndeterminate':
-                    next.indeterminate = true;
-                    next.checked = false;
-                    break;
 
-                // Focus actions
-                case 'focus':
-                    next.focused = true;
-                    break;
-                case 'blur':
-                    next.focused = false;
-                    break;
-                case 'setFocused':
-                    next.focused = true;
-                    break;
-                case 'clearFocused':
-                    next.focused = false;
-                    break;
-
-                // Input/change actions
-                case 'change':
-                    if (payload?.value !== undefined) {
-                        next.value = payload.value;
-                    }
-                    break;
-
-                // Button actions (matching button.sudo.md spec)
-                case 'pressDown':
-                    next.pressed = true;
-                    next.state = 'pressed';
-                    break;
-                case 'pressUp':
-                    next.pressed = false;
-                    next.state = 'idle';
-                    break;
-                case 'cancelPress':
-                    next.pressed = false;
-                    next.state = 'idle';
-                    break;
-                case 'click':
-                    // Instant click (like Enter key) - no pressed state
-                    break;
-                case 'release':
-                    next.pressed = false;
-                    break;
-
-                // Collapsible actions
-                case 'open':
-                    next.open = true;
-                    break;
-                case 'close':
-                    next.open = false;
-                    break;
-                case 'toggleOpen':
-                    next.open = !prev.open;
-                    break;
-
-                // Select actions
-                case 'select':
-                    if (payload?.id !== undefined) {
-                        next.selectedId = payload.id;
-                    }
-                    if (payload?.value !== undefined) {
-                        next.value = payload.value;
-                    }
-                    break;
-
-                // Slider actions
-                case 'increment':
-                    next.value = Math.min(prev.max ?? 100, (prev.value ?? 0) + (prev.stepSize ?? prev.step ?? 1));
-                    break;
-                case 'decrement':
-                    next.value = Math.max(prev.min ?? 0, (prev.value ?? 0) - (prev.stepSize ?? prev.step ?? 1));
-                    break;
-                case 'setValue':
-                    if (payload?.value !== undefined) {
-                        next.value = Math.max(prev.min ?? 0, Math.min(prev.max ?? 100, payload.value));
-                    }
-                    break;
-                case 'setDragging':
-                    next.dragging = true;
-                    break;
-                case 'clearDragging':
-                    next.dragging = false;
-                    break;
-
-                // Tabs actions
-                case 'selectTab':
-                    if (payload?.id !== undefined) {
-                        next.activeTabId = payload.id;
-                    }
-                    break;
+            // If we have a spec-defined action with a mutation expression, use it
+            if (actionDef?.mutation) {
+                applyMutation(next, actionDef.mutation, prev, payload);
+            } else {
+                // Fallback for common actions not in spec (focus/blur, change with payload)
+                switch (name) {
+                    case 'focus':
+                    case 'setFocused':
+                        next.focused = true;
+                        break;
+                    case 'blur':
+                    case 'clearFocused':
+                        next.focused = false;
+                        break;
+                    case 'change':
+                        if (payload?.value !== undefined) {
+                            next.value = payload.value;
+                        }
+                        break;
+                    case 'select':
+                        // Select with payload - used by select, tabs
+                        if (payload?.id !== undefined) next.selectedId = payload.id;
+                        if (payload?.value !== undefined) next.selectedValue = payload.value;
+                        break;
+                    case 'setValue':
+                        if (payload?.value !== undefined) {
+                            next.value = Math.max(prev.min ?? 0, Math.min(prev.max ?? 100, payload.value));
+                        }
+                        break;
+                }
             }
+
             return next;
         });
     };
+
+    /**
+     * Apply a mutation expression to context.
+     * Supports expressions like:
+     *   - "context.open = true"
+     *   - "context.checked = !context.checked"
+     *   - "context.value = context.value + context.step"
+     */
+    const applyMutation = (
+        ctx: Record<string, any>,
+        mutation: string,
+        prev: Record<string, any>,
+        payload?: any
+    ) => {
+        // Parse "context.key = expression" format
+        const match = mutation.match(/^context\.(\w+)\s*=\s*(.+)$/);
+        if (!match) return;
+
+        const [, key, expr] = match;
+
+        // Evaluate the expression
+        const value = evaluateExpression(expr.trim(), prev, payload);
+        ctx[key] = value;
+    };
+
+    /**
+     * Evaluate a simple expression used in mutation strings.
+     * Supports: true, false, numbers, !context.x, context.x, context.x + context.y
+     */
+    const evaluateExpression = (expr: string, ctx: Record<string, any>, payload?: any): any => {
+        // Boolean literals
+        if (expr === 'true') return true;
+        if (expr === 'false') return false;
+
+        // Number literals
+        if (/^-?\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
+
+        // Negation: !context.key
+        if (expr.startsWith('!context.')) {
+            const key = expr.slice(9); // "!context.".length = 9
+            return !ctx[key];
+        }
+
+        // Simple reference: context.key
+        if (expr.startsWith('context.')) {
+            const key = expr.slice(8); // "context.".length = 8
+            return ctx[key];
+        }
+
+        // Addition/subtraction: context.value + context.step, context.value - 1
+        const addMatch = expr.match(/^context\.(\w+)\s*\+\s*(.+)$/);
+        if (addMatch) {
+            const [, key, rightExpr] = addMatch;
+            const left = ctx[key] ?? 0;
+            const right = evaluateExpression(rightExpr.trim(), ctx, payload);
+            return left + right;
+        }
+
+        const subMatch = expr.match(/^context\.(\w+)\s*-\s*(.+)$/);
+        if (subMatch) {
+            const [, key, rightExpr] = subMatch;
+            const left = ctx[key] ?? 0;
+            const right = evaluateExpression(rightExpr.trim(), ctx, payload);
+            return left - right;
+        }
+
+        // Default: return the expression as-is (string)
+        return expr;
+    };
+
 
     return (
         <div style={{
