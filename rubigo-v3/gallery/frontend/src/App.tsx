@@ -113,6 +113,10 @@ const App: Component = () => {
                 case 'click':
                 case 'press':
                     next.pressed = true;
+                    // Auto-release after 150ms to simulate real button click
+                    setTimeout(() => {
+                        setContext(c => ({ ...c, pressed: false }));
+                    }, 150);
                     break;
                 case 'release':
                     next.pressed = false;
