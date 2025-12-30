@@ -10,6 +10,7 @@ pub struct Machine {
     pub id: String,
     pub context: serde_json::Value,
     regions: Vec<Region>,
+    #[allow(dead_code)] // Kept for future native action execution
     actions: HashMap<String, ActionConfig>,
 }
 
@@ -82,6 +83,7 @@ impl Machine {
     }
 
     /// Execute an action's mutation on the context
+    #[allow(dead_code)] // Kept for future native action execution
     fn execute_action(&mut self, action_name: &str) {
         if let Some(action) = self.actions.get(action_name) {
             // Parse simple mutations like "context.field = value"
@@ -111,6 +113,7 @@ impl Machine {
     }
 
     /// Parse field name from "context.field = !context.field"
+    #[allow(dead_code)]
     fn parse_toggle_field(&self, mutation: &str) -> Option<String> {
         // Extract field from "context.checked = !context.checked"
         let parts: Vec<&str> = mutation.split('=').collect();
@@ -124,6 +127,7 @@ impl Machine {
     }
 
     /// Parse field name from "context.field = true" or "context.field = false"
+    #[allow(dead_code)]
     fn parse_assign_field(&self, mutation: &str) -> Option<String> {
         self.parse_toggle_field(mutation)
     }
