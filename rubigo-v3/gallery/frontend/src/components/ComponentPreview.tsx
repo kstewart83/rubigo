@@ -175,6 +175,49 @@ export const ComponentPreview: Component<Props> = (props) => {
                         WASM
                     </button>
                 </div>
+            ) : props.spec?.name?.toLowerCase().includes('collapsible') ? (
+                <div style={{
+                    width: '100%',
+                    'max-width': '300px',
+                    border: '1px solid var(--border)',
+                    'border-radius': '8px',
+                    overflow: 'hidden'
+                }}>
+                    <button
+                        onClick={() => !props.context.disabled && props.onAction('toggle', {})}
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            background: 'var(--bg-secondary)',
+                            border: 'none',
+                            display: 'flex',
+                            'align-items': 'center',
+                            'justify-content': 'space-between',
+                            cursor: props.context.disabled ? 'not-allowed' : 'pointer',
+                            opacity: props.context.disabled ? 0.5 : 1,
+                            color: 'var(--text-primary)',
+                            'font-size': '14px',
+                            'font-weight': '500'
+                        }}
+                    >
+                        <span>Click to {props.context.open ? 'Collapse' : 'Expand'}</span>
+                        <span style={{
+                            transform: props.context.open ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s'
+                        }}>▼</span>
+                    </button>
+                    <div style={{
+                        'max-height': props.context.open ? '200px' : '0',
+                        overflow: 'hidden',
+                        transition: 'max-height 0.2s ease-out',
+                        background: 'var(--bg-primary)'
+                    }}>
+                        <div style={{ padding: '16px', color: 'var(--text-secondary)', 'font-size': '13px' }}>
+                            This is the collapsible content panel. It expands and collapses
+                            with smooth animation when the trigger is clicked.
+                        </div>
+                    </div>
+                </div>
             ) : (
                 <div style={{ color: 'var(--text-secondary)' }}>
                     No preview available for {props.spec?.name}
