@@ -212,6 +212,10 @@ mod tests {
     fn validate_primitive_passes_with_all_sections() {
         let content = r#"
 # Button
+## Component API
+```typescript
+interface ButtonProps {}
+```
 ## Context Schema
 ```cue
 {}

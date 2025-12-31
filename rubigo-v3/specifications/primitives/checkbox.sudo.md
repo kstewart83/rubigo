@@ -262,12 +262,12 @@ guards: {
 actions: {
     setChecked: {
         description: "Set to checked state"
-        mutation:    "context.checked = true; context.indeterminate?: bool | default: false"
+        mutation:    "context.checked = true; context.indeterminate = false"
         emits:       ["onChange"]
     }
     setUnchecked: {
         description: "Set to unchecked state"
-        mutation:    "context.checked?: bool | default: false; context.indeterminate?: bool | default: false"
+        mutation:    "context.checked = false; context.indeterminate = false"
         emits:       ["onChange"]
     }
     setIndeterminate: {
