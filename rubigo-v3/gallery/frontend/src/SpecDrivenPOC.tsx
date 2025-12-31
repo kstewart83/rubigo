@@ -217,7 +217,11 @@ const SpecDrivenPOC: Component = () => {
     // Build component props dynamically
     const componentProps = () => {
         const props: Record<string, unknown> = { ...propValues() };
-        props.onChange = (checked: boolean) => logEvent(`onChange fired: checked=${checked}`);
+        props.onChange = (checked: boolean) => {
+            // Two-way binding: sync component state back to controls
+            updateProp('checked', checked);
+            logEvent(`onChange fired: checked=${checked}`);
+        };
         return props;
     };
 
