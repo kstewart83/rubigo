@@ -30,12 +30,14 @@ macro_rules! warn {
 // Import types and functions from rubigo-build library
 use rubigo_build::{
     cross_reference_events,
+    extract_component_api_typescript,
     extract_cue_blocks,
     extract_cue_version,
     extract_quint_block,
     extract_test_vectors,
     // Interactions
     generate_interactions_manifest,
+    generate_types_file,
     // Vectors
     generate_unified_vectors,
     // Extraction
@@ -200,6 +202,17 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
                 "Failed to generate unified vectors for {}: {}",
                 spec_name, e
             );
+        }
+    }
+
+    // Extract and generate TypeScript types from Component API section
+    if let Some(typescript) = extract_component_api_typescript(&content) {
+        let types_content = generate_types_file(spec_name, &typescript);
+        let types_path = generated_dir.join(format!("{}.types.ts", spec_name));
+        if let Err(e) = fs::write(&types_path, types_content) {
+            warn!("Failed to write types file for {}: {}", spec_name, e);
+        } else {
+            info!("Generated TypeScript types: {}.types.ts", spec_name);
         }
     }
 

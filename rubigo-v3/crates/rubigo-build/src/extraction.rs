@@ -129,6 +129,44 @@ pub fn extract_test_vectors(content: &str) -> Option<String> {
     None
 }
 
+/// Extract TypeScript interface from ## Component API section
+/// Returns the content between ```typescript and ``` fences within that section
+pub fn extract_component_api_typescript(content: &str) -> Option<String> {
+    let mut in_api_section = false;
+    let mut in_ts_block = false;
+    let mut typescript = String::new();
+
+    for line in content.lines() {
+        if line.trim() == "## Component API" {
+            in_api_section = true;
+            continue;
+        }
+
+        // Exit Component API section when we hit the next ## header
+        if in_api_section && line.starts_with("## ") {
+            in_api_section = false;
+            continue;
+        }
+
+        if in_api_section && line.trim() == "```typescript" {
+            in_ts_block = true;
+            typescript.clear();
+            continue;
+        }
+
+        if in_api_section && in_ts_block && line.trim() == "```" {
+            return Some(typescript.trim().to_string());
+        }
+
+        if in_api_section && in_ts_block {
+            typescript.push_str(line);
+            typescript.push('\n');
+        }
+    }
+
+    None
+}
+
 /// Extract version number from cue version output
 /// "cue version v0.15.1" -> "0.15.1"
 pub fn extract_cue_version(output: &str) -> Option<String> {
@@ -137,6 +175,33 @@ pub fn extract_cue_version(output: &str) -> Option<String> {
         .next()
         .and_then(|line| line.split_whitespace().nth(2))
         .map(|v| v.trim_start_matches('v').to_string())
+}
+
+/// Generate a .types.ts file from the extracted Component API TypeScript
+/// Returns the file content ready to be written
+pub fn generate_types_file(component_name: &str, typescript_interface: &str) -> String {
+    format!(
+        r#"// Auto-generated from {}.sudo.md – do not edit
+// Framework-agnostic types; override Slot in your component
+
+type Slot = unknown;
+
+{}
+
+export type {{ {}Props }};
+"#,
+        component_name,
+        typescript_interface,
+        capitalize_first(component_name)
+    )
+}
+
+fn capitalize_first(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
 }
 
 #[cfg(test)]
