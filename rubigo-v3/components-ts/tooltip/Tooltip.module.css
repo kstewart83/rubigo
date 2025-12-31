@@ -1,0 +1,97 @@
+/**
+ * Tooltip Component Styles
+ */
+@import '../tokens/variables.css';
+
+.root {
+    position: relative;
+    display: inline-block;
+}
+
+.trigger {
+    display: inline-block;
+}
+
+.content {
+    position: absolute;
+    z-index: 1000;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: white;
+    background: rgba(17, 24, 39, 0.95);
+    border-radius: 4px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Positioning */
+.top {
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.bottom {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.left {
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.right {
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Arrow */
+.arrow {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(17, 24, 39, 0.95);
+    transform: rotate(45deg);
+}
+
+.arrowTop {
+    bottom: -4px;
+    left: 50%;
+    margin-left: -4px;
+}
+
+.arrowBottom {
+    top: -4px;
+    left: 50%;
+    margin-left: -4px;
+}
+
+.arrowLeft {
+    right: -4px;
+    top: 50%;
+    margin-top: -4px;
+}
+
+.arrowRight {
+    left: -4px;
+    top: 50%;
+    margin-top: -4px;
+}
