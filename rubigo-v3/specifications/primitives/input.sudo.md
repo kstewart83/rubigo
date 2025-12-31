@@ -54,6 +54,21 @@ Placeholder:
 
 ---
 
+## Component API
+
+```sudolang
+interface Input {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

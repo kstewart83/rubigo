@@ -73,6 +73,21 @@ Responsive:
 
 ---
 
+## Component API
+
+```sudolang
+interface Dialog {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

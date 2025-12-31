@@ -55,6 +55,23 @@ Usage Guidance:
     - Actions (use Button)
 ```
 
+## Component API
+
+```sudolang
+interface Checkbox {
+  // State inputs
+  checked = false
+  disabled = false
+  indeterminate = false
+  
+  // Callbacks
+  onChange: (checked: boolean) => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

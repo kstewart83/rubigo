@@ -77,6 +77,28 @@ Transition:
 
 ---
 
+## Component API
+
+```sudolang
+interface Button {
+  // State inputs
+  disabled = false
+  loading = false
+  
+  // Styling
+  variant: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "link" = "primary"
+  size: "sm" | "md" | "lg" | "icon" = "md"
+  
+  // Callbacks
+  onClick: () => void
+  
+  // Content
+  children: slot
+}
+```
+
+---
+
 ## Formal Model
 
 ```quint

@@ -6,7 +6,17 @@
 pub const SPEC_SUFFIX: &str = ".sudo.md";
 
 /// Required sections for primitive specs (full statechart)
-pub const PRIMITIVE_SECTIONS: &[&str] = &["Context Schema", "State Machine", "Guards", "Actions"];
+pub const PRIMITIVE_SECTIONS: &[&str] = &[
+    "Component API",
+    "Context Schema",
+    "State Machine",
+    "Guards",
+    "Actions",
+];
+
+/// Primitive sections that require CUE syntax (excludes Sudolang sections)
+pub const PRIMITIVE_CUE_SECTIONS: &[&str] =
+    &["Context Schema", "State Machine", "Guards", "Actions"];
 
 /// Required sections for compound specs (orchestration + imports)
 pub const COMPOUND_SECTIONS: &[&str] = &["Composition", "Context Schema"];
@@ -44,10 +54,10 @@ impl SpecType {
     /// Get sections that require ```cue blocks (excludes presentational sections)
     pub fn sections_requiring_cue(&self) -> &'static [&'static str] {
         match self {
-            SpecType::Primitive => PRIMITIVE_SECTIONS, // All require cue
-            SpecType::Compound => &["Context Schema"], // Only Context Schema needs cue
-            SpecType::Presentational => &[],           // Design Guidelines uses sudolang
-            SpecType::Schema => SCHEMA_SECTIONS,       // Context Schema needs cue
+            SpecType::Primitive => PRIMITIVE_CUE_SECTIONS, // Component API uses sudolang, not cue
+            SpecType::Compound => &["Context Schema"],     // Only Context Schema needs cue
+            SpecType::Presentational => &[],               // Design Guidelines uses sudolang
+            SpecType::Schema => SCHEMA_SECTIONS,           // Context Schema needs cue
         }
     }
 

@@ -81,6 +81,43 @@ Usage Guidance:
 
 ---
 
+## Component API
+
+Defines the public interface for component consumers. Uses Sudolang `interface` syntax.
+
+**Categories:**
+- **State inputs**: Props that control component state (e.g., `disabled`, `loading`)
+- **Styling**: Visual customization (e.g., `variant`, `size`)
+- **Callbacks**: Event handlers (e.g., `onClick`, `onChange`)
+- **Content**: Slots for children/content (e.g., `children`)
+
+**Conventions:**
+- Use `=` for default values
+- Use `|` for union types (enums)
+- Use `() => void` for callback signatures
+- Use `slot` for content slots
+
+```sudolang
+// TEMPLATE: Replace with your component's API
+
+interface Template {
+  // State inputs (control internal context)
+  enabled = true
+  
+  // Styling
+  variant: "default" | "alt" = "default"
+  size: "sm" | "md" | "lg" = "md"
+  
+  // Callbacks
+  onChange: (value: string) => void
+  
+  // Content
+  children: slot
+}
+```
+
+---
+
 ## Formal Model
 
 Use Quint for verifiable behavior specification and invariants.

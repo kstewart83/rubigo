@@ -75,6 +75,21 @@ Orientation:
 
 ---
 
+## Component API
+
+```sudolang
+interface Slider {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

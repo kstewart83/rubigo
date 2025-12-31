@@ -76,6 +76,21 @@ Timing:
 
 ---
 
+## Component API
+
+```sudolang
+interface Tooltip {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

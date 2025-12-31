@@ -72,6 +72,22 @@ Visual States:
   Error: Red border if validation context requires
 ```
 
+## Component API
+
+```sudolang
+interface Switch {
+  // State inputs
+  checked = false
+  disabled = false
+  
+  // Callbacks
+  onCheckedChange: (checked: boolean) => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

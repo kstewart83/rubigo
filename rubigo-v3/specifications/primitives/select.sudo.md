@@ -76,6 +76,21 @@ Animation:
 
 ---
 
+## Component API
+
+```sudolang
+interface Select {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint
