@@ -62,24 +62,24 @@ describe('Switch', () => {
             expect(switchEl.getAttribute('aria-checked')).toBe('true');
         });
 
-        it('calls onChange with new value', async () => {
-            const onChange = vi.fn();
-            const { getByRole } = render(() => <Switch onChange={onChange} />);
+        it('calls onCheckedChange with new value', async () => {
+            const onCheckedChange = vi.fn();
+            const { getByRole } = render(() => <Switch onCheckedChange={onCheckedChange} />);
             const switchEl = getByRole('switch');
 
             await fireEvent.click(switchEl);
 
-            expect(onChange).toHaveBeenCalledWith(true);
+            expect(onCheckedChange).toHaveBeenCalledWith(true);
         });
 
-        it('calls onChange with false when toggling off', async () => {
-            const onChange = vi.fn();
-            const { getByRole } = render(() => <Switch checked={true} onChange={onChange} />);
+        it('calls onCheckedChange with false when toggling off', async () => {
+            const onCheckedChange = vi.fn();
+            const { getByRole } = render(() => <Switch checked={true} onCheckedChange={onCheckedChange} />);
             const switchEl = getByRole('switch');
 
             await fireEvent.click(switchEl);
 
-            expect(onChange).toHaveBeenCalledWith(false);
+            expect(onCheckedChange).toHaveBeenCalledWith(false);
         });
     });
 
@@ -100,13 +100,13 @@ describe('Switch', () => {
         });
 
         it('does not toggle when disabled', async () => {
-            const onChange = vi.fn();
-            const { getByRole } = render(() => <Switch disabled={true} onChange={onChange} />);
+            const onCheckedChange = vi.fn();
+            const { getByRole } = render(() => <Switch disabled={true} onCheckedChange={onCheckedChange} />);
             const switchEl = getByRole('switch');
 
             await fireEvent.click(switchEl);
 
-            expect(onChange).not.toHaveBeenCalled();
+            expect(onCheckedChange).not.toHaveBeenCalled();
             expect(switchEl.getAttribute('aria-checked')).toBe('false');
         });
     });
@@ -118,7 +118,7 @@ describe('Switch', () => {
             const { getByRole } = render(() => (
                 <Switch
                     checked={checked()}
-                    onChange={(newVal) => setChecked(newVal)}
+                    onCheckedChange={(newVal) => setChecked(newVal)}
                 />
             ));
             const switchEl = getByRole('switch');

@@ -21,7 +21,7 @@ export interface UseCheckboxReturn {
     indeterminate: () => boolean;
     state: () => string;
     toggle: () => void;
-    setChecked: (checked: boolean) => void;
+    setChecked: (checked?: boolean) => void;
     setUnchecked: () => void;
     setIndeterminate: (indeterminate: boolean) => void;
     /** Reset to initial state, optionally with context overrides */
@@ -110,12 +110,13 @@ export function useCheckbox(optionsInput: UseCheckboxOptions | (() => UseCheckbo
         }
     };
 
-    const setChecked = (checked: boolean) => {
-        const event = checked ? 'SET_CHECKED' : 'SET_UNCHECKED';
+    const setChecked = (checked?: boolean) => {
+        const targetChecked = checked ?? true;  // Default to true for testability
+        const event = targetChecked ? 'SET_CHECKED' : 'SET_UNCHECKED';
         const result = machine.send(event);
         if (result.handled) {
             bump();
-            options.onChange?.(machine.getContext().checked);
+            getOptions().onChange?.(machine.getContext().checked);
         }
     };
 

@@ -32,8 +32,9 @@ pub use interactions::{
 };
 pub use quint::{cross_reference_events, generate_itf_trace, write_quint_file};
 pub use testgen::{
-    extract_aria_mapping, generate_component_tests, generate_hook_tests, generate_keyboard_tests,
-    parse_keyboard_interactions, AriaMapping, KeyboardMapping,
+    extract_aria_mapping, extract_emit_mappings, generate_component_tests, generate_emit_tests,
+    generate_hook_tests, generate_keyboard_tests, parse_keyboard_interactions, AriaMapping,
+    EmitMapping, KeyboardMapping,
 };
 pub use types::{SpecMeta, SpecType, SPEC_SUFFIX};
 pub use validation::{validate_quint_model, validate_spec_structure};

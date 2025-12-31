@@ -14,6 +14,8 @@ export interface UseTooltipReturn {
     disabled: Accessor<boolean>;
     show: () => void;
     hide: () => void;
+    /** Spec-compliant: alias for show */
+    setOpen: () => void;
     rootProps: () => {
         'aria-hidden': boolean;
         onKeyDown: (e: KeyboardEvent) => void;
@@ -67,13 +69,13 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
         if (disabled()) return;
         clearTimeouts();
         setOpen(true);
-        options.onOpenChange?.(true);
+        getOptions().onOpenChange?.(true);
     };
 
     const hide = () => {
         clearTimeouts();
         setOpen(false);
-        options.onOpenChange?.(false);
+        getOptions().onOpenChange?.(false);
     };
 
     const handleMouseEnter = () => {
@@ -81,7 +83,7 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
         clearTimeouts();
         openTimeout = setTimeout(() => {
             setOpen(true);
-            options.onOpenChange?.(true);
+            getOptions().onOpenChange?.(true);
         }, delayDuration);
     };
 
@@ -89,7 +91,7 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
         clearTimeouts();
         closeTimeout = setTimeout(() => {
             setOpen(false);
-            options.onOpenChange?.(false);
+            getOptions().onOpenChange?.(false);
         }, 100);
     };
 
@@ -133,6 +135,7 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
         disabled,
         show,
         hide,
+        setOpen: show,  // Spec-compliant alias
         rootProps,
         triggerProps,
         contentProps,
