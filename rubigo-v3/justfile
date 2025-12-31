@@ -289,10 +289,11 @@ build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-o
 
 # === Testing ===
 
-# TypeScript tests
+# TypeScript tests (conformance + component tests)
 ts-test:
     rm -rf components-ts/dist
     cd components-ts && bun test
+    cd components-ts && npx vitest run --passWithNoTests
 
 ts-conformance:
     #!/usr/bin/env bash
