@@ -291,8 +291,13 @@ build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-o
 
 # TypeScript tests (conformance + component tests)
 ts-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
     rm -rf components-ts/dist
+    # Run both Bun conformance tests and Vitest component tests
+    echo "🧪 Running Bun conformance tests..."
     cd components-ts && bun test
+    echo "🧪 Running Vitest component tests..."
     cd components-ts && npx vitest run --passWithNoTests
 
 ts-conformance:
