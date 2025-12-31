@@ -27,6 +27,13 @@ export interface UseSliderReturn {
     decrement: () => void;
     setMin: () => void;
     setMax: () => void;
+    rootProps: () => {
+        'aria-disabled': boolean | undefined;
+        'aria-valuemin': number;
+        'aria-valuemax': number;
+        'aria-valuenow': number;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     trackProps: () => {
         onMouseDown: (e: MouseEvent) => void;
     };

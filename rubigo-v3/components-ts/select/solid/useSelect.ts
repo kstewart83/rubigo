@@ -18,6 +18,7 @@ export interface UseSelectReturn {
     disabled: Accessor<boolean>;
     openDropdown: () => void;
     closeDropdown: () => void;
+    close: () => void;
     toggleDropdown: () => void;
     selectValue: (value: string) => void;
     highlightValue: (value: string) => void;
@@ -26,13 +27,18 @@ export interface UseSelectReturn {
     highlightFirst: () => void;
     highlightLast: () => void;
     registerOption: (value: string) => void;
+    rootProps: () => {
+        'aria-disabled': boolean | undefined;
+        'aria-expanded': boolean;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     triggerProps: () => {
         role: 'combobox';
         'aria-haspopup': 'listbox';
         'aria-expanded': boolean;
         'aria-disabled': boolean | undefined;
         tabIndex: number;
-        onClick: () => void;
+        onClick: (e?: MouseEvent) => void;
         onKeyDown: (e: KeyboardEvent) => void;
     };
     listboxProps: () => {
@@ -221,8 +227,8 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
         'aria-expanded': open(),
         'aria-disabled': disabled() || undefined,
         tabIndex: disabled() ? -1 : 0,
-        onClick: (e: MouseEvent) => {
-            e.stopPropagation();
+        onClick: (e?: MouseEvent) => {
+            e?.stopPropagation();
             toggleDropdown();
         },
         onKeyDown: handleKeyDown,
