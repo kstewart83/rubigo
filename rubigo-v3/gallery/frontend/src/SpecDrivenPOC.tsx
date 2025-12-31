@@ -107,21 +107,52 @@ const SpecDrivenPOC: Component = () => {
     };
 
     return (
-        <div style={{ padding: '40px', 'font-family': 'system-ui, sans-serif' }}>
-            <h2 style={{ 'margin-bottom': '20px' }}>
+        <div style={{
+            padding: '40px',
+            'font-family': 'system-ui, sans-serif',
+            'min-height': '100vh',
+            'color-scheme': 'light dark',
+            background: 'var(--bg, #fff)',
+            color: 'var(--text, #1f2937)'
+        }}>
+            <style>{`
+                :root {
+                    --bg: #fff;
+                    --bg-panel: #f9f9f9;
+                    --bg-code: #f0f0f0;
+                    --border: #ddd;
+                    --text: #1f2937;
+                    --text-muted: #666;
+                    --input-bg: #fff;
+                    --input-border: #ccc;
+                }
+                @media (prefers-color-scheme: dark) {
+                    :root {
+                        --bg: #1a1a1a;
+                        --bg-panel: #2a2a2a;
+                        --bg-code: #333;
+                        --border: #444;
+                        --text: #e5e5e5;
+                        --text-muted: #999;
+                        --input-bg: #333;
+                        --input-border: #555;
+                    }
+                }
+            `}</style>
+            <h2 style={{ 'margin-bottom': '20px', color: 'var(--text)' }}>
                 Spec-Driven Controls: {buttonMeta.component}
             </h2>
 
             {/* Control Panel */}
             <div style={{
                 padding: '20px',
-                border: '1px solid #ddd',
+                border: '1px solid var(--border)',
                 'border-radius': '8px',
                 'margin-bottom': '30px',
-                'background': '#f9f9f9'
+                'background': 'var(--bg-panel)'
             }}>
                 <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '16px' }}>
-                    <h3 style={{ margin: '0', 'font-size': '14px', color: '#666' }}>
+                    <h3 style={{ margin: '0', 'font-size': '14px', color: 'var(--text-muted)' }}>
                         Controls (from {buttonMeta.interface})
                     </h3>
                     <button
@@ -129,10 +160,11 @@ const SpecDrivenPOC: Component = () => {
                         style={{
                             padding: '4px 12px',
                             'font-size': '12px',
-                            background: '#f0f0f0',
-                            border: '1px solid #ccc',
+                            background: 'var(--bg-code)',
+                            border: '1px solid var(--input-border)',
                             'border-radius': '4px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            color: 'var(--text)'
                         }}
                     >
                         Reset to Defaults
@@ -147,9 +179,9 @@ const SpecDrivenPOC: Component = () => {
                             type="text"
                             value={childrenText()}
                             onInput={(e) => setChildrenText(e.target.value)}
-                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid #ccc' }}
+                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                         />
-                        <span style={{ color: '#666', 'font-size': '12px' }}>(Button label content)</span>
+                        <span style={{ color: 'var(--text-muted)', 'font-size': '12px' }}>(Button label content)</span>
                     </label>
 
                     {/* Dynamic controls from metadata */}
@@ -162,13 +194,13 @@ const SpecDrivenPOC: Component = () => {
             {/* Preview */}
             <div style={{
                 padding: '40px',
-                border: '1px solid #ddd',
+                border: '1px solid var(--border)',
                 'border-radius': '8px',
                 display: 'flex',
                 'justify-content': 'center',
                 'align-items': 'center',
                 'min-height': '100px',
-                'background': '#fff'
+                'background': 'var(--bg-panel)'
             }}>
                 <Button {...buttonProps()}>
                     {childrenText()}
@@ -184,10 +216,10 @@ const SpecDrivenPOC: Component = () => {
             }}>
                 <div>
                     <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '8px' }}>
-                        <h4 style={{ margin: '0', 'font-size': '12px', color: '#666' }}>Event Log</h4>
+                        <h4 style={{ margin: '0', 'font-size': '12px', color: 'var(--text-muted)' }}>Event Log</h4>
                         <button
                             onClick={() => setEventLog([])}
-                            style={{ padding: '2px 8px', 'font-size': '10px', background: '#f0f0f0', border: '1px solid #ccc', 'border-radius': '3px', cursor: 'pointer' }}
+                            style={{ padding: '2px 8px', 'font-size': '10px', background: 'var(--bg-code)', border: '1px solid var(--input-border)', 'border-radius': '3px', cursor: 'pointer', color: 'var(--text)' }}
                         >
                             Clear
                         </button>
@@ -209,15 +241,16 @@ const SpecDrivenPOC: Component = () => {
                     </div>
                 </div>
                 <div>
-                    <h4 style={{ margin: '0 0 8px 0', 'font-size': '12px', color: '#666' }}>Current Props</h4>
+                    <h4 style={{ margin: '0 0 8px 0', 'font-size': '12px', color: 'var(--text-muted)' }}>Current Props</h4>
                     <pre style={{
                         height: '120px',
                         'overflow-y': 'auto',
                         margin: '0',
                         padding: '8px',
-                        'background': '#f0f0f0',
+                        'background': 'var(--bg-code)',
                         'border-radius': '4px',
-                        'font-size': '11px'
+                        'font-size': '11px',
+                        color: 'var(--text)'
                     }}>
                         {JSON.stringify({ children: childrenText(), ...propValues() }, null, 2)}
                     </pre>
