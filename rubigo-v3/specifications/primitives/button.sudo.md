@@ -20,7 +20,7 @@ disabled states to prevent interaction, and pressed states for toggle-button beh
 
 ## Requirements
 
-```sudolang
+```typescript
 // Button Component Requirements
 
 The button triggers actions when activated by click, touch, or keyboard.
@@ -51,7 +51,7 @@ Error Handling:
 
 ## Design Guidelines
 
-```sudolang
+```typescript
 // Visual Design Guidelines
 
 Visual Variants (styling concern, not state machine):
@@ -79,18 +79,25 @@ Transition:
 
 ## Component API
 
-```cue
-api: {
-    // State inputs
-    disabled?: bool | default: false
-    loading?: bool | default: false
-    
-    // Styling
-    variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "link" | default: "primary"
-    size?: "sm" | "md" | "lg" | "icon" | default: "md"
-    
-    // Callbacks
-    onClick?: "callback"
+```typescript
+interface ButtonProps {
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
+  
+  /** Shows loading state and blocks interaction */
+  loading?: boolean;   // default: false
+  
+  /** Visual style variant */
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "link";  // default: "primary"
+  
+  /** Size of the button */
+  size?: "sm" | "md" | "lg" | "icon";  // default: "md"
+  
+  /** Called when button is activated */
+  onClick?: () => void;
+  
+  /** Button label content */
+  children: Slot;
 }
 ```
 
@@ -422,7 +429,7 @@ actions: {
 
 ## Accessibility
 
-```sudolang
+```typescript
 // Button Accessibility Requirements
 
 Role: button (native <button> element preferred)

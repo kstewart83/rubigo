@@ -20,7 +20,7 @@ between them. Only one panel is visible at a time.
 
 ## Requirements
 
-```cue
+```sudolang
 // Tabs Component Requirements
 
 A tabbed interface enables switching between content panels.
@@ -51,7 +51,7 @@ Focus Management:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 // Visual Design Guidelines
 
 Layout:
@@ -73,15 +73,19 @@ Transitions:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface TabsProps {
+  /** Currently active tab */
+  value?: string;
   
-  // Callbacks
-  onChange?: "callback"
+  /** Default active tab */
+  defaultValue?: string;
   
-  // Content
+  /** Called when active tab changes */
+  onValueChange?: (value: string) => void;
+  
+  /** Tab items */
+  children: Slot;
 }
 ```
 
@@ -332,7 +336,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 // Tabs Accessibility Requirements
 
 ARIA Roles:

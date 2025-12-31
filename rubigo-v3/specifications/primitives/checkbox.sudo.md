@@ -9,7 +9,7 @@ A primitive checkbox component that supports three states: unchecked, checked, a
 
 ## Requirements
 
-```cue
+```sudolang
 The checkbox enables binary or tri-state selection.
 Users toggle via click, touch, or keyboard.
 
@@ -33,7 +33,7 @@ Visual States:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 Visual Design:
   Touch target: minimum 44x44px (24px visible box)
   Transition: 150ms ease-out for state changes
@@ -57,17 +57,22 @@ Usage Guidance:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  checked?: bool | default: false
-  disabled?: bool | default: false
-  indeterminate?: bool | default: false
+```typescript
+interface CheckboxProps {
+  /** Current checked state */
+  checked?: boolean;  // default: false
   
-  // Callbacks
-  onChange?: "callback"
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
   
-  // Content
+  /** Indeterminate state (neither checked nor unchecked) */
+  indeterminate?: boolean;  // default: false
+  
+  /** Called when checked state changes */
+  onChange?: (checked: boolean) => void;
+  
+  /** Checkbox label content */
+  children?: Slot;
 }
 ```
 
@@ -275,7 +280,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: checkbox
 ARIA attributes:
   - aria-checked: "true" | "false" | "mixed" (for indeterminate)

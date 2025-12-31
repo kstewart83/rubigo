@@ -9,7 +9,7 @@ A text input field for user text entry with focus, typing, and validation states
 
 ## Requirements
 
-```cue
+```sudolang
 // Input primitive requirements
 
 The input provides single-line text entry.
@@ -35,7 +35,7 @@ Error Handling:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 Visual Design:
   Touch target: minimum 44px height
   Border: visible focus ring on keyboard focus
@@ -56,15 +56,19 @@ Placeholder:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface InputProps {
+  /** Current value */
+  value?: string;  // default: ""
   
-  // Callbacks
-  onChange?: "callback"
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
   
-  // Content
+  /** Placeholder text */
+  placeholder?: string;
+  
+  /** Called when value changes */
+  onChange?: (value: string) => void;
 }
 ```
 
@@ -260,7 +264,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: textbox
 ARIA attributes:
   - aria-disabled: reflects context.disabled

@@ -19,7 +19,7 @@ A Slider allows users to select a numeric value within a range by dragging a thu
 
 ## Requirements
 
-```cue
+```sudolang
 // Slider provides continuous or stepped value selection.
 // Supports mouse drag and keyboard control.
 
@@ -48,7 +48,7 @@ Keyboard Interaction:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 // Visual Design Guidelines
 
 Track:
@@ -77,15 +77,25 @@ Orientation:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface SliderProps {
+  /** Current value */
+  value?: number;  // default: 0
   
-  // Callbacks
-  onChange?: "callback"
+  /** Minimum value */
+  min?: number;  // default: 0
   
-  // Content
+  /** Maximum value */
+  max?: number;  // default: 100
+  
+  /** Step increment */
+  step?: number;  // default: 1
+  
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
+  
+  /** Called when value changes */
+  onValueChange?: (value: number) => void;
 }
 ```
 
@@ -420,7 +430,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: slider
 ARIA attributes:
   Thumb:

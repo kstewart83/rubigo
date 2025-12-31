@@ -10,7 +10,7 @@ navigation, focus management, and accessibility attributes.
 
 ## Requirements
 
-```cue
+```sudolang
 The switch represents a binary on/off control.
 Users can toggle via click, touch, or keyboard.
 
@@ -32,7 +32,7 @@ Error Handling:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 Visual Design:
   Touch target: minimum 44x44px (iOS/WCAG), 48dp (Android)
   Transition: 200ms ease-out for state changes
@@ -74,16 +74,16 @@ Visual States:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  checked?: bool | default: false
-  disabled?: bool | default: false
+```typescript
+interface SwitchProps {
+  /** Current checked state */
+  checked?: boolean;  // default: false
   
-  // Callbacks
-  onCheckedChange?: "callback"
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
   
-  // Content
+  /** Called when checked state changes */
+  onCheckedChange?: (checked: boolean) => void;
 }
 ```
 
@@ -298,7 +298,7 @@ events: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: switch
 ARIA attributes:
   - aria-checked: reflects context.checked
