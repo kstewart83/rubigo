@@ -119,11 +119,17 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
         id,
     });
 
+    const rootProps = () => ({
+        'aria-hidden': !open(),
+        onKeyDown: handleKeyDown,
+    });
+
     return {
         open,
         disabled,
         show,
         hide,
+        rootProps,
         triggerProps,
         contentProps,
     };

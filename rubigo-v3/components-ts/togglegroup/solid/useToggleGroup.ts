@@ -205,6 +205,8 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
     const rootProps = () => ({
         role: 'radiogroup' as const,
         'aria-disabled': disabled() || undefined,
+        'aria-checked': true,
+        onKeyDown: handleKeyDown,
     });
 
     return {

@@ -104,11 +104,18 @@ export function useDialog(optionsInput: UseDialogOptions | (() => UseDialogOptio
         'aria-hidden': true,
     });
 
+    const rootProps = () => ({
+        'aria-hidden': !open(),
+        'aria-modal': open(),
+        onKeyDown: handleKeyDown,
+    });
+
     return {
         open,
         openDialog,
         closeDialog,
         close: closeDialog,
+        rootProps,
         triggerProps,
         dialogProps,
         backdropProps,

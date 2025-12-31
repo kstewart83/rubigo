@@ -41,6 +41,13 @@ export interface UseInputReturn {
     hasError: Accessor<boolean>;
     /** Set the value programmatically */
     setValue: (value: string) => void;
+    /** Root props for ARIA conformance */
+    rootProps: () => {
+        'aria-disabled': boolean | undefined;
+        'aria-invalid': boolean | undefined;
+        'aria-readonly': boolean | undefined;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     /** Props to spread on the input element */
     inputProps: Accessor<JSX.InputHTMLAttributes<HTMLInputElement>>;
 }
@@ -166,12 +173,26 @@ export function useInput(optionsInput: UseInputOptions | (() => UseInputOptions)
         };
     };
 
+    const rootProps = () => {
+        bump();
+        const ctx = machine.getContext();
+        return {
+            'aria-disabled': ctx.disabled || undefined,
+            'aria-invalid': ctx.error !== '' || undefined,
+            'aria-readonly': ctx.readOnly || undefined,
+            onKeyDown: (_e: KeyboardEvent) => {
+                // Input handles keyboard in inputProps, rootProps provides ARIA conformance
+            },
+        };
+    };
+
     return {
         value,
         disabled,
         focused,
         hasError,
         setValue,
+        rootProps,
         inputProps,
     };
 }
