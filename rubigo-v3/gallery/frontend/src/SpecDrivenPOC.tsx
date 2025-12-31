@@ -7,13 +7,16 @@
 import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 'solid-js';
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
+import { Switch } from '@rubigo/components/switch';
 import buttonMeta from '@generated/button.meta.json';
 import checkboxMeta from '@generated/checkbox.meta.json';
+import switchMeta from '@generated/switch.meta.json';
 
 // Available components registry
 const COMPONENTS = {
     button: { meta: buttonMeta, component: Button, defaultChildren: 'Click Me' },
     checkbox: { meta: checkboxMeta, component: Checkbox, defaultChildren: 'Accept Terms' },
+    switch: { meta: switchMeta, component: Switch, defaultChildren: 'Dark Mode' },
 } as const;
 
 type ComponentKey = keyof typeof COMPONENTS;
@@ -166,7 +169,7 @@ const SpecDrivenPOC: Component = () => {
     };
 
     const [propValues, setPropValues] = createSignal<Record<string, unknown>>(getInitialProps(getMeta()));
-    const [childrenText, setChildrenText] = createSignal(componentConfig().defaultChildren);
+    const [childrenText, setChildrenText] = createSignal<string>(componentConfig().defaultChildren);
     const [eventLog, setEventLog] = createSignal<string[]>([]);
 
     // Handle component switch
@@ -251,7 +254,7 @@ const SpecDrivenPOC: Component = () => {
         // Add appropriate callback based on component
         if (selectedComponent() === 'button') {
             props.onClick = () => logEvent('onClick fired');
-        } else if (selectedComponent() === 'checkbox') {
+        } else if (selectedComponent() === 'checkbox' || selectedComponent() === 'switch') {
             props.onChange = (checked: boolean) => {
                 updateProp('checked', checked);
                 logEvent(`onChange fired: checked=${checked}`);
