@@ -123,14 +123,7 @@ spec-gen: check-binaries
 
 # Validate all specs
 validate: check-binaries
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "🔍 Validating specs..."
-    for spec in specifications/*/*{{SPEC_SUFFIX}}; do
-        [ -f "$spec" ] || continue
-        echo "  Checking $spec..."
-    done
-    echo "✅ All specs valid"
+    ./scripts/validate-spec-types.sh
 
 # === Build ===
 

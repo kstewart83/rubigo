@@ -19,7 +19,7 @@ A Tooltip displays contextual information when users hover over or focus on a tr
 
 ## Requirements
 
-```cue
+```sudolang
 // Tooltip provides contextual help on hover or focus.
 // Opens after a delay and closes when interaction ends.
 
@@ -49,7 +49,7 @@ Positioning:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 // Visual Design Guidelines
 
 Appearance:
@@ -78,15 +78,16 @@ Timing:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface TooltipProps {
+  /** Tooltip content */
+  content: string | Slot;
   
-  // Callbacks
-  onChange?: "callback"
+  /** Delay before showing (ms) */
+  delayDuration?: number;  // default: 300
   
-  // Content
+  /** Trigger element */
+  children: Slot;
 }
 ```
 
@@ -348,7 +349,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: tooltip
 ARIA attributes:
   Trigger:

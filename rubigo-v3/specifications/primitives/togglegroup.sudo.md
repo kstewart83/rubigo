@@ -19,7 +19,7 @@ A Toggle Group is a set of toggle buttons where only one can be selected at a ti
 
 ## Requirements
 
-```cue
+```sudolang
 // Toggle Group provides exclusive selection from a set of options.
 // Like radio buttons, only one option can be selected at a time.
 
@@ -50,7 +50,7 @@ Error Handling:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 // Visual Design Guidelines
 
 Layout Variants:
@@ -78,15 +78,22 @@ Usage:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface ToggleGroupProps {
+  /** Currently selected value(s) */
+  value?: string | string[];
   
-  // Callbacks
-  onChange?: "callback"
+  /** Selection mode */
+  type?: "single" | "multiple";  // default: "single"
   
-  // Content
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
+  
+  /** Called when value changes */
+  onValueChange?: (value: string | string[]) => void;
+  
+  /** Toggle items */
+  children: Slot;
 }
 ```
 
@@ -385,7 +392,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: radiogroup (container), radio (items)
 ARIA attributes:
   Container:

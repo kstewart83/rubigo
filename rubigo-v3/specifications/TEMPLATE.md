@@ -83,30 +83,38 @@ Usage Guidance:
 
 ## Component API
 
-Defines the public interface for component consumers. Uses CUE syntax for parseability.
+Defines the public interface for component consumers. Uses TypeScript `interface` syntax for validation.
 
 **Categories:**
 - **State inputs**: Props that control component state (e.g., `disabled`, `loading`)
 - **Styling**: Visual customization (e.g., `variant`, `size`)
 - **Callbacks**: Event handlers (e.g., `onClick`, `onChange`)
+- **Content**: Slots for children/content (e.g., `children`)
 
 **Conventions:**
-- Use `?` suffix for optional props
-- Use `| default:` for default values
+- Use `?:` for optional props with `// default:` comment
 - Use `|` for union types (enums)
+- Use JSDoc `/** */` for descriptions
+- Use `Slot` for content slots (framework-agnostic)
 
-```cue
+```typescript
 // TEMPLATE: Replace with your component's API
-api: {
-    // State inputs
-    disabled?: bool | default: false
-    
-    // Styling
-    variant?: "default" | "alt" | default: "default"
-    size?: "sm" | "md" | "lg" | default: "md"
-    
-    // Callbacks
-    onChange?: "callback"
+
+interface TemplateProps {
+  /** Whether interactions are allowed */
+  enabled?: boolean;  // default: true
+  
+  /** Visual style variant */
+  variant?: "default" | "alt";  // default: "default"
+  
+  /** Component size */
+  size?: "sm" | "md" | "lg";  // default: "md"
+  
+  /** Called when value changes */
+  onChange?: (value: string) => void;
+  
+  /** Component content */
+  children: Slot;
 }
 ```
 

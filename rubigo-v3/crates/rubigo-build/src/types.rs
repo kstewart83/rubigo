@@ -15,13 +15,8 @@ pub const PRIMITIVE_SECTIONS: &[&str] = &[
 ];
 
 /// Primitive sections that require CUE syntax (excludes Sudolang sections)
-pub const PRIMITIVE_CUE_SECTIONS: &[&str] = &[
-    "Component API",
-    "Context Schema",
-    "State Machine",
-    "Guards",
-    "Actions",
-];
+pub const PRIMITIVE_CUE_SECTIONS: &[&str] =
+    &["Context Schema", "State Machine", "Guards", "Actions"];
 
 /// Required sections for compound specs (orchestration + imports)
 pub const COMPOUND_SECTIONS: &[&str] = &["Composition", "Context Schema"];

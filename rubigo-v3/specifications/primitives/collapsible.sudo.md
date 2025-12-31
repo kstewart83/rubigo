@@ -19,7 +19,7 @@ A Collapsible is a panel that can be expanded or collapsed to show or hide conte
 
 ## Requirements
 
-```cue
+```sudolang
 // Collapsible provides progressive disclosure of content.
 // Users can expand/collapse to show/hide associated content.
 
@@ -45,7 +45,7 @@ Screen Reader:
 
 ## Design Guidelines
 
-```cue
+```sudolang
 // Visual Design Guidelines
 
 Trigger Appearance:
@@ -71,15 +71,22 @@ Touch Targets:
 
 ## Component API
 
-```cue
-api: {
-  // State inputs
-  disabled?: bool | default: false
+```typescript
+interface CollapsibleProps {
+  /** Whether the collapsible is open */
+  open?: boolean;  // default: false
   
-  // Callbacks
-  onChange?: "callback"
+  /** Prevents interaction when true */
+  disabled?: boolean;  // default: false
   
-  // Content
+  /** Called when open state changes */
+  onOpenChange?: (open: boolean) => void;
+  
+  /** Trigger element */
+  trigger: Slot;
+  
+  /** Collapsible content */
+  children: Slot;
 }
 ```
 
@@ -266,7 +273,7 @@ actions: {
 
 ## Accessibility
 
-```cue
+```sudolang
 Role: button (trigger), region (content)
 ARIA attributes:
   Trigger:
