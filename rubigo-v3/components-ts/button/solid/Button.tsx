@@ -9,13 +9,10 @@ import type { Component, JSX } from 'solid-js';
 import { splitProps } from 'solid-js';
 import { useButton, type UseButtonOptions } from './useButton';
 import styles from '../Button.module.css';
+import type { ButtonProps as SpecButtonProps } from '@generated/button.types';
 
-// TODO: Import from generated/button.types.ts once tsconfig rootDir is updated
-// to include generated/ directory. Types are auto-generated from spec's Component API.
-// See: ../../../generated/button.types.ts
-export interface ButtonProps extends UseButtonOptions {
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
-    size?: 'sm' | 'md' | 'lg' | 'icon';
+// Extend spec-derived types with framework-specific overrides
+export interface ButtonProps extends UseButtonOptions, Omit<SpecButtonProps, 'children' | 'onClick'> {
     class?: string;
     children: JSX.Element;
 }
