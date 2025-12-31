@@ -1,88 +1,117 @@
 /**
  * Spec-Driven Gallery POC
  * 
- * Props derived from button.sudo.md Component API:
- * - disabled: boolean = false
- * - loading: boolean = false
- * - variant: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "link" = "primary"
- * - size: "sm" | "md" | "lg" | "icon" = "md"
- * - onClick: () => void
- * - children: slot
+ * Dynamically generates controls from component metadata
  */
-import { Component, createSignal } from 'solid-js';
+import { Component, createSignal, createEffect, For } from 'solid-js';
 import { Button } from '@rubigo/components/button';
+import buttonMeta from '../../../generated/button.meta.json';
 
-const VARIANTS = ["primary", "secondary", "outline", "ghost", "destructive", "link"] as const;
-const SIZES = ["sm", "md", "lg", "icon"] as const;
+// Type for prop metadata
+interface PropMeta {
+    name: string;
+    type: string;
+    options?: string[];
+    optional: boolean;
+    default?: string;
+    description?: string;
+}
+
+interface ComponentMeta {
+    component: string;
+    interface: string;
+    props: PropMeta[];
+}
 
 const SpecDrivenPOC: Component = () => {
-    // State inputs
-    const [disabled, setDisabled] = createSignal(false);
-    const [loading, setLoading] = createSignal(false);
+    const meta = buttonMeta as ComponentMeta;
 
-    // Styling
-    const [variant, setVariant] = createSignal<typeof VARIANTS[number]>("primary");
-    const [size, setSize] = createSignal<typeof SIZES[number]>("md");
+    // Create a reactive store for all props
+    const [propValues, setPropValues] = createSignal<Record<string, unknown>>(() => {
+        const initial: Record<string, unknown> = {};
+        for (const prop of meta.props) {
+            if (prop.default) {
+                if (prop.type === 'boolean') {
+                    initial[prop.name] = prop.default === 'true';
+                } else {
+                    initial[prop.name] = prop.default;
+                }
+            }
+        }
+        return initial;
+    });
 
-    // Event log
-    const [log, setLog] = createSignal<string[]>([]);
-    const addLog = (msg: string) => setLog(prev => [msg, ...prev.slice(0, 4)]);
+    const updateProp = (name: string, value: unknown) => {
+        setPropValues(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Build props object for the component
+    const getComponentProps = () => {
+        const props: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(propValues())) {
+            props[key] = value;
+        }
+        // Add onClick handler
+        props.onClick = () => console.log('clicked');
+        return props;
+    };
+
+    // Render a control for a single prop
+    const renderControl = (prop: PropMeta) => {
+        // Skip children and function props (not controllable)
+        if (prop.name === 'children' || prop.type === 'function' || prop.type === 'Slot') {
+            return null;
+        }
+
+        if (prop.type === 'boolean') {
+            return (
+                <label style={{ display: 'flex', gap: '8px', 'align-items': 'center' }}>
+                    <input
+                        type="checkbox"
+                        checked={propValues()[prop.name] as boolean || false}
+                        onChange={(e) => updateProp(prop.name, e.target.checked)}
+                    />
+                    <span>{prop.name}</span>
+                    {prop.description && <small style={{ color: '#666' }}>({prop.description})</small>}
+                </label>
+            );
+        }
+
+        if (prop.type === 'union' && prop.options) {
+            return (
+                <div style={{ display: 'flex', gap: '8px', 'align-items': 'center' }}>
+                    <strong>{prop.name}:</strong>
+                    <select
+                        value={propValues()[prop.name] as string || prop.default || ''}
+                        onChange={(e) => updateProp(prop.name, e.target.value)}
+                    >
+                        <For each={prop.options}>
+                            {(option) => <option value={option}>{option}</option>}
+                        </For>
+                    </select>
+                </div>
+            );
+        }
+
+        return null;
+    };
 
     return (
-        <div style={{ padding: '20px', 'font-family': 'system-ui' }}>
-            <h1>Button Component</h1>
+        <div style={{ padding: '40px', 'font-family': 'system-ui' }}>
+            <h1>{meta.interface.replace('Props', '')} Component</h1>
 
             {/* Live Preview */}
             <div style={{ padding: '40px', background: '#f5f5f5', 'border-radius': '8px', 'margin-bottom': '20px' }}>
-                <Button
-                    disabled={disabled()}
-                    loading={loading()}
-                    variant={variant()}
-                    size={size()}
-                    onClick={() => addLog('onClick')}
-                >
+                <Button {...getComponentProps()}>
                     Click Me
                 </Button>
             </div>
 
-            {/* Controls - derived from Component API */}
-            <div style={{ display: 'grid', 'grid-template-columns': 'repeat(2, 1fr)', gap: '16px', 'margin-bottom': '20px' }}>
-                {/* State inputs */}
-                <label>
-                    <input type="checkbox" checked={disabled()} onChange={(e) => setDisabled(e.target.checked)} />
-                    {' '}disabled
-                </label>
-                <label>
-                    <input type="checkbox" checked={loading()} onChange={(e) => setLoading(e.target.checked)} />
-                    {' '}loading
-                </label>
-
-                {/* Styling - variant */}
-                <div>
-                    <strong>variant:</strong>{' '}
-                    <select value={variant()} onChange={(e) => setVariant(e.target.value as any)}>
-                        {VARIANTS.map(v => <option value={v}>{v}</option>)}
-                    </select>
-                </div>
-
-                {/* Styling - size */}
-                <div>
-                    <strong>size:</strong>{' '}
-                    {SIZES.map(s => (
-                        <label style={{ 'margin-right': '8px' }}>
-                            <input type="radio" name="size" checked={size() === s} onChange={() => setSize(s)} />
-                            {' '}{s}
-                        </label>
-                    ))}
-                </div>
-            </div>
-
-            {/* Event Log */}
-            <div>
-                <strong>Events:</strong>
-                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', 'border-radius': '4px' }}>
-                    {log().length ? log().join('\n') : '(click the button)'}
-                </pre>
+            {/* Auto-generated Controls */}
+            <div style={{ display: 'grid', 'grid-template-columns': 'repeat(2, 1fr)', gap: '16px' }}>
+                <For each={meta.props}>
+                    {(prop) => renderControl(prop)}
+                </For>
             </div>
         </div>
     );
