@@ -62,9 +62,17 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
         }
     });
 
-    // Note: We intentionally do NOT sync `checked` prop changes via effect.
-    // This allows the checkbox to work as uncontrolled (checked is initial value).
-    // For controlled behavior, the parent should manage state via onChange callback.
+    // Sync checked prop to machine context (for controlled components)
+    createEffect(() => {
+        const newChecked = options.checked ?? false;
+        if (machine.getContext().checked !== newChecked) {
+            // Sync context and state directly
+            (machine as any).context.checked = newChecked;
+            (machine as any).context.indeterminate = false;
+            (machine as any).state = newChecked ? 'checked' : 'unchecked';
+            bump();
+        }
+    });
 
     // Sync indeterminate prop to machine context
     createEffect(() => {
