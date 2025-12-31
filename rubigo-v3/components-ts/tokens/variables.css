@@ -1,0 +1,58 @@
+/**
+ * Rubigo Design Tokens
+ * 
+ * Shared CSS custom properties for all components.
+ * Import this file at the app entry point or in individual components.
+ */
+
+:root {
+    /* Accent colors (brand) */
+    --rubigo-accent: #3b82f6;
+    --rubigo-accent-dark: #2563eb;
+    --rubigo-destructive: #ef4444;
+    --rubigo-destructive-dark: #dc2626;
+
+    /* Text colors */
+    --rubigo-text: #1f2937;
+    --rubigo-text-muted: #6b7280;
+
+    /* Backgrounds */
+    --rubigo-bg: #ffffff;
+    --rubigo-bg-panel: #f9f9f9;
+    --rubigo-bg-code: #f0f0f0;
+    --rubigo-bg-hover: #f3f4f6;
+
+    /* Borders */
+    --rubigo-border: #e5e7eb;
+    --rubigo-input-border: #d1d5db;
+
+    /* Layout */
+    --rubigo-radius: 6px;
+    --rubigo-radius-sm: 4px;
+    --rubigo-radius-lg: 8px;
+
+    /* Focus ring */
+    --rubigo-focus-ring: 0 0 0 2px var(--rubigo-bg), 0 0 0 4px var(--rubigo-accent);
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Text colors */
+        --rubigo-text: #e5e5e5;
+        --rubigo-text-muted: #9ca3af;
+
+        /* Backgrounds */
+        --rubigo-bg: #1a1a1a;
+        --rubigo-bg-panel: #2a2a2a;
+        --rubigo-bg-code: #333333;
+        --rubigo-bg-hover: #374151;
+
+        /* Borders */
+        --rubigo-border: #4b5563;
+        --rubigo-input-border: #555555;
+
+        /* Focus ring adjusts for dark bg */
+        --rubigo-focus-ring: 0 0 0 2px var(--rubigo-bg), 0 0 0 4px var(--rubigo-accent);
+    }
+}

@@ -112,47 +112,23 @@ const SpecDrivenPOC: Component = () => {
             'font-family': 'system-ui, sans-serif',
             'min-height': '100vh',
             'color-scheme': 'light dark',
-            background: 'var(--bg, #fff)',
-            color: 'var(--text, #1f2937)'
+            background: 'var(--rubigo-bg)',
+            color: 'var(--rubigo-text)'
         }}>
-            <style>{`
-                :root {
-                    --bg: #fff;
-                    --bg-panel: #f9f9f9;
-                    --bg-code: #f0f0f0;
-                    --border: #ddd;
-                    --text: #1f2937;
-                    --text-muted: #666;
-                    --input-bg: #fff;
-                    --input-border: #ccc;
-                }
-                @media (prefers-color-scheme: dark) {
-                    :root {
-                        --bg: #1a1a1a;
-                        --bg-panel: #2a2a2a;
-                        --bg-code: #333;
-                        --border: #444;
-                        --text: #e5e5e5;
-                        --text-muted: #999;
-                        --input-bg: #333;
-                        --input-border: #555;
-                    }
-                }
-            `}</style>
-            <h2 style={{ 'margin-bottom': '20px', color: 'var(--text)' }}>
+            <h2 style={{ 'margin-bottom': '20px', color: 'var(--rubigo-text)' }}>
                 Spec-Driven Controls: {buttonMeta.component}
             </h2>
 
             {/* Control Panel */}
             <div style={{
                 padding: '20px',
-                border: '1px solid var(--border)',
+                border: '1px solid var(--rubigo-border)',
                 'border-radius': '8px',
                 'margin-bottom': '30px',
-                'background': 'var(--bg-panel)'
+                'background': 'var(--rubigo-bg-panel)'
             }}>
                 <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '16px' }}>
-                    <h3 style={{ margin: '0', 'font-size': '14px', color: 'var(--text-muted)' }}>
+                    <h3 style={{ margin: '0', 'font-size': '14px', color: 'var(--rubigo-text-muted)' }}>
                         Controls (from {buttonMeta.interface})
                     </h3>
                     <Button
@@ -172,9 +148,9 @@ const SpecDrivenPOC: Component = () => {
                             type="text"
                             value={childrenText()}
                             onInput={(e) => setChildrenText(e.target.value)}
-                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
                         />
-                        <span style={{ color: 'var(--text-muted)', 'font-size': '12px' }}>(Button label content)</span>
+                        <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Button label content)</span>
                     </label>
 
                     {/* Dynamic controls from metadata */}
@@ -187,13 +163,13 @@ const SpecDrivenPOC: Component = () => {
             {/* Preview */}
             <div style={{
                 padding: '40px',
-                border: '1px solid var(--border)',
+                border: '1px solid var(--rubigo-border)',
                 'border-radius': '8px',
                 display: 'flex',
                 'justify-content': 'center',
                 'align-items': 'center',
                 'min-height': '100px',
-                'background': 'var(--bg-panel)'
+                'background': 'var(--rubigo-bg-panel)'
             }}>
                 <Button {...buttonProps()}>
                     {childrenText()}
@@ -209,7 +185,7 @@ const SpecDrivenPOC: Component = () => {
             }}>
                 <div>
                     <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '8px' }}>
-                        <h4 style={{ margin: '0', 'font-size': '12px', color: 'var(--text-muted)' }}>Event Log</h4>
+                        <h4 style={{ margin: '0', 'font-size': '12px', color: 'var(--rubigo-text-muted)' }}>Event Log</h4>
                         <Button
                             onClick={() => setEventLog([])}
                             variant="ghost"
@@ -235,16 +211,16 @@ const SpecDrivenPOC: Component = () => {
                     </div>
                 </div>
                 <div>
-                    <h4 style={{ margin: '0 0 8px 0', 'font-size': '12px', color: 'var(--text-muted)' }}>Current Props</h4>
+                    <h4 style={{ margin: '0 0 8px 0', 'font-size': '12px', color: 'var(--rubigo-text-muted)' }}>Current Props</h4>
                     <pre style={{
                         height: '120px',
                         'overflow-y': 'auto',
                         margin: '0',
                         padding: '8px',
-                        'background': 'var(--bg-code)',
+                        'background': 'var(--rubigo-bg-code)',
                         'border-radius': '4px',
                         'font-size': '11px',
-                        color: 'var(--text)'
+                        color: 'var(--rubigo-text)'
                     }}>
                         {JSON.stringify({ children: childrenText(), ...propValues() }, null, 2)}
                     </pre>
