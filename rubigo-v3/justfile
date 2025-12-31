@@ -292,13 +292,20 @@ build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-o
 # TypeScript tests (conformance + component tests)
 ts-test:
     #!/usr/bin/env bash
-    set -euo pipefail
     rm -rf components-ts/dist
-    # Run both Bun conformance tests and Vitest component tests
+    bun_exit=0
+    vitest_exit=0
+    # Run Bun conformance tests
     echo "🧪 Running Bun conformance tests..."
-    cd components-ts && bun test
+    (cd components-ts && bun test) || bun_exit=$?
+    # Run Vitest component tests
     echo "🧪 Running Vitest component tests..."
-    cd components-ts && npx vitest run --passWithNoTests
+    (cd components-ts && npx vitest run --passWithNoTests) || vitest_exit=$?
+    # Report results
+    if [ $bun_exit -ne 0 ]; then echo "❌ Bun tests failed (exit $bun_exit)"; fi
+    if [ $vitest_exit -ne 0 ]; then echo "❌ Vitest tests failed (exit $vitest_exit)"; fi
+    if [ $bun_exit -eq 0 ] && [ $vitest_exit -eq 0 ]; then echo "✅ All TypeScript tests passed"; fi
+    exit $((bun_exit || vitest_exit))
 
 ts-conformance:
     #!/usr/bin/env bash
