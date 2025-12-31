@@ -19,7 +19,7 @@ A Select provides a dropdown menu for choosing a single option from a list. Supp
 
 ## Requirements
 
-```sudolang
+```cue
 // Select provides single-value selection from a list.
 // Supports both mouse and keyboard interaction.
 
@@ -51,7 +51,7 @@ Keyboard Interaction:
 
 ## Design Guidelines
 
-```sudolang
+```cue
 // Visual Design Guidelines
 
 Trigger:
@@ -78,16 +78,15 @@ Animation:
 
 ## Component API
 
-```sudolang
-interface Select {
+```cue
+api: {
   // State inputs
-  disabled = false
+  disabled?: bool | default: false
   
   // Callbacks
-  onChange: () => void
+  onChange?: "callback"
   
   // Content
-  children: slot
 }
 ```
 
@@ -359,7 +358,7 @@ actions: {
 
 ## Accessibility
 
-```sudolang
+```cue
 Role: combobox (trigger), listbox (dropdown), option (items)
 ARIA attributes:
   Trigger:

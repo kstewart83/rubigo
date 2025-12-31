@@ -83,36 +83,30 @@ Usage Guidance:
 
 ## Component API
 
-Defines the public interface for component consumers. Uses Sudolang `interface` syntax.
+Defines the public interface for component consumers. Uses CUE syntax for parseability.
 
 **Categories:**
 - **State inputs**: Props that control component state (e.g., `disabled`, `loading`)
 - **Styling**: Visual customization (e.g., `variant`, `size`)
 - **Callbacks**: Event handlers (e.g., `onClick`, `onChange`)
-- **Content**: Slots for children/content (e.g., `children`)
 
 **Conventions:**
-- Use `=` for default values
+- Use `?` suffix for optional props
+- Use `| default:` for default values
 - Use `|` for union types (enums)
-- Use `() => void` for callback signatures
-- Use `slot` for content slots
 
-```sudolang
+```cue
 // TEMPLATE: Replace with your component's API
-
-interface Template {
-  // State inputs (control internal context)
-  enabled = true
-  
-  // Styling
-  variant: "default" | "alt" = "default"
-  size: "sm" | "md" | "lg" = "md"
-  
-  // Callbacks
-  onChange: (value: string) => void
-  
-  // Content
-  children: slot
+api: {
+    // State inputs
+    disabled?: bool | default: false
+    
+    // Styling
+    variant?: "default" | "alt" | default: "default"
+    size?: "sm" | "md" | "lg" | default: "md"
+    
+    // Callbacks
+    onChange?: "callback"
 }
 ```
 

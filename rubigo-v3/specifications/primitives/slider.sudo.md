@@ -19,7 +19,7 @@ A Slider allows users to select a numeric value within a range by dragging a thu
 
 ## Requirements
 
-```sudolang
+```cue
 // Slider provides continuous or stepped value selection.
 // Supports mouse drag and keyboard control.
 
@@ -48,7 +48,7 @@ Keyboard Interaction:
 
 ## Design Guidelines
 
-```sudolang
+```cue
 // Visual Design Guidelines
 
 Track:
@@ -77,16 +77,15 @@ Orientation:
 
 ## Component API
 
-```sudolang
-interface Slider {
+```cue
+api: {
   // State inputs
-  disabled = false
+  disabled?: bool | default: false
   
   // Callbacks
-  onChange: () => void
+  onChange?: "callback"
   
   // Content
-  children: slot
 }
 ```
 
@@ -421,7 +420,7 @@ actions: {
 
 ## Accessibility
 
-```sudolang
+```cue
 Role: slider
 ARIA attributes:
   Thumb:
