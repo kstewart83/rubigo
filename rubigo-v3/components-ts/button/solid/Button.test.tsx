@@ -82,13 +82,49 @@ describe('Button Component', () => {
         expect(button.getAttribute('aria-busy')).toBe('true');
     });
 
-    it('applies variant class', () => {
-        const { getByRole } = render(() => (
-            <Button variant="destructive">Delete</Button>
-        ));
+    // Variant Tests - ensure all 6 variants from spec have CSS
+    describe('Variants', () => {
+        it('applies primary variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="primary">Primary</Button>
+            ));
+            expect(getByRole('button').className).toContain('primary');
+        });
 
-        const button = getByRole('button');
-        expect(button.className).toContain('destructive');
+        it('applies secondary variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="secondary">Secondary</Button>
+            ));
+            expect(getByRole('button').className).toContain('secondary');
+        });
+
+        it('applies outline variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="outline">Outline</Button>
+            ));
+            expect(getByRole('button').className).toContain('outline');
+        });
+
+        it('applies ghost variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="ghost">Ghost</Button>
+            ));
+            expect(getByRole('button').className).toContain('ghost');
+        });
+
+        it('applies destructive variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="destructive">Destructive</Button>
+            ));
+            expect(getByRole('button').className).toContain('destructive');
+        });
+
+        it('applies link variant class', () => {
+            const { getByRole } = render(() => (
+                <Button variant="link">Link</Button>
+            ));
+            expect(getByRole('button').className).toContain('link');
+        });
     });
 
     it('applies size class', () => {
