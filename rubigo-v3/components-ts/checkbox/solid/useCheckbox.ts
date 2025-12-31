@@ -53,7 +53,7 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
     const [version, setVersion] = createSignal(0);
     const bump = () => setVersion((v) => v + 1);
 
-    // Sync prop changes to machine context (reactive updates)
+    // Sync disabled prop to machine context (reactive updates)
     createEffect(() => {
         const newDisabled = options.disabled ?? false;
         if (machine.getContext().disabled !== newDisabled) {
@@ -62,18 +62,11 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
         }
     });
 
-    createEffect(() => {
-        const newChecked = options.checked ?? false;
-        if (machine.getContext().checked !== newChecked) {
-            if (newChecked) {
-                machine.send('SET_CHECKED');
-            } else {
-                machine.send('SET_UNCHECKED');
-            }
-            bump();
-        }
-    });
+    // Note: We intentionally do NOT sync `checked` prop changes via effect.
+    // This allows the checkbox to work as uncontrolled (checked is initial value).
+    // For controlled behavior, the parent should manage state via onChange callback.
 
+    // Sync indeterminate prop to machine context
     createEffect(() => {
         const newIndeterminate = options.indeterminate ?? false;
         if (machine.getContext().indeterminate !== newIndeterminate) {
