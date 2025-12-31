@@ -4,7 +4,7 @@
  * Based on the button.sudo.md specification.
  */
 
-import { createSignal, createMemo } from 'solid-js';
+import { createSignal, createMemo, createEffect } from 'solid-js';
 import { createMachine } from '../../statechart';
 import { createButtonConfig, type ButtonContext } from '../config';
 
@@ -52,6 +52,27 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
 
     const [version, setVersion] = createSignal(0);
     const bump = () => setVersion((v) => v + 1);
+
+    // Sync prop changes to machine context (reactive updates)
+    createEffect(() => {
+        const newDisabled = options.disabled ?? false;
+        if (machine.getContext().disabled !== newDisabled) {
+            (machine as any).context.disabled = newDisabled;
+            bump();
+        }
+    });
+
+    createEffect(() => {
+        const newLoading = options.loading ?? false;
+        if (machine.getContext().loading !== newLoading) {
+            if (newLoading) {
+                machine.send('START_LOADING');
+            } else {
+                machine.send('STOP_LOADING');
+            }
+            bump();
+        }
+    });
 
     const getContext = createMemo(() => {
         version();
