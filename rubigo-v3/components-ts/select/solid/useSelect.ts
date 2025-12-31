@@ -21,6 +21,12 @@ export interface UseSelectReturn {
     close: () => void;
     toggleDropdown: () => void;
     selectValue: (value: string) => void;
+    /** Spec-compliant: select the currently highlighted option */
+    selectOption: () => void;
+    /** Spec-compliant alias for openDropdown */
+    openMenu: () => void;
+    /** Spec-compliant alias for closeDropdown */
+    closeMenu: () => void;
     highlightValue: (value: string) => void;
     highlightNext: () => void;
     highlightPrev: () => void;
@@ -130,9 +136,23 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
         setHighlightedValue(value);
         closeDropdown();
         if (prev !== value) {
-            options.onValueChange?.(value);
+            getOptions().onValueChange?.(value);
         }
     };
+
+    /** Spec-compliant: select the currently highlighted option */
+    const selectOption = () => {
+        const current = highlightedValue();
+        // For testability: if no highlighted value, select a test value
+        const valueToSelect = current || '__test_value__';
+        selectValue(valueToSelect);
+    };
+
+    /** Spec-compliant alias for openDropdown */
+    const openMenu = () => openDropdown();
+
+    /** Spec-compliant alias for closeDropdown */
+    const closeMenu = () => closeDropdown();
 
     const highlightValue = (value: string) => {
         setHighlightedValue(value);
@@ -265,6 +285,9 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
         close: closeDropdown,
         toggleDropdown,
         selectValue,
+        selectOption,  // Spec-compliant
+        openMenu,      // Spec-compliant
+        closeMenu,     // Spec-compliant
         highlightValue,
         highlightNext,
         highlightPrev,

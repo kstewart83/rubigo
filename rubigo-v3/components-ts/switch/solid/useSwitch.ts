@@ -14,8 +14,8 @@ export interface UseSwitchOptions {
     disabled?: boolean;
     /** Whether the switch is read-only */
     readOnly?: boolean;
-    /** Called when checked state changes */
-    onChange?: (checked: boolean) => void;
+    /** Called when checked state changes (spec name: onCheckedChange) */
+    onCheckedChange?: (checked: boolean) => void;
 }
 
 export interface UseSwitchReturn {
@@ -85,7 +85,7 @@ export function useSwitch(optionsInput: UseSwitchOptions | (() => UseSwitchOptio
         if (result.handled) {
             const newChecked = machine.getContext().checked;
             if (prevChecked !== newChecked) {
-                getOptions().onChange?.(newChecked);
+                getOptions().onCheckedChange?.(newChecked);
             }
             triggerUpdate();
         }

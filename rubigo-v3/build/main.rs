@@ -35,9 +35,11 @@ use rubigo_build::{
     extract_component_api_typescript,
     extract_cue_blocks,
     extract_cue_version,
+    extract_emit_mappings,
     extract_quint_block,
     extract_test_vectors,
     generate_component_tests,
+    generate_emit_tests,
     generate_hook_tests,
     // Interactions
     generate_interactions_manifest,
@@ -290,6 +292,25 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
                 warn!("Failed to write component test for {}: {}", spec_name, e);
             } else {
                 info!("Generated component test: {}.component.test.ts", spec_name);
+            }
+        }
+    }
+
+    // Generate emit callback tests from Actions section mutation→emit pairs
+    let emit_mappings = extract_emit_mappings(&content);
+    if !emit_mappings.is_empty() {
+        let tests_dir = generated_dir
+            .parent()
+            .map(|p| p.join("components-ts/tests"))
+            .unwrap_or_else(|| generated_dir.join("tests"));
+
+        if tests_dir.exists() {
+            let emit_test = generate_emit_tests(spec_name, &emit_mappings);
+            let emit_test_path = tests_dir.join(format!("{}.emit.test.ts", spec_name));
+            if let Err(e) = fs::write(&emit_test_path, emit_test) {
+                warn!("Failed to write emit test for {}: {}", spec_name, e);
+            } else {
+                info!("Generated emit test: {}.emit.test.ts", spec_name);
             }
         }
     }

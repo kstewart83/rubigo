@@ -12,7 +12,9 @@ export interface UseTabsOptions {
     defaultValue?: string;
     /** Controlled active tab id */
     value?: string;
-    /** Called when active tab changes */
+    /** Called when active tab changes (spec name: onTabChange) */
+    onTabChange?: (value: string) => void;
+    /** @deprecated Use onTabChange instead */
     onValueChange?: (value: string) => void;
 }
 
@@ -23,6 +25,8 @@ export interface UseTabsReturn {
     focusedId: Accessor<string>;
     /** Select a tab by id */
     selectTab: (id: string) => void;
+    /** Spec-compliant: alias for selectTab */
+    setSelected: (id: string) => void;
     /** Focus next tab */
     focusNext: () => void;
     /** Focus previous tab */
@@ -61,7 +65,9 @@ export interface UseTabsReturn {
     };
 }
 
-export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
+export function useTabs(optionsInput: UseTabsOptions | (() => UseTabsOptions) = {}): UseTabsReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
     const defaultId = options.defaultValue ?? 'tab-0';
 
     const machine = createMachine(createTabsConfig({
@@ -100,10 +106,16 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         (machine as any).context.selectedId = id;
         (machine as any).context.focusedId = id;
         if (prevId !== id) {
-            options.onValueChange?.(id);
+            // Support both onTabChange (spec) and onValueChange (legacy)
+            const opts = getOptions();
+            opts.onTabChange?.(id);
+            opts.onValueChange?.(id);
         }
         triggerUpdate();
     };
+
+    /** Spec-compliant: alias for selectTab */
+    const setSelected = selectTab;
 
     const getTabIndex = (id: string): number => {
         const ids = tabIds();
@@ -230,6 +242,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         selectedId,
         focusedId,
         selectTab,
+        setSelected,  // Spec-compliant alias
         focusNext,
         focusPrev,
         focusFirst,

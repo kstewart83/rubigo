@@ -91,7 +91,7 @@ export function useCollapsible(optionsInput: UseCollapsibleOptions | (() => UseC
         const ctx = machine.getContext();
         if (ctx.disabled || ctx.open) return;
         (machine as any).context.open = true;
-        options.onOpenChange?.(true);
+        getOptions().onOpenChange?.(true);
         triggerUpdate();
     };
 
@@ -99,7 +99,7 @@ export function useCollapsible(optionsInput: UseCollapsibleOptions | (() => UseC
         const ctx = machine.getContext();
         if (ctx.disabled || !ctx.open) return;
         (machine as any).context.open = false;
-        options.onOpenChange?.(false);
+        getOptions().onOpenChange?.(false);
         triggerUpdate();
     };
 

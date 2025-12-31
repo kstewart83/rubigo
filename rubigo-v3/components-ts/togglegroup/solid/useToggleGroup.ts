@@ -17,6 +17,8 @@ export interface UseToggleGroupReturn {
     focusedId: Accessor<string>;
     disabled: Accessor<boolean>;
     select: (id: string) => void;
+    /** Spec-compliant alias for select */
+    selectItem: (id: string) => void;
     focusNext: () => void;
     focusPrev: () => void;
     focusFirst: () => void;
@@ -99,7 +101,7 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
 
         (machine as any).context.selectedId = id;
         (machine as any).context.focusedId = id;
-        options.onValueChange?.(id);
+        getOptions().onValueChange?.(id);
         triggerUpdate();
     };
 
@@ -214,6 +216,7 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
         focusedId,
         disabled,
         select,
+        selectItem: select,  // Spec-compliant alias
         focusNext,
         focusPrev,
         focusFirst,

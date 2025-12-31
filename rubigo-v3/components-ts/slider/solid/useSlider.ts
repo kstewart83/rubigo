@@ -13,6 +13,10 @@ export interface UseSliderOptions {
     disabled?: boolean;
     onValueChange?: (value: number) => void;
     onValueCommit?: (value: number) => void;
+    /** Called when drag starts */
+    onDragStart?: () => void;
+    /** Called when drag ends */
+    onDragEnd?: () => void;
 }
 
 export interface UseSliderReturn {
@@ -25,8 +29,16 @@ export interface UseSliderReturn {
     setValue: (value: number) => void;
     increment: () => void;
     decrement: () => void;
+    /** Spec-compliant alias for increment */
+    incrementValue: () => void;
+    /** Spec-compliant alias for decrement */
+    decrementValue: () => void;
     setMin: () => void;
     setMax: () => void;
+    /** Start drag mode (for testing/programmatic control) */
+    startDrag: () => void;
+    /** End drag mode (for testing/programmatic control) */
+    endDrag: () => void;
     rootProps: () => {
         'aria-disabled': boolean | undefined;
         'aria-valuemin': number;
@@ -163,7 +175,7 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
         const newValue = ctx.min + percent * (ctx.max - ctx.min);
         const stepped = Math.round(newValue / ctx.step) * ctx.step;
         setValue(stepped);
-        options.onValueCommit?.(stepped);
+        getOptions().onValueCommit?.(stepped);
     };
 
     // Handle drag
@@ -173,6 +185,7 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
 
         e.preventDefault();
         (machine as any).context.dragging = true;
+        getOptions().onDragStart?.();
         triggerUpdate();
 
         const track = (e.currentTarget as HTMLElement).parentElement!;
@@ -188,7 +201,8 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
 
         const handleMouseUp = () => {
             (machine as any).context.dragging = false;
-            options.onValueCommit?.(machine.getContext().value);
+            getOptions().onDragEnd?.();
+            getOptions().onValueCommit?.(machine.getContext().value);
             triggerUpdate();
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
@@ -271,8 +285,22 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
         setValue,
         increment,
         decrement,
+        incrementValue: increment,  // Spec-compliant alias
+        decrementValue: decrement,  // Spec-compliant alias
         setMin,
         setMax,
+        startDrag: () => {
+            if (machine.getContext().disabled) return;
+            (machine as any).context.dragging = true;
+            getOptions().onDragStart?.();
+            triggerUpdate();
+        },
+        endDrag: () => {
+            (machine as any).context.dragging = false;
+            getOptions().onDragEnd?.();
+            getOptions().onValueCommit?.(machine.getContext().value);
+            triggerUpdate();
+        },
         rootProps,
         trackProps,
         thumbProps,

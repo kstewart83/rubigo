@@ -5,7 +5,6 @@
  * Supports switching between implemented components.
  */
 import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 'solid-js';
-import { SpecTestRunner } from './SpecTestRunner';
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
 import { Switch } from '@rubigo/components/switch';
@@ -203,10 +202,20 @@ const SpecDrivenPOC: Component = () => {
     // Get examples for current component
     const getExamples = createMemo(() => getExamplesFor(selectedComponent()));
 
-    // Check if component is compound (needs special structure, not just props)
+    // Check if component is compound (needs special structure, not just props).
     // These components require sub-components like Tabs.List, Dialog.Portal, etc.
     const COMPOUND_COMPONENTS: ComponentKey[] = ['tabs', 'collapsible', 'togglegroup', 'tooltip', 'dialog', 'select'];
     const isCompoundComponent = createMemo(() => COMPOUND_COMPONENTS.includes(selectedComponent()));
+
+    // Check if a component has controllable props (boolean, number, or string with options)
+    // Excludes: Slot (children), function (callbacks), plain string (identifiers)
+    const hasControllableProps = (meta: { props: PropMeta[] }) => {
+        return meta.props.some((p: PropMeta) =>
+            p.type === 'boolean' ||
+            p.type === 'number' ||
+            (p.type === 'string' && p.options && p.options.length > 0)
+        );
+    };
 
     // Handle component switch
     const switchComponent = (key: ComponentKey) => {
@@ -215,8 +224,11 @@ const SpecDrivenPOC: Component = () => {
         setPropValues(getInitialProps(config.meta));
         setChildrenText(config.defaultChildren);
         setEventLog([]);
-        // Compound components start at example 0, simple components start at Interactive (-1)
-        setSelectedExample(COMPOUND_COMPONENTS.includes(key) ? 0 : -1);
+        // Compound components without controllable props start at example 0
+        // All other components (including compounds with controllable props) start at Interactive (-1)
+        const isCompound = COMPOUND_COMPONENTS.includes(key);
+        const hasControls = hasControllableProps(config.meta);
+        setSelectedExample(isCompound && !hasControls ? 0 : -1);
         logEvent(`Switched to ${key}`);
     };
 
@@ -281,6 +293,29 @@ const SpecDrivenPOC: Component = () => {
                     </label>
                 );
 
+            case 'number':
+                return (
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+                        <span>{prop.name}:</span>
+                        <input
+                            type="number"
+                            value={value() as number}
+                            onInput={(e) => updateProp(prop.name, parseInt(e.target.value) || 0)}
+                            style={{
+                                width: '80px',
+                                padding: '4px 8px',
+                                'border-radius': '4px',
+                                border: '1px solid var(--rubigo-border)',
+                                background: 'var(--rubigo-bg-panel)',
+                                color: 'var(--rubigo-text)'
+                            }}
+                        />
+                        <Show when={prop.description}>
+                            <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>({prop.description})</span>
+                        </Show>
+                    </label>
+                );
+
             default:
                 return null;
         }
@@ -334,11 +369,67 @@ const SpecDrivenPOC: Component = () => {
         }
 
         // Interactive mode (-1) - render with controls
-        // But compound components can't use Interactive mode
-        if (COMPOUND_COMPONENTS.includes(selectedComponent())) {
+        // Compound components without controllable props can't use Interactive mode
+        if (COMPOUND_COMPONENTS.includes(selectedComponent()) && !hasControllableProps(getMeta())) {
             return <div style={{ color: 'var(--rubigo-text-muted)', 'font-style': 'italic' }}>
                 Select an example above to preview this compound component.
             </div>;
+        }
+
+        // For compound components with controllable props, render with dynamic props
+        if (COMPOUND_COMPONENTS.includes(selectedComponent()) && hasControllableProps(getMeta())) {
+            const props = componentProps();
+
+            // Tooltip
+            if (selectedComponent() === 'tooltip') {
+                return (
+                    <Tooltip.Root
+                        delayDuration={props.delayDuration as number ?? 300}
+                        disabled={props.disabled as boolean ?? false}
+                    >
+                        <Tooltip.Trigger>Hover me (Interactive)</Tooltip.Trigger>
+                        <Tooltip.Content>
+                            {`Tooltip: delay=${props.delayDuration ?? 300}ms, disabled=${props.disabled ?? false}`}
+                        </Tooltip.Content>
+                    </Tooltip.Root>
+                );
+            }
+
+            // Collapsible
+            if (selectedComponent() === 'collapsible') {
+                return (
+                    <Collapsible.Root
+                        open={props.open as boolean ?? false}
+                        disabled={props.disabled as boolean ?? false}
+                    >
+                        <Collapsible.Trigger>Toggle (Interactive)</Collapsible.Trigger>
+                        <Collapsible.Content>
+                            <div style={{ padding: '12px', background: 'var(--rubigo-bg-panel)', 'border-radius': '4px' }}>
+                                Collapsible content: open={String(props.open ?? false)}, disabled={String(props.disabled ?? false)}
+                            </div>
+                        </Collapsible.Content>
+                    </Collapsible.Root>
+                );
+            }
+
+            // Dialog
+            if (selectedComponent() === 'dialog') {
+                return (
+                    <Dialog.Root open={props.open as boolean ?? false}>
+                        <Dialog.Trigger>Open Dialog (Interactive)</Dialog.Trigger>
+                        <Dialog.Portal>
+                            <Dialog.Overlay />
+                            <Dialog.Content>
+                                <Dialog.Title>Interactive Dialog</Dialog.Title>
+                                <Dialog.Description>
+                                    Dialog state: open={String(props.open ?? false)}
+                                </Dialog.Description>
+                                <Dialog.Close>Close</Dialog.Close>
+                            </Dialog.Content>
+                        </Dialog.Portal>
+                    </Dialog.Root>
+                );
+            }
         }
 
         const Comp = componentConfig().component as Component<Record<string, unknown>>;
@@ -457,8 +548,8 @@ const SpecDrivenPOC: Component = () => {
                         color: 'var(--rubigo-text)',
                     }}
                 >
-                    {/* Interactive mode - only for simple components */}
-                    <Show when={!isCompoundComponent()}>
+                    {/* Interactive mode - for simple components or compounds with controllable props */}
+                    <Show when={!isCompoundComponent() || hasControllableProps(getMeta())}>
                         <option value={-1}>⚡ Interactive (use controls)</option>
                     </Show>
                     {/* Spec examples */}
@@ -512,10 +603,7 @@ const SpecDrivenPOC: Component = () => {
                 <PropsPanel props={displayProps} />
             </div>
 
-            {/* Spec Test Runner - always visible at bottom */}
-            <div style={{ 'margin-top': '32px', 'border-top': '1px solid var(--rubigo-border)', 'padding-top': '24px' }}>
-                <SpecTestRunner component={selectedComponent()} />
-            </div>
+
         </div>
     );
 };
