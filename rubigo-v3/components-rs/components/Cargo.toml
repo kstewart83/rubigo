@@ -22,6 +22,11 @@ path = "button/src/main.rs"
 name = "checkbox"
 path = "checkbox/src/main.rs"
 
+# Input component
+[[bin]]
+name = "input"
+path = "input/src/main.rs"
+
 [dependencies]
 wasm-bindgen.workspace = true
 serde.workspace = true
