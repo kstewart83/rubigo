@@ -178,17 +178,17 @@ const SpecDrivenPOC: Component = () => {
         switch (prop.type) {
             case 'boolean':
                 return (
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
-                        <input
-                            type="checkbox"
+                    <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+                        <Checkbox
                             checked={value() as boolean}
-                            onChange={(e) => updateProp(prop.name, e.target.checked)}
-                        />
-                        <span>{prop.name}</span>
+                            onChange={(checked) => updateProp(prop.name, checked)}
+                        >
+                            {prop.name}
+                        </Checkbox>
                         <Show when={prop.description}>
                             <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>({prop.description})</span>
                         </Show>
-                    </label>
+                    </div>
                 );
 
             case 'union':
