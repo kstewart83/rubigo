@@ -19,7 +19,7 @@ A Dialog is a modal window that overlays the page content, requiring user intera
 
 ## Requirements
 
-```sudolang
+```cue
 // Dialog provides modal overlay for critical interactions.
 // Focus is trapped within the dialog while open.
 
@@ -48,7 +48,7 @@ Focus Management:
 
 ## Design Guidelines
 
-```sudolang
+```cue
 // Visual Design Guidelines
 
 Appearance:
@@ -75,16 +75,15 @@ Responsive:
 
 ## Component API
 
-```sudolang
-interface Dialog {
+```cue
+api: {
   // State inputs
-  disabled = false
+  disabled?: bool | default: false
   
   // Callbacks
-  onChange: () => void
+  onChange?: "callback"
   
   // Content
-  children: slot
 }
 ```
 
@@ -294,7 +293,7 @@ actions: {
 
 ## Accessibility
 
-```sudolang
+```cue
 Role: dialog
 ARIA attributes:
   Dialog:

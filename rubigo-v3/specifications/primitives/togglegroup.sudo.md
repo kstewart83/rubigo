@@ -19,7 +19,7 @@ A Toggle Group is a set of toggle buttons where only one can be selected at a ti
 
 ## Requirements
 
-```sudolang
+```cue
 // Toggle Group provides exclusive selection from a set of options.
 // Like radio buttons, only one option can be selected at a time.
 
@@ -50,7 +50,7 @@ Error Handling:
 
 ## Design Guidelines
 
-```sudolang
+```cue
 // Visual Design Guidelines
 
 Layout Variants:
@@ -78,16 +78,15 @@ Usage:
 
 ## Component API
 
-```sudolang
-interface Togglegroup {
+```cue
+api: {
   // State inputs
-  disabled = false
+  disabled?: bool | default: false
   
   // Callbacks
-  onChange: () => void
+  onChange?: "callback"
   
   // Content
-  children: slot
 }
 ```
 
@@ -386,7 +385,7 @@ actions: {
 
 ## Accessibility
 
-```sudolang
+```cue
 Role: radiogroup (container), radio (items)
 ARIA attributes:
   Container:
