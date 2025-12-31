@@ -116,6 +116,14 @@ export function useCollapsible(optionsInput: UseCollapsibleOptions | (() => UseC
         hidden: !open(),
     });
 
+    const rootProps = () => ({
+        'aria-disabled': disabled() || undefined,
+        'aria-expanded': open(),
+        onKeyDown: (_e: KeyboardEvent) => {
+            // Keyboard handling is on triggerProps
+        },
+    });
+
     return {
         open,
         disabled,
@@ -123,6 +131,7 @@ export function useCollapsible(optionsInput: UseCollapsibleOptions | (() => UseC
         expand,
         collapse,
         close: collapse,
+        rootProps,
         triggerProps,
         contentProps,
     };

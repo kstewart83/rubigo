@@ -243,6 +243,12 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
         };
     };
 
+    const rootProps = () => ({
+        'aria-disabled': disabled() || undefined,
+        'aria-expanded': open(),
+        onKeyDown: handleKeyDown,
+    });
+
     return {
         open,
         selectedValue,
@@ -259,6 +265,7 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
         highlightFirst,
         highlightLast,
         registerOption,
+        rootProps,
         triggerProps,
         listboxProps,
         getOptionProps,

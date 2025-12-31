@@ -243,6 +243,17 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
         };
     };
 
+    const rootProps = () => {
+        const ctx = machine.getContext();
+        return {
+            'aria-disabled': ctx.disabled || undefined,
+            'aria-valuemin': ctx.min,
+            'aria-valuemax': ctx.max,
+            'aria-valuenow': ctx.value,
+            onKeyDown: handleKeyDown,
+        };
+    };
+
     return {
         value,
         min: minVal,
@@ -255,6 +266,7 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
         decrement,
         setMin,
         setMax,
+        rootProps,
         trackProps,
         thumbProps,
     };

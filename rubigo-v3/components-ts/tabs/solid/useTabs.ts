@@ -197,6 +197,30 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         hidden: selectedId() !== id,
     });
 
+    const rootProps = () => ({
+        'aria-selected': true,
+        onKeyDown: (e: KeyboardEvent) => {
+            switch (e.key) {
+                case 'ArrowRight':
+                    e.preventDefault();
+                    focusNext();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    focusPrev();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    focusFirst();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    focusLast();
+                    break;
+            }
+        },
+    });
+
     return {
         selectedId,
         focusedId,
@@ -206,6 +230,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         focusFirst,
         focusLast,
         activate,
+        rootProps,
         tablistProps,
         getTabProps,
         getPanelProps,
