@@ -1,12 +1,22 @@
 /**
  * Spec-Driven Gallery POC
  * 
- * Controls are dynamically generated from checkbox.meta.json
+ * Controls are dynamically generated from component metadata.
+ * Supports switching between implemented components.
  */
-import { Component, createSignal, For, Show, Accessor, Setter, JSX } from 'solid-js';
+import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 'solid-js';
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
-import componentMeta from '@generated/checkbox.meta.json';
+import buttonMeta from '@generated/button.meta.json';
+import checkboxMeta from '@generated/checkbox.meta.json';
+
+// Available components registry
+const COMPONENTS = {
+    button: { meta: buttonMeta, component: Button, defaultChildren: 'Click Me' },
+    checkbox: { meta: checkboxMeta, component: Checkbox, defaultChildren: 'Accept Terms' },
+} as const;
+
+type ComponentKey = keyof typeof COMPONENTS;
 
 // Types from metadata
 interface PropMeta {
@@ -133,21 +143,41 @@ const PropsPanel: Component<PropsPanelProps> = (props) => {
 
 // ===== Main Component =====
 const SpecDrivenPOC: Component = () => {
-    // Initialize state from metadata defaults
-    const initialProps: Record<string, unknown> = {};
-    for (const prop of componentMeta.props as PropMeta[]) {
-        if (prop.default !== undefined) {
-            if (prop.type === 'boolean') {
-                initialProps[prop.name] = prop.default === 'true';
-            } else {
-                initialProps[prop.name] = prop.default;
+    // Component selection
+    const [selectedComponent, setSelectedComponent] = createSignal<ComponentKey>('checkbox');
+
+    // Get current component config
+    const componentConfig = createMemo(() => COMPONENTS[selectedComponent()]);
+    const getMeta = () => componentConfig().meta;
+
+    // Initialize props from metadata defaults
+    const getInitialProps = (meta: typeof buttonMeta): Record<string, unknown> => {
+        const props: Record<string, unknown> = {};
+        for (const prop of meta.props as PropMeta[]) {
+            if (prop.default !== undefined) {
+                if (prop.type === 'boolean') {
+                    props[prop.name] = prop.default === 'true';
+                } else {
+                    props[prop.name] = prop.default;
+                }
             }
         }
-    }
+        return props;
+    };
 
-    const [propValues, setPropValues] = createSignal<Record<string, unknown>>(initialProps);
-    const [childrenText, setChildrenText] = createSignal('Accept Terms');
+    const [propValues, setPropValues] = createSignal<Record<string, unknown>>(getInitialProps(getMeta()));
+    const [childrenText, setChildrenText] = createSignal(componentConfig().defaultChildren);
     const [eventLog, setEventLog] = createSignal<string[]>([]);
+
+    // Handle component switch
+    const switchComponent = (key: ComponentKey) => {
+        setSelectedComponent(key);
+        const config = COMPONENTS[key];
+        setPropValues(getInitialProps(config.meta));
+        setChildrenText(config.defaultChildren);
+        setEventLog([]);
+        logEvent(`Switched to ${key}`);
+    };
 
     // Log an event to the UI
     const logEvent = (event: string) => {
@@ -162,8 +192,8 @@ const SpecDrivenPOC: Component = () => {
 
     // Reset all props to metadata defaults
     const resetToDefaults = () => {
-        setPropValues(initialProps);
-        setChildrenText('Accept Terms');
+        setPropValues(getInitialProps(getMeta()));
+        setChildrenText(componentConfig().defaultChildren);
         logEvent('Reset to defaults');
     };
 
@@ -171,9 +201,10 @@ const SpecDrivenPOC: Component = () => {
     const renderControl = (prop: PropMeta) => {
         const value = () => propValues()[prop.name];
 
-        // Skip children and onClick (handled separately)
+        // Skip children and callbacks (handled separately)
         if (prop.name === 'children') return null;
         if (prop.name === 'onClick') return null;
+        if (prop.name === 'onChange') return null;
 
         switch (prop.type) {
             case 'boolean':
@@ -217,16 +248,30 @@ const SpecDrivenPOC: Component = () => {
     // Build component props dynamically
     const componentProps = () => {
         const props: Record<string, unknown> = { ...propValues() };
-        props.onChange = (checked: boolean) => {
-            // Two-way binding: sync component state back to controls
-            updateProp('checked', checked);
-            logEvent(`onChange fired: checked=${checked}`);
-        };
+        // Add appropriate callback based on component
+        if (selectedComponent() === 'button') {
+            props.onClick = () => logEvent('onClick fired');
+        } else if (selectedComponent() === 'checkbox') {
+            props.onChange = (checked: boolean) => {
+                updateProp('checked', checked);
+                logEvent(`onChange fired: checked=${checked}`);
+            };
+        }
         return props;
     };
 
     // Combined props for display
     const displayProps = () => ({ children: childrenText(), ...propValues() });
+
+    // Render preview component
+    const renderPreview = () => {
+        const Comp = componentConfig().component;
+        return (
+            <Comp {...componentProps()}>
+                {childrenText()}
+            </Comp>
+        );
+    };
 
     return (
         <div style={{
@@ -237,13 +282,34 @@ const SpecDrivenPOC: Component = () => {
             background: 'var(--rubigo-bg)',
             color: 'var(--rubigo-text)'
         }}>
-            <h2 style={{ 'margin-bottom': '20px', color: 'var(--rubigo-text)' }}>
-                Spec-Driven Controls: {componentMeta.component}
-            </h2>
+            {/* Header with component selector */}
+            <div style={{ display: 'flex', 'align-items': 'center', gap: '16px', 'margin-bottom': '20px' }}>
+                <h2 style={{ margin: '0', color: 'var(--rubigo-text)' }}>
+                    Spec-Driven Controls:
+                </h2>
+                <select
+                    value={selectedComponent()}
+                    onChange={(e) => switchComponent(e.target.value as ComponentKey)}
+                    style={{
+                        padding: '8px 12px',
+                        'font-size': '16px',
+                        'font-weight': 'bold',
+                        'border-radius': '6px',
+                        border: '1px solid var(--rubigo-border)',
+                        background: 'var(--rubigo-bg-panel)',
+                        color: 'var(--rubigo-text)',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <For each={Object.keys(COMPONENTS) as ComponentKey[]}>
+                        {(key) => <option value={key}>{key}</option>}
+                    </For>
+                </select>
+            </div>
 
             <ControlPanel
                 title="Controls"
-                interfaceName={componentMeta.interface}
+                interfaceName={getMeta().interface}
                 onReset={resetToDefaults}
             >
                 {/* Children input */}
@@ -255,19 +321,17 @@ const SpecDrivenPOC: Component = () => {
                         onInput={(e) => setChildrenText(e.target.value)}
                         style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
                     />
-                    <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Button label content)</span>
+                    <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Label content)</span>
                 </label>
 
                 {/* Dynamic controls from metadata */}
-                <For each={componentMeta.props as PropMeta[]}>
+                <For each={getMeta().props as PropMeta[]}>
                     {(prop) => renderControl(prop)}
                 </For>
             </ControlPanel>
 
             <Preview>
-                <Checkbox {...componentProps()}>
-                    {childrenText()}
-                </Checkbox>
+                {renderPreview()}
             </Preview>
 
             {/* Bottom panels */}
