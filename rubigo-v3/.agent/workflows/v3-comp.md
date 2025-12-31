@@ -4,7 +4,7 @@ description: Create a new Rubigo V3 component from spec to integration
 
 # /v3-comp Workflow
 
-Creates a new Rubigo V3 component following the spec-first architecture.
+Creates a new Rubigo V3 component following the spec-first architecture with **both TypeScript/SolidJS and Rust/WASM** implementations.
 
 ## Command Format
 
@@ -101,7 +101,11 @@ Fix any validation errors **and warnings** before proceeding.
 
 ---
 
-## Step 6: Create Component Config
+# Part A: TypeScript / SolidJS Implementation
+
+---
+
+## Step 6: Create Component Config (TS)
 
 Create `components-ts/<component>/config.ts`:
 
@@ -171,7 +175,7 @@ Create `components-ts/<component>/<Component>.module.css`:
 
 ---
 
-## Step 10: Create Component Tests
+## Step 10: Create Component Tests (TS)
 
 Create `components-ts/<component>/solid/<Component>.test.tsx`:
 
@@ -190,7 +194,7 @@ cd components-ts && npx vitest run
 
 ---
 
-## Step 11: Update Exports
+## Step 11: Update TS Exports
 
 Update `components-ts/<component>/index.ts`:
 ```typescript
@@ -216,28 +220,182 @@ Update `gallery/frontend/src/SpecDrivenPOC.tsx`:
 
 ---
 
-## Step 13: Commit
+# Part B: Rust / WASM Implementation
+
+---
+
+## Step 13: Create Rust WASM Component
+
+Create `components-rs/components/<component>/src/main.rs`:
+
+```rust
+//! <Component> Component WASM Entry Point
+
+use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+
+/// <Component> context - the extended state
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen]
+pub struct <Component>Context {
+    // Context fields from spec
+}
+
+#[wasm_bindgen]
+impl <Component>Context {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            // Default values
+        }
+    }
+}
+
+/// <Component> state enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum <Component>State {
+    // States from spec
+}
+
+/// <Component> component - wraps state machine and context
+#[wasm_bindgen]
+pub struct <Component> {
+    context: <Component>Context,
+    state: <Component>State,
+}
+
+#[wasm_bindgen]
+impl <Component> {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            context: <Component>Context::new(),
+            state: <Component>State::default(),
+        }
+    }
+
+    // Guards
+    fn can_act(&self) -> bool {
+        !self.context.disabled
+    }
+
+    // Event handlers matching spec
+    pub fn send_event(&mut self, event: &str) -> bool {
+        // Match events to state transitions
+        false
+    }
+
+    // ARIA attributes as JSON
+    pub fn aria_attrs(&self) -> String {
+        format!(r#"{{"role":"<role>","aria-disabled":"{}"}}"#, self.context.disabled)
+    }
+}
+
+#[wasm_bindgen(start)]
+pub fn main() {}
+```
+
+---
+
+## Step 14: Update Rust Cargo Configuration
+
+Update `components-rs/components/Cargo.toml` to add the new component as a binary target:
+
+```toml
+[[bin]]
+name = "<component>"
+path = "<component>/src/main.rs"
+```
+
+---
+
+## Step 15: Build and Test WASM
+
+Build the Rust WASM component:
+
+```
+// turbo
+cd components-rs/components && cargo build --target wasm32-unknown-unknown --release
+```
+
+Verify the WASM file is generated at `target/wasm32-unknown-unknown/release/<component>.wasm`.
+
+---
+
+## Step 16: Create Rust Unit Tests
+
+Add tests in `components-rs/components/<component>/src/main.rs` or a separate test module:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_initial_state() {
+        let comp = <Component>::new();
+        // Assert initial values
+    }
+
+    #[test]
+    fn test_disabled_blocks_interaction() {
+        let mut comp = <Component>::new();
+        comp.context.disabled = true;
+        // Assert interaction blocked
+    }
+}
+```
+
+Run Rust tests:
+```
+// turbo
+cd components-rs/components && cargo test
+```
+
+---
+
+# Part C: Finalize
+
+---
+
+## Step 17: Commit
 
 ```
 git add -A && git commit -m "feat(<component>): implement <Component> component
 
-- Spec: requirements, state machine, test vectors
-- Hook: use<Component> with state management
-- Component: <Component>.tsx with styling
-- Tests: comprehensive test suite
-- Gallery: added to POC selector"
+TypeScript/SolidJS:
+- config.ts, use<Component>.ts hook, <Component>.tsx component
+- CSS module with design tokens
+- Comprehensive test suite
+
+Rust/WASM:
+- WASM entry point with wasm_bindgen
+- State machine and context structs
+- Unit tests"
 ```
 
 ---
 
 ## Checklist
 
-- [ ] Spec created and validated (`just build` passes)
-- [ ] config.ts with machine config
-- [ ] use<Component>.ts hook
-- [ ] <Component>.tsx component
-- [ ] <Component>.module.css styles
-- [ ] <Component>.test.tsx tests (all pass)
+### Specification
+- [ ] Spec created at `specifications/primitives/<component>.sudo.md`
+- [ ] `just build` passes with no errors/warnings
+
+### TypeScript/SolidJS
+- [ ] `components-ts/<component>/config.ts`
+- [ ] `components-ts/<component>/solid/use<Component>.ts`
+- [ ] `components-ts/<component>/solid/<Component>.tsx`
+- [ ] `components-ts/<component>/<Component>.module.css`
+- [ ] `components-ts/<component>/solid/<Component>.test.tsx` (all pass)
 - [ ] Exports updated (component and library index)
-- [ ] Added to POC gallery
+- [ ] Added to POC gallery `COMPONENTS` registry
+
+### Rust/WASM
+- [ ] `components-rs/components/<component>/src/main.rs`
+- [ ] Added to `Cargo.toml` as binary target
+- [ ] WASM builds successfully
+- [ ] Rust unit tests pass
+
+### Final
 - [ ] Committed with conventional commit message
