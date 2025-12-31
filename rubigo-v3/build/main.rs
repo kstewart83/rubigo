@@ -37,11 +37,13 @@ use rubigo_build::{
     extract_test_vectors,
     // Interactions
     generate_interactions_manifest,
+    generate_meta_json,
     generate_types_file,
     // Vectors
     generate_unified_vectors,
     // Extraction
     parse_frontmatter,
+    parse_typescript_interface,
     // Validation
     validate_spec_structure,
     // Quint
@@ -213,6 +215,20 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
             warn!("Failed to write types file for {}: {}", spec_name, e);
         } else {
             info!("Generated TypeScript types: {}.types.ts", spec_name);
+        }
+
+        // Also generate metadata JSON for dynamic controls
+        let meta = parse_typescript_interface(spec_name, &typescript);
+        let meta_json = generate_meta_json(&meta);
+        let meta_path = generated_dir.join(format!("{}.meta.json", spec_name));
+        if let Err(e) = fs::write(&meta_path, meta_json) {
+            warn!("Failed to write meta file for {}: {}", spec_name, e);
+        } else {
+            info!(
+                "Generated metadata: {}.meta.json ({} props)",
+                spec_name,
+                meta.props.len()
+            );
         }
     }
 

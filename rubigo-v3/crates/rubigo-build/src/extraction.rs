@@ -213,6 +213,140 @@ fn extract_interface_name(typescript: &str) -> Option<String> {
     None
 }
 
+/// Metadata for a single prop
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PropMeta {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub prop_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+    pub optional: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Metadata for a component
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ComponentMeta {
+    pub component: String,
+    pub interface: String,
+    pub props: Vec<PropMeta>,
+}
+
+/// Parse TypeScript interface to extract prop metadata
+pub fn parse_typescript_interface(component_name: &str, typescript: &str) -> ComponentMeta {
+    let interface_name = extract_interface_name(typescript)
+        .unwrap_or_else(|| format!("{}Props", capitalize_first(component_name)));
+
+    let mut props = Vec::new();
+    let lines: Vec<&str> = typescript.lines().collect();
+    let mut pending_jsdoc: Option<String> = None;
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+
+        // Capture JSDoc comments
+        if trimmed.starts_with("/**") && trimmed.ends_with("*/") {
+            // Single-line JSDoc: /** Description */
+            pending_jsdoc = Some(
+                trimmed
+                    .trim_start_matches("/**")
+                    .trim_end_matches("*/")
+                    .trim()
+                    .to_string(),
+            );
+            continue;
+        }
+
+        // Skip interface/export/closing lines
+        if trimmed.starts_with("interface ")
+            || trimmed.starts_with("export ")
+            || trimmed == "}"
+            || trimmed.is_empty()
+        {
+            continue;
+        }
+
+        // Parse prop line: "  disabled?: boolean;  // default: false"
+        if let Some(prop) = parse_prop_line(trimmed, pending_jsdoc.take()) {
+            props.push(prop);
+        }
+    }
+
+    ComponentMeta {
+        component: component_name.to_string(),
+        interface: interface_name,
+        props,
+    }
+}
+
+fn parse_prop_line(line: &str, description: Option<String>) -> Option<PropMeta> {
+    // Split off inline comment first
+    let (prop_part, inline_comment) = if let Some(idx) = line.find("//") {
+        (&line[..idx], Some(line[idx + 2..].trim()))
+    } else {
+        (line, None)
+    };
+
+    // Parse: "name?: type;" or "name: type;"
+    let prop_part = prop_part.trim().trim_end_matches(';').trim();
+
+    let (name_part, type_part) = prop_part.split_once(':')?;
+    let name_part = name_part.trim();
+    let type_part = type_part.trim();
+
+    let optional = name_part.ends_with('?');
+    let name = name_part.trim_end_matches('?').to_string();
+
+    // Parse type
+    let (prop_type, options) = parse_type(type_part);
+
+    // Extract default from inline comment: "// default: value"
+    let default = inline_comment.and_then(|c| {
+        c.strip_prefix("default:")
+            .or_else(|| c.strip_prefix("default: "))
+            .map(|v| v.trim().trim_matches('"').to_string())
+    });
+
+    Some(PropMeta {
+        name,
+        prop_type,
+        options,
+        optional,
+        default,
+        description,
+    })
+}
+
+fn parse_type(type_str: &str) -> (String, Option<Vec<String>>) {
+    let type_str = type_str.trim();
+
+    // Check for union of string literals: "primary" | "secondary" | ...
+    if type_str.contains('|') && type_str.contains('"') {
+        let options: Vec<String> = type_str
+            .split('|')
+            .map(|s| s.trim().trim_matches('"').to_string())
+            .collect();
+        return ("union".to_string(), Some(options));
+    }
+
+    // Check for function type: () => void
+    if type_str.contains("=>") {
+        return ("function".to_string(), None);
+    }
+
+    // Simple types: boolean, string, number, Slot, etc.
+    (type_str.to_string(), None)
+}
+
+/// Generate JSON metadata for a component
+pub fn generate_meta_json(meta: &ComponentMeta) -> String {
+    serde_json::to_string_pretty(meta).unwrap_or_else(|_| "{}".to_string())
+}
+
 fn capitalize_first(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
