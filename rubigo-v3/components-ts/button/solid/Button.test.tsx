@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent, cleanup } from '@solidjs/testing-library';
+import { createSignal } from 'solid-js';
 import { Button } from './Button';
 
 afterEach(() => {
@@ -190,6 +191,57 @@ describe('Button Component', () => {
             fireEvent.mouseUp(button);
 
             expect(onClick).not.toHaveBeenCalled();
+        });
+    });
+
+    // Prop Reactivity Tests (catches bugs where prop changes after mount have no effect)
+    describe('Prop Reactivity', () => {
+        it('responds to disabled prop changing from false to true', () => {
+            const onClick = vi.fn();
+            const [disabled, setDisabled] = createSignal(false);
+
+            const { getByRole } = render(() => (
+                <Button onClick={onClick} disabled={disabled()}>Click Me</Button>
+            ));
+
+            const button = getByRole('button');
+
+            // Should work when not disabled
+            fireEvent.mouseDown(button);
+            fireEvent.mouseUp(button);
+            expect(onClick).toHaveBeenCalledTimes(1);
+
+            // Disable the button
+            setDisabled(true);
+
+            // Should NOT work when disabled
+            fireEvent.mouseDown(button);
+            fireEvent.mouseUp(button);
+            expect(onClick).toHaveBeenCalledTimes(1); // Still 1, not 2
+        });
+
+        it('responds to loading prop changing from false to true', () => {
+            const onClick = vi.fn();
+            const [loading, setLoading] = createSignal(false);
+
+            const { getByRole } = render(() => (
+                <Button onClick={onClick} loading={loading()}>Click Me</Button>
+            ));
+
+            const button = getByRole('button');
+
+            // Should work when not loading
+            fireEvent.mouseDown(button);
+            fireEvent.mouseUp(button);
+            expect(onClick).toHaveBeenCalledTimes(1);
+
+            // Set loading
+            setLoading(true);
+
+            // Should NOT work when loading
+            fireEvent.mouseDown(button);
+            fireEvent.mouseUp(button);
+            expect(onClick).toHaveBeenCalledTimes(1); // Still 1, not 2
         });
     });
 });
