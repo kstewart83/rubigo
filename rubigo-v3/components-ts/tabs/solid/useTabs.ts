@@ -33,6 +33,11 @@ export interface UseTabsReturn {
     focusLast: () => void;
     /** Activate the currently focused tab */
     activate: () => void;
+    /** Root props for ARIA */
+    rootProps: () => {
+        'aria-selected': boolean;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     /** Get tablist props */
     tablistProps: () => {
         role: 'tablist';

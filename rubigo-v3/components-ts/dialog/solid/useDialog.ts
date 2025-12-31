@@ -15,6 +15,12 @@ export interface UseDialogReturn {
     open: Accessor<boolean>;
     openDialog: () => void;
     closeDialog: () => void;
+    close: () => void;
+    rootProps: () => {
+        'aria-hidden': boolean;
+        'aria-modal': boolean;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     triggerProps: () => {
         onClick: () => void;
         'aria-haspopup': 'dialog';

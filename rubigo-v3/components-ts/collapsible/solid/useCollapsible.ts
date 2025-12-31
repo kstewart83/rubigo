@@ -18,6 +18,12 @@ export interface UseCollapsibleReturn {
     toggle: () => void;
     expand: () => void;
     collapse: () => void;
+    close: () => void;
+    rootProps: () => {
+        'aria-disabled': boolean | undefined;
+        'aria-expanded': boolean;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     triggerProps: () => {
         'aria-expanded': boolean;
         'aria-disabled': boolean | undefined;

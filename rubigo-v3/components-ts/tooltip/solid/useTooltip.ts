@@ -14,6 +14,10 @@ export interface UseTooltipReturn {
     disabled: Accessor<boolean>;
     show: () => void;
     hide: () => void;
+    rootProps: () => {
+        'aria-hidden': boolean;
+        onKeyDown: (e: KeyboardEvent) => void;
+    };
     triggerProps: () => {
         onMouseEnter: () => void;
         onMouseLeave: () => void;
