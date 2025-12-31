@@ -230,9 +230,36 @@ build-test-lib:
     echo "🧪 Running rubigo-build unit tests..."
     cargo test -p rubigo-build
     echo "✅ Library unit tests passed"
+# Test: TypeScript type files are generated from Component API sections
+build-test-types:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing TypeScript type generation..."
+    cargo build
+    
+    # Check button.types.ts exists and has ButtonProps
+    if [ ! -f "generated/button.types.ts" ]; then
+        echo "❌ FAIL: generated/button.types.ts not found"
+        exit 1
+    fi
+    if ! grep -q "interface ButtonProps" "generated/button.types.ts"; then
+        echo "❌ FAIL: button.types.ts missing ButtonProps interface"
+        exit 1
+    fi
+    echo "  ✓ button.types.ts generated with ButtonProps"
+    
+    # Count total generated type files (should match number of specs with Component API)
+    TYPE_COUNT=$(ls generated/*.types.ts 2>/dev/null | wc -l)
+    if [ "$TYPE_COUNT" -lt 10 ]; then
+        echo "❌ FAIL: expected 10+ type files, found $TYPE_COUNT"
+        exit 1
+    fi
+    echo "  ✓ $TYPE_COUNT type files generated"
+    
+    echo "✅ TypeScript type generation working"
 
 # Run all build validation tests
-build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-outputs
+build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-outputs build-test-types
     @echo "═══════════════════════════════════"
     @echo "✅ All build tests passed"
 

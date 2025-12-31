@@ -20,8 +20,8 @@ pub mod vectors;
 
 // Re-export common types
 pub use extraction::{
-    extract_cue_blocks, extract_cue_version, extract_quint_block, extract_test_vectors,
-    parse_frontmatter,
+    extract_component_api_typescript, extract_cue_blocks, extract_cue_version, extract_quint_block,
+    extract_test_vectors, generate_types_file, parse_frontmatter,
 };
 pub use interactions::{
     extract_component_interactions, extract_keyboard_mappings, extract_mouse_events,
