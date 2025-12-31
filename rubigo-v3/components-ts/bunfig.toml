@@ -1,3 +1,8 @@
+# JSX config for SolidJS
+[jsx]
+runtime = "solid"
+
 [test]
 # Only run tests in source directories, not compiled dist
 root = "."
+preload = ["./test-setup.ts"]

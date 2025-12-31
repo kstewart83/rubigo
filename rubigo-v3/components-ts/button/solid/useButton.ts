@@ -32,7 +32,6 @@ export interface UseButtonReturn {
         'aria-disabled': boolean;
         'aria-busy': boolean;
         tabIndex: number;
-        onClick: () => void;
         onMouseDown: () => void;
         onMouseUp: () => void;
         onMouseLeave: () => void;
@@ -123,7 +122,8 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
         'aria-disabled': disabled(),
         'aria-busy': loading(),
         tabIndex: disabled() ? -1 : 0,
-        onClick: click,
+        // Note: onClick is not set here - pressUp handles invoking the callback
+        // to match spec behavior (activate on mouse release, not on click event)
         onMouseDown: pressDown,
         onMouseUp: pressUp,
         onMouseLeave: pressCancel,
