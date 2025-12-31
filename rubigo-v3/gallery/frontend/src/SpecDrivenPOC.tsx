@@ -155,20 +155,13 @@ const SpecDrivenPOC: Component = () => {
                     <h3 style={{ margin: '0', 'font-size': '14px', color: 'var(--text-muted)' }}>
                         Controls (from {buttonMeta.interface})
                     </h3>
-                    <button
+                    <Button
                         onClick={resetToDefaults}
-                        style={{
-                            padding: '4px 12px',
-                            'font-size': '12px',
-                            background: 'var(--bg-code)',
-                            border: '1px solid var(--input-border)',
-                            'border-radius': '4px',
-                            cursor: 'pointer',
-                            color: 'var(--text)'
-                        }}
+                        variant="secondary"
+                        size="sm"
                     >
                         Reset to Defaults
-                    </button>
+                    </Button>
                 </div>
 
                 <div style={{ display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
@@ -217,12 +210,13 @@ const SpecDrivenPOC: Component = () => {
                 <div>
                     <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '8px' }}>
                         <h4 style={{ margin: '0', 'font-size': '12px', color: 'var(--text-muted)' }}>Event Log</h4>
-                        <button
+                        <Button
                             onClick={() => setEventLog([])}
-                            style={{ padding: '2px 8px', 'font-size': '10px', background: 'var(--bg-code)', border: '1px solid var(--input-border)', 'border-radius': '3px', cursor: 'pointer', color: 'var(--text)' }}
+                            variant="ghost"
+                            size="sm"
                         >
                             Clear
-                        </button>
+                        </Button>
                     </div>
                     <div style={{
                         height: '120px',
