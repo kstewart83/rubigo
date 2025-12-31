@@ -71,6 +71,21 @@ Transitions:
 
 ---
 
+## Component API
+
+```sudolang
+interface Tabs {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

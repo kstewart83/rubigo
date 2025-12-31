@@ -69,6 +69,21 @@ Touch Targets:
 
 ---
 
+## Component API
+
+```sudolang
+interface Collapsible {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint

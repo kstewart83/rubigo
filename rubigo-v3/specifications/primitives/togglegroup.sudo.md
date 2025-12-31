@@ -76,6 +76,21 @@ Usage:
 
 ---
 
+## Component API
+
+```sudolang
+interface Togglegroup {
+  // State inputs
+  disabled = false
+  
+  // Callbacks
+  onChange: () => void
+  
+  // Content
+  children: slot
+}
+```
+
 ## Formal Model
 
 ```quint
