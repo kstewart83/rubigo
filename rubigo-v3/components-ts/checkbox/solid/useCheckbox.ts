@@ -22,6 +22,7 @@ export interface UseCheckboxReturn {
     state: () => string;
     toggle: () => void;
     setChecked: (checked: boolean) => void;
+    setUnchecked: () => void;
     setIndeterminate: (indeterminate: boolean) => void;
     /** Reset to initial state, optionally with context overrides */
     reset: (contextOverrides?: Partial<CheckboxContext>) => void;
@@ -40,8 +41,14 @@ export interface UseCheckboxReturn {
 
 /**
  * useCheckbox - SolidJS hook for a spec-driven checkbox
+ *
+ * @param optionsInput - Options object or getter function for reactive props
  */
-export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn {
+export function useCheckbox(optionsInput: UseCheckboxOptions | (() => UseCheckboxOptions) = {}): UseCheckboxReturn {
+    // Resolve options - support both plain object and getter function
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const initialContext: CheckboxContext = {
         checked: options.checked ?? false,
         disabled: options.disabled ?? false,
@@ -55,7 +62,7 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
 
     // Sync disabled prop to machine context (reactive updates)
     createEffect(() => {
-        const newDisabled = options.disabled ?? false;
+        const newDisabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== newDisabled) {
             (machine as any).context.disabled = newDisabled;
             bump();
@@ -64,7 +71,7 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
 
     // Sync checked prop to machine context (for controlled components)
     createEffect(() => {
-        const newChecked = options.checked ?? false;
+        const newChecked = getOptions().checked ?? false;
         if (machine.getContext().checked !== newChecked) {
             // Sync context and state directly
             (machine as any).context.checked = newChecked;
@@ -76,10 +83,15 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
 
     // Sync indeterminate prop to machine context
     createEffect(() => {
-        const newIndeterminate = options.indeterminate ?? false;
+        const newIndeterminate = getOptions().indeterminate ?? false;
         if (machine.getContext().indeterminate !== newIndeterminate) {
             if (newIndeterminate) {
                 machine.send('SET_INDETERMINATE');
+            } else {
+                // Clear indeterminate - revert to checked/unchecked based on current state
+                (machine as any).context.indeterminate = false;
+                const isChecked = machine.getContext().checked;
+                (machine as any).state = isChecked ? 'checked' : 'unchecked';
             }
             bump();
         }
@@ -94,7 +106,7 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
         const result = machine.send('TOGGLE');
         if (result.handled) {
             bump();
-            options.onChange?.(machine.getContext().checked);
+            getOptions().onChange?.(machine.getContext().checked);
         }
     };
 
@@ -132,14 +144,15 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
             bump();
             // Emit onChange for state-changing events
             if (['TOGGLE', 'SET_CHECKED', 'SET_UNCHECKED'].includes(event)) {
-                options.onChange?.(machine.getContext().checked);
+                getOptions().onChange?.(machine.getContext().checked);
             }
         }
         return result;
     };
 
     const rootProps = () => {
-        const ctx = getContext();
+        version(); // Ensure fresh data in non-reactive contexts
+        const ctx = machine.getContext();
         const ariaChecked = ctx.indeterminate ? 'mixed' as const : ctx.checked;
 
         return {
@@ -168,12 +181,13 @@ export function useCheckbox(options: UseCheckboxOptions = {}): UseCheckboxReturn
     };
 
     return {
-        checked: () => getContext().checked,
-        disabled: () => getContext().disabled,
-        indeterminate: () => getContext().indeterminate,
-        state: () => machine.getState(),
+        checked: () => { version(); return getOptions().checked ?? machine.getContext().checked; },
+        disabled: () => { version(); return getOptions().disabled ?? machine.getContext().disabled; },
+        indeterminate: () => { version(); return getOptions().indeterminate ?? machine.getContext().indeterminate; },
+        state: () => { version(); return machine.getState(); },
         toggle,
         setChecked,
+        setUnchecked: () => setChecked(false),
         setIndeterminate,
         reset,
         send,

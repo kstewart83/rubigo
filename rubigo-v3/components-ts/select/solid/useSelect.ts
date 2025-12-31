@@ -47,27 +47,34 @@ export interface UseSelectReturn {
     };
 }
 
-export function useSelect(options: UseSelectOptions = {}): UseSelectReturn {
+export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptions) = {}): UseSelectReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const defaultVal = options.value ?? options.defaultValue ?? '';
 
     const [open, setOpen] = createSignal(false);
     const [selectedValue, setSelectedValue] = createSignal(defaultVal);
     const [highlightedValue, setHighlightedValue] = createSignal(defaultVal);
-    const [disabled, setDisabled] = createSignal(options.disabled ?? false);
+    const [internalDisabled, setInternalDisabled] = createSignal(options.disabled ?? false);
     const [optionValues, setOptionValues] = createSignal<string[]>([]);
+
+    // Disabled accessor reads from props first for immediate reactivity
+    const disabled = () => getOptions().disabled ?? internalDisabled();
 
     // Sync controlled props
     createEffect(() => {
-        if (options.value !== undefined && selectedValue() !== options.value) {
-            setSelectedValue(options.value);
-            setHighlightedValue(options.value);
+        const value = getOptions().value;
+        if (value !== undefined && selectedValue() !== value) {
+            setSelectedValue(value);
+            setHighlightedValue(value);
         }
     });
 
     createEffect(() => {
-        const d = options.disabled ?? false;
-        if (disabled() !== d) {
-            setDisabled(d);
+        const d = getOptions().disabled ?? false;
+        if (internalDisabled() !== d) {
+            setInternalDisabled(d);
         }
     });
 
@@ -243,6 +250,7 @@ export function useSelect(options: UseSelectOptions = {}): UseSelectReturn {
         disabled,
         openDropdown,
         closeDropdown,
+        close: closeDropdown,
         toggleDropdown,
         selectValue,
         highlightValue,

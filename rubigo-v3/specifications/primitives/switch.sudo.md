@@ -316,6 +316,15 @@ Screen Reader:
   - Provide accessible name via label or aria-label
 ```
 
+## ARIA Mapping
+
+```aria-mapping
+| State   | aria-checked | aria-disabled |
+|---------|--------------|---------------|
+| idle    | {checked}    | {disabled}    |
+| focused | {checked}    | {disabled}    |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -327,4 +336,26 @@ stateDiagram-v2
     focused --> focused: TOGGLE [canToggle]
     focused --> focused: KEYDOWN_SPACE [canToggle]
     focused --> focused: KEYDOWN_ENTER [canToggle]
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Switch onChange={(on) => console.log(on)}>
+  Dark Mode
+</Switch>
+```
+
+```tsx example="checked"
+<Switch checked>
+  Enabled Feature
+</Switch>
+```
+
+```tsx example="disabled"
+<Switch disabled>
+  Locked Setting
+</Switch>
 ```

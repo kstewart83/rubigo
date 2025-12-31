@@ -30,12 +30,18 @@ export interface UseTooltipReturn {
 
 let tooltipIdCounter = 0;
 
-export function useTooltip(options: UseTooltipOptions = {}): UseTooltipReturn {
+export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOptions) = {}): UseTooltipReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const delayDuration = options.delayDuration ?? 300;
 
     const [open, setOpen] = createSignal(false);
-    const [disabled, setDisabled] = createSignal(options.disabled ?? false);
+    const [internalDisabled, setInternalDisabled] = createSignal(options.disabled ?? false);
     const id = `tooltip-${++tooltipIdCounter}`;
+
+    // Disabled accessor reads from props first for immediate reactivity
+    const disabled = () => getOptions().disabled ?? internalDisabled();
 
     let openTimeout: ReturnType<typeof setTimeout> | null = null;
     let closeTimeout: ReturnType<typeof setTimeout> | null = null;

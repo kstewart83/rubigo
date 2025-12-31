@@ -45,7 +45,10 @@ export interface UseInputReturn {
     inputProps: Accessor<JSX.InputHTMLAttributes<HTMLInputElement>>;
 }
 
-export function useInput(options: UseInputOptions = {}): UseInputReturn {
+export function useInput(optionsInput: UseInputOptions | (() => UseInputOptions) = {}): UseInputReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     // Initialize state machine with overrides from options
     const machine = createMachine(createInputConfig({
         value: options.value ?? '',
@@ -60,7 +63,7 @@ export function useInput(options: UseInputOptions = {}): UseInputReturn {
 
     // Sync disabled prop to machine context
     createEffect(() => {
-        const disabled = options.disabled ?? false;
+        const disabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== disabled) {
             (machine as any).context.disabled = disabled;
             triggerUpdate();
@@ -69,7 +72,7 @@ export function useInput(options: UseInputOptions = {}): UseInputReturn {
 
     // Sync readOnly prop to machine context
     createEffect(() => {
-        const readOnly = options.readOnly ?? false;
+        const readOnly = getOptions().readOnly ?? false;
         if (machine.getContext().readOnly !== readOnly) {
             (machine as any).context.readOnly = readOnly;
             triggerUpdate();
@@ -78,7 +81,7 @@ export function useInput(options: UseInputOptions = {}): UseInputReturn {
 
     // Sync invalid prop to machine context
     createEffect(() => {
-        const error = options.invalid ? 'invalid' : '';
+        const error = getOptions().invalid ? 'invalid' : '';
         if (machine.getContext().error !== error) {
             (machine as any).context.error = error;
             triggerUpdate();
@@ -87,7 +90,7 @@ export function useInput(options: UseInputOptions = {}): UseInputReturn {
 
     // Sync value prop to machine context (controlled mode)
     createEffect(() => {
-        const value = options.value;
+        const value = getOptions().value;
         if (value !== undefined) {
             const ctx = machine.getContext();
             if (ctx.value !== value) {
@@ -102,20 +105,20 @@ export function useInput(options: UseInputOptions = {}): UseInputReturn {
         const ctx = machine.getContext();
         if (!ctx.disabled && !ctx.readOnly) {
             (machine as any).context.value = newValue;
-            options.onChange?.(newValue);
+            getOptions().onChange?.(newValue);
             triggerUpdate();
         }
     };
 
-    // Reactive accessors
+    // Reactive accessors - props take precedence
     const value = () => {
         bump(); // Subscribe to updates
-        return machine.getContext().value;
+        return getOptions().value ?? machine.getContext().value;
     };
 
     const disabled = () => {
         bump();
-        return machine.getContext().disabled;
+        return getOptions().disabled ?? machine.getContext().disabled;
     };
 
     const focused = () => {

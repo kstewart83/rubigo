@@ -42,11 +42,19 @@ export interface UseButtonReturn {
 
 /**
  * useButton - SolidJS hook for a spec-driven button
+ *
+ * @param optionsInput - Options object or getter function for reactive props
  */
-export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
+export function useButton(optionsInput: UseButtonOptions | (() => UseButtonOptions) = {}): UseButtonReturn {
+    // Resolve options - support both plain object and getter function
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+
+    // Get initial options for machine setup
+    const initialOptions = getOptions();
+
     const machine = createMachine(createButtonConfig({
-        disabled: options.disabled ?? false,
-        loading: options.loading ?? false,
+        disabled: initialOptions.disabled ?? false,
+        loading: initialOptions.loading ?? false,
         pressed: false,
     }));
 
@@ -55,7 +63,8 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
 
     // Sync prop changes to machine context (reactive updates)
     createEffect(() => {
-        const newDisabled = options.disabled ?? false;
+        const opts = getOptions();
+        const newDisabled = opts.disabled ?? false;
         if (machine.getContext().disabled !== newDisabled) {
             (machine as any).context.disabled = newDisabled;
             bump();
@@ -63,7 +72,8 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
     });
 
     createEffect(() => {
-        const newLoading = options.loading ?? false;
+        const opts = getOptions();
+        const newLoading = opts.loading ?? false;
         if (machine.getContext().loading !== newLoading) {
             if (newLoading) {
                 machine.send('START_LOADING');
@@ -79,15 +89,16 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
         return machine.getContext();
     });
 
-    const disabled = () => getContext().disabled;
-    const loading = () => getContext().loading;
+    // Props take precedence over machine context for immediate reactivity
+    const disabled = () => getOptions().disabled ?? getContext().disabled;
+    const loading = () => getOptions().loading ?? getContext().loading;
     const pressed = () => getContext().pressed;
     const state = () => { version(); return machine.getState(); };
 
     const click = () => {
         const result = machine.send('CLICK');
         if (result.handled) {
-            options.onClick?.();
+            getOptions().onClick?.();
             bump();
         }
     };
@@ -100,7 +111,7 @@ export function useButton(options: UseButtonOptions = {}): UseButtonReturn {
     const pressUp = () => {
         const result = machine.send('PRESS_UP');
         if (result.handled) {
-            options.onClick?.();
+            getOptions().onClick?.();
         }
         bump();
     };

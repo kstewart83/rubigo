@@ -37,7 +37,10 @@ export interface UseToggleGroupReturn {
     };
 }
 
-export function useToggleGroup(options: UseToggleGroupOptions = {}): UseToggleGroupReturn {
+export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseToggleGroupOptions) = {}): UseToggleGroupReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const defaultId = options.value ?? options.defaultValue ?? 'item-0';
 
     const machine = createMachine(createToggleGroupConfig({
@@ -53,18 +56,19 @@ export function useToggleGroup(options: UseToggleGroupOptions = {}): UseToggleGr
 
     // Sync controlled props
     createEffect(() => {
-        if (options.value !== undefined) {
+        const value = getOptions().value;
+        if (value !== undefined) {
             const ctx = machine.getContext();
-            if (ctx.selectedId !== options.value) {
-                (machine as any).context.selectedId = options.value;
-                (machine as any).context.focusedId = options.value;
+            if (ctx.selectedId !== value) {
+                (machine as any).context.selectedId = value;
+                (machine as any).context.focusedId = value;
                 triggerUpdate();
             }
         }
     });
 
     createEffect(() => {
-        const disabled = options.disabled ?? false;
+        const disabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== disabled) {
             (machine as any).context.disabled = disabled;
             triggerUpdate();
@@ -83,7 +87,7 @@ export function useToggleGroup(options: UseToggleGroupOptions = {}): UseToggleGr
 
     const disabled = () => {
         bump();
-        return machine.getContext().disabled;
+        return getOptions().disabled ?? machine.getContext().disabled;
     };
 
     const getItemIndex = (id: string): number => itemIds().indexOf(id);

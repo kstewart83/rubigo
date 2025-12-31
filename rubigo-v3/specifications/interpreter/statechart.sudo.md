@@ -238,3 +238,13 @@ Implementations should pass these test cases:
   "expected": { "handled": true, "new_state": "b" }
 }
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+const machine = createMachine(buttonConfig);
+machine.send({ type: 'CLICK' });
+console.log(machine.state); // 'active'
+```

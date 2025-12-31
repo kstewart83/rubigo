@@ -42,7 +42,10 @@ export interface UseSliderReturn {
     };
 }
 
-export function useSlider(options: UseSliderOptions = {}): UseSliderReturn {
+export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptions) = {}): UseSliderReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const min = options.min ?? 0;
     const max = options.max ?? 100;
     const step = options.step ?? 1;
@@ -61,17 +64,18 @@ export function useSlider(options: UseSliderOptions = {}): UseSliderReturn {
 
     // Sync controlled props
     createEffect(() => {
-        if (options.value !== undefined) {
+        const value = getOptions().value;
+        if (value !== undefined) {
             const ctx = machine.getContext();
-            if (ctx.value !== options.value) {
-                (machine as any).context.value = clamp(options.value, ctx.min, ctx.max);
+            if (ctx.value !== value) {
+                (machine as any).context.value = clamp(value, ctx.min, ctx.max);
                 triggerUpdate();
             }
         }
     });
 
     createEffect(() => {
-        const disabled = options.disabled ?? false;
+        const disabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== disabled) {
             (machine as any).context.disabled = disabled;
             triggerUpdate();
@@ -83,7 +87,7 @@ export function useSlider(options: UseSliderOptions = {}): UseSliderReturn {
 
     const value = () => {
         bump();
-        return machine.getContext().value;
+        return getOptions().value ?? machine.getContext().value;
     };
 
     const minVal = () => {
@@ -98,7 +102,7 @@ export function useSlider(options: UseSliderOptions = {}): UseSliderReturn {
 
     const disabled = () => {
         bump();
-        return machine.getContext().disabled;
+        return getOptions().disabled ?? machine.getContext().disabled;
     };
 
     const dragging = () => {
@@ -107,6 +111,7 @@ export function useSlider(options: UseSliderOptions = {}): UseSliderReturn {
     };
 
     const percentage = () => {
+        bump(); // Track reactivity
         const ctx = machine.getContext();
         return ((ctx.value - ctx.min) / (ctx.max - ctx.min)) * 100;
     };

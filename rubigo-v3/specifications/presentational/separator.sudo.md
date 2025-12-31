@@ -39,3 +39,23 @@ ARIA attributes:
 
 Note: Purely decorative, no keyboard interaction
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<div>
+  <p>Section 1</p>
+  <Separator />
+  <p>Section 2</p>
+</div>
+```
+
+```tsx example="vertical"
+<div style={{ display: 'flex', height: '100px' }}>
+  <p>Left</p>
+  <Separator orientation="vertical" />
+  <p>Right</p>
+</div>
+```

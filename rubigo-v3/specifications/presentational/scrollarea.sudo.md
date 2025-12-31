@@ -53,3 +53,17 @@ Keyboard:
 Note: Native scroll containers are accessible by default
       Only add custom behavior if native is insufficient
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<ScrollArea style={{ height: '200px' }}>
+  <div style={{ padding: '16px' }}>
+    <p>Scrollable content here...</p>
+    <p>More content...</p>
+    <p>Even more content...</p>
+  </div>
+</ScrollArea>
+```

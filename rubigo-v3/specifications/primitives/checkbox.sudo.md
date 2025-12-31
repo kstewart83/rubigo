@@ -296,6 +296,16 @@ Screen Reader:
   - Announce "partially checked" for indeterminate
 ```
 
+## ARIA Mapping
+
+```aria-mapping
+| State         | aria-checked | aria-disabled |
+|---------------|--------------|---------------|
+| unchecked     | false        | {disabled}    |
+| checked       | true         | {disabled}    |
+| indeterminate | mixed        | {disabled}    |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -310,4 +320,26 @@ stateDiagram-v2
     indeterminate --> checked: TOGGLE [canToggle]
     indeterminate --> checked: SET_CHECKED [canToggle]
     indeterminate --> unchecked: SET_UNCHECKED [canToggle]
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Checkbox onChange={(checked) => console.log(checked)}>
+  Accept Terms
+</Checkbox>
+```
+
+```tsx example="checked"
+<Checkbox checked>
+  Pre-selected
+</Checkbox>
+```
+
+```tsx example="disabled"
+<Checkbox disabled>
+  Cannot Change
+</Checkbox>
 ```

@@ -44,3 +44,22 @@ Focus Management:
   - Card itself should not be focusable
   - Interactive children handle their own focus
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Card>
+  <Card.Header>
+    <Card.Title>Card Title</Card.Title>
+    <Card.Description>Card description text.</Card.Description>
+  </Card.Header>
+  <Card.Content>
+    <p>Main content goes here.</p>
+  </Card.Content>
+  <Card.Footer>
+    <Button>Action</Button>
+  </Card.Footer>
+</Card>
+```

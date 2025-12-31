@@ -361,6 +361,16 @@ Announcements:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State | aria-selected |
+|-------|---------------|
+| idle  | {selected}    |
+```
+
+> **Note:** Each tab item has `aria-selected` based on whether its ID matches `selectedId`.
+
 ## State Diagram
 
 ```mermaid
@@ -371,3 +381,46 @@ stateDiagram-v2
     idle --> idle: FOCUS_PREV / focusPrevTab
     idle --> idle: ACTIVATE / activateFocused
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Tabs.Root defaultValue="account">
+  <Tabs.List>
+    <Tabs.Tab value="account">Account</Tabs.Tab>
+    <Tabs.Tab value="settings">Settings</Tabs.Tab>
+    <Tabs.Tab value="billing">Billing</Tabs.Tab>
+  </Tabs.List>
+  <Tabs.Panel value="account">
+    <p>Manage your account settings and preferences.</p>
+  </Tabs.Panel>
+  <Tabs.Panel value="settings">
+    <p>Configure application settings.</p>
+  </Tabs.Panel>
+  <Tabs.Panel value="billing">
+    <p>View billing history and payment methods.</p>
+  </Tabs.Panel>
+</Tabs.Root>
+```
+
+```tsx example="disabled"
+<Tabs.Root defaultValue="active">
+  <Tabs.List>
+    <Tabs.Tab value="active">Active Tab</Tabs.Tab>
+    <Tabs.Tab value="disabled" disabled>Disabled Tab</Tabs.Tab>
+    <Tabs.Tab value="another">Another Tab</Tabs.Tab>
+  </Tabs.List>
+  <Tabs.Panel value="active">
+    <p>This tab is active and clickable.</p>
+  </Tabs.Panel>
+  <Tabs.Panel value="disabled">
+    <p>This content is inaccessible.</p>
+  </Tabs.Panel>
+  <Tabs.Panel value="another">
+    <p>Another active tab content.</p>
+  </Tabs.Panel>
+</Tabs.Root>
+```
+

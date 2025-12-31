@@ -317,6 +317,15 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State  | aria-modal | aria-hidden |
+|--------|------------|-------------|
+| closed | false      | true        |
+| open   | true       | false       |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -327,3 +336,36 @@ stateDiagram-v2
     open --> closed: ESCAPE [canClose]
     open --> closed: BACKDROP_CLICK [canClose]
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Dialog.Root>
+  <Dialog.Trigger>Open Dialog</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content>
+      <Dialog.Title>Confirm Action</Dialog.Title>
+      <Dialog.Description>Are you sure you want to proceed?</Dialog.Description>
+      <Dialog.Close>Close</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+```tsx example="info"
+<Dialog.Root>
+  <Dialog.Trigger>View Details</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content>
+      <Dialog.Title>Information</Dialog.Title>
+      <Dialog.Description>This is helpful information.</Dialog.Description>
+      <Dialog.Close>Got it</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+

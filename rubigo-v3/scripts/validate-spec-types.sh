@@ -53,4 +53,33 @@ else
     exit 1
 fi
 
+# Validate Example Usages section
+echo "🔍 Validating Example Usages..."
+examples_failed=0
+for spec in specifications/*/*.sudo.md; do
+    [ -f "$spec" ] || continue
+    name=$(basename "$spec" .sudo.md)
+    
+    # Skip template
+    if [ "$name" = "TEMPLATE" ]; then
+        continue
+    fi
+    
+    # Check for Example Usages section with tsx example block
+    if ! grep -q '^## Example Usages' "$spec"; then
+        echo "  ❌ $name: missing '## Example Usages' section"
+        examples_failed=1
+    elif ! grep -q '```tsx example=' "$spec"; then
+        echo "  ❌ $name: has Example Usages but no \`\`\`tsx example= blocks"
+        examples_failed=1
+    else
+        echo "  ✓ $name: has examples"
+    fi
+done
+
+if [ "$examples_failed" -eq 1 ]; then
+    echo "❌ Example Usages validation failed"
+    exit 1
+fi
+
 echo "✅ All specs valid"

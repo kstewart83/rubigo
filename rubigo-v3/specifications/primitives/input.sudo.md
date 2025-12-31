@@ -280,3 +280,31 @@ Screen Reader:
   - Announce placeholder when empty
   - Announce error messages on validation failure
 ```
+
+---
+
+## ARIA Mapping
+
+```aria-mapping
+| State   | aria-disabled | aria-readonly | aria-invalid |
+|---------|---------------|---------------|--------------|
+| idle    | {disabled}    | {readOnly}    | {error!=""}  |
+| focused | {disabled}    | {readOnly}    | {error!=""}  |
+```
+
+## Example Usages
+
+```tsx example="basic"
+<Input 
+  placeholder="Enter your name"
+  onChange={(val) => console.log(val)}
+/>
+```
+
+```tsx example="withValue"
+<Input value="Hello World" />
+```
+
+```tsx example="disabled"
+<Input disabled placeholder="Cannot edit" />
+```

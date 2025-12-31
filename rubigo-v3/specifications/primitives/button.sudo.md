@@ -452,6 +452,16 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State   | aria-disabled | aria-busy |
+|---------|---------------|-----------|
+| idle    | {disabled}    | false     |
+| pressed | {disabled}    | false     |
+| loading | true          | true      |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -463,4 +473,28 @@ stateDiagram-v2
     pressed --> idle: PRESS_UP / triggerAction
     pressed --> idle: PRESS_CANCEL
     loading --> idle: STOP_LOADING
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Button onClick={() => console.log('clicked')}>
+  Click Me
+</Button>
+```
+
+```tsx example="variants"
+<>
+  <Button variant="primary">Primary</Button>
+  <Button variant="secondary">Secondary</Button>
+  <Button variant="destructive">Delete</Button>
+</>
+```
+
+```tsx example="disabled"
+<Button disabled>
+  Cannot Click
+</Button>
 ```

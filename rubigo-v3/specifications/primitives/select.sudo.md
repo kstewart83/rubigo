@@ -395,6 +395,15 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State  | aria-expanded | aria-disabled |
+|--------|---------------|---------------|
+| closed | false         | {disabled}    |
+| open   | true          | {disabled}    |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -407,4 +416,29 @@ stateDiagram-v2
     open --> closed: SELECT
     open --> open: HIGHLIGHT_NEXT
     open --> open: HIGHLIGHT_PREV
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Select.Root onValueChange={(v) => console.log(v)}>
+  <Select.Trigger placeholder="Select a fruit..." />
+  <Select.Content>
+    <Select.Item value="apple">Apple</Select.Item>
+    <Select.Item value="banana">Banana</Select.Item>
+    <Select.Item value="cherry">Cherry</Select.Item>
+  </Select.Content>
+</Select.Root>
+```
+
+```tsx example="withDefault"
+<Select.Root defaultValue="banana">
+  <Select.Trigger />
+  <Select.Content>
+    <Select.Item value="apple">Apple</Select.Item>
+    <Select.Item value="banana">Banana</Select.Item>
+  </Select.Content>
+</Select.Root>
 ```
