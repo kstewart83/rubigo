@@ -272,11 +272,22 @@ const SpecDrivenPOC: Component = () => {
     };
 
     // Combined props for display
-    const displayProps = () => ({ children: childrenText(), ...propValues() });
+    const displayProps = () => {
+        const props = { ...propValues() };
+        // Input uses value instead of children
+        if (selectedComponent() !== 'input') {
+            (props as any).children = childrenText();
+        }
+        return props;
+    };
 
     // Render preview component
     const renderPreview = () => {
         const Comp = componentConfig().component;
+        // Input is a self-closing component that uses value, not children
+        if (selectedComponent() === 'input') {
+            return <Comp {...componentProps()} placeholder="Type here..." />;
+        }
         return (
             <Comp {...componentProps()}>
                 {childrenText()}
@@ -323,17 +334,19 @@ const SpecDrivenPOC: Component = () => {
                 interfaceName={getMeta().interface}
                 onReset={resetToDefaults}
             >
-                {/* Children input */}
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
-                    <span>children:</span>
-                    <input
-                        type="text"
-                        value={childrenText()}
-                        onInput={(e) => setChildrenText(e.target.value)}
-                        style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
-                    />
-                    <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Label content)</span>
-                </label>
+                {/* Children input - hidden for Input component since it uses value, not children */}
+                <Show when={selectedComponent() !== 'input'}>
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+                        <span>children:</span>
+                        <input
+                            type="text"
+                            value={childrenText()}
+                            onInput={(e) => setChildrenText(e.target.value)}
+                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
+                        />
+                        <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Label content)</span>
+                    </label>
+                </Show>
 
                 {/* Dynamic controls from metadata */}
                 <For each={getMeta().props as PropMeta[]}>
