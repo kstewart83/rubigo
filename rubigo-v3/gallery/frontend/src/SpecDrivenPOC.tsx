@@ -1,11 +1,12 @@
 /**
  * Spec-Driven Gallery POC
  * 
- * Controls are dynamically generated from button.meta.json
+ * Controls are dynamically generated from checkbox.meta.json
  */
 import { Component, createSignal, For, Show, Accessor, Setter, JSX } from 'solid-js';
 import { Button } from '@rubigo/components/button';
-import buttonMeta from '@generated/button.meta.json';
+import { Checkbox } from '@rubigo/components/checkbox';
+import componentMeta from '@generated/checkbox.meta.json';
 
 // Types from metadata
 interface PropMeta {
@@ -134,7 +135,7 @@ const PropsPanel: Component<PropsPanelProps> = (props) => {
 const SpecDrivenPOC: Component = () => {
     // Initialize state from metadata defaults
     const initialProps: Record<string, unknown> = {};
-    for (const prop of buttonMeta.props as PropMeta[]) {
+    for (const prop of componentMeta.props as PropMeta[]) {
         if (prop.default !== undefined) {
             if (prop.type === 'boolean') {
                 initialProps[prop.name] = prop.default === 'true';
@@ -145,7 +146,7 @@ const SpecDrivenPOC: Component = () => {
     }
 
     const [propValues, setPropValues] = createSignal<Record<string, unknown>>(initialProps);
-    const [childrenText, setChildrenText] = createSignal('Click Me');
+    const [childrenText, setChildrenText] = createSignal('Accept Terms');
     const [eventLog, setEventLog] = createSignal<string[]>([]);
 
     // Log an event to the UI
@@ -162,7 +163,7 @@ const SpecDrivenPOC: Component = () => {
     // Reset all props to metadata defaults
     const resetToDefaults = () => {
         setPropValues(initialProps);
-        setChildrenText('Click Me');
+        setChildrenText('Accept Terms');
         logEvent('Reset to defaults');
     };
 
@@ -213,10 +214,10 @@ const SpecDrivenPOC: Component = () => {
         }
     };
 
-    // Build button props dynamically
-    const buttonProps = () => {
+    // Build component props dynamically
+    const componentProps = () => {
         const props: Record<string, unknown> = { ...propValues() };
-        props.onClick = () => logEvent('onClick fired');
+        props.onChange = (checked: boolean) => logEvent(`onChange fired: checked=${checked}`);
         return props;
     };
 
@@ -233,12 +234,12 @@ const SpecDrivenPOC: Component = () => {
             color: 'var(--rubigo-text)'
         }}>
             <h2 style={{ 'margin-bottom': '20px', color: 'var(--rubigo-text)' }}>
-                Spec-Driven Controls: {buttonMeta.component}
+                Spec-Driven Controls: {componentMeta.component}
             </h2>
 
             <ControlPanel
                 title="Controls"
-                interfaceName={buttonMeta.interface}
+                interfaceName={componentMeta.interface}
                 onReset={resetToDefaults}
             >
                 {/* Children input */}
@@ -254,15 +255,15 @@ const SpecDrivenPOC: Component = () => {
                 </label>
 
                 {/* Dynamic controls from metadata */}
-                <For each={buttonMeta.props as PropMeta[]}>
+                <For each={componentMeta.props as PropMeta[]}>
                     {(prop) => renderControl(prop)}
                 </For>
             </ControlPanel>
 
             <Preview>
-                <Button {...buttonProps()}>
+                <Checkbox {...componentProps()}>
                     {childrenText()}
-                </Button>
+                </Checkbox>
             </Preview>
 
             {/* Bottom panels */}
