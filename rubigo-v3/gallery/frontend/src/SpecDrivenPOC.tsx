@@ -32,6 +32,13 @@ const SpecDrivenPOC: Component = () => {
 
     const [propValues, setPropValues] = createSignal<Record<string, unknown>>(initialProps);
     const [childrenText, setChildrenText] = createSignal('Click Me');
+    const [eventLog, setEventLog] = createSignal<string[]>([]);
+
+    // Log an event to the UI
+    const logEvent = (event: string) => {
+        const timestamp = new Date().toLocaleTimeString();
+        setEventLog(prev => [`[${timestamp}] ${event}`, ...prev].slice(0, 20));
+    };
 
     // Update a single prop value
     const updateProp = (name: string, value: unknown) => {
@@ -42,6 +49,7 @@ const SpecDrivenPOC: Component = () => {
     const resetToDefaults = () => {
         setPropValues(initialProps);
         setChildrenText('Click Me');
+        logEvent('Reset to defaults');
     };
 
     // Render control based on prop type
@@ -94,7 +102,7 @@ const SpecDrivenPOC: Component = () => {
     // Build button props dynamically
     const buttonProps = () => {
         const props: Record<string, unknown> = { ...propValues() };
-        props.onClick = () => console.log('Button clicked!', props);
+        props.onClick = () => logEvent('onClick fired');
         return props;
     };
 
@@ -167,17 +175,54 @@ const SpecDrivenPOC: Component = () => {
                 </Button>
             </div>
 
-            {/* Debug: show current props */}
-            <pre style={{
+            {/* Event Log */}
+            <div style={{
                 'margin-top': '20px',
-                padding: '12px',
-                'background': '#f0f0f0',
-                'border-radius': '4px',
-                'font-size': '12px',
-                overflow: 'auto'
+                display: 'grid',
+                'grid-template-columns': '1fr 1fr',
+                gap: '16px'
             }}>
-                {JSON.stringify({ children: childrenText(), ...propValues() }, null, 2)}
-            </pre>
+                <div>
+                    <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '8px' }}>
+                        <h4 style={{ margin: '0', 'font-size': '12px', color: '#666' }}>Event Log</h4>
+                        <button
+                            onClick={() => setEventLog([])}
+                            style={{ padding: '2px 8px', 'font-size': '10px', background: '#f0f0f0', border: '1px solid #ccc', 'border-radius': '3px', cursor: 'pointer' }}
+                        >
+                            Clear
+                        </button>
+                    </div>
+                    <div style={{
+                        height: '120px',
+                        'overflow-y': 'auto',
+                        padding: '8px',
+                        background: '#1e1e1e',
+                        color: '#0f0',
+                        'border-radius': '4px',
+                        'font-family': 'monospace',
+                        'font-size': '11px'
+                    }}>
+                        <For each={eventLog()}>
+                            {(line) => <div>{line}</div>}
+                        </For>
+                        {eventLog().length === 0 && <span style={{ color: '#666' }}>No events yet...</span>}
+                    </div>
+                </div>
+                <div>
+                    <h4 style={{ margin: '0 0 8px 0', 'font-size': '12px', color: '#666' }}>Current Props</h4>
+                    <pre style={{
+                        height: '120px',
+                        'overflow-y': 'auto',
+                        margin: '0',
+                        padding: '8px',
+                        'background': '#f0f0f0',
+                        'border-radius': '4px',
+                        'font-size': '11px'
+                    }}>
+                        {JSON.stringify({ children: childrenText(), ...propValues() }, null, 2)}
+                    </pre>
+                </div>
+            </div>
         </div>
     );
 };
