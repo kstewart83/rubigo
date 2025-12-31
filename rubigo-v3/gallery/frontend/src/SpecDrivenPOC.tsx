@@ -38,6 +38,12 @@ const SpecDrivenPOC: Component = () => {
         setPropValues(prev => ({ ...prev, [name]: value }));
     };
 
+    // Reset all props to metadata defaults
+    const resetToDefaults = () => {
+        setPropValues(initialProps);
+        setChildrenText('Click Me');
+    };
+
     // Render control based on prop type
     const renderControl = (prop: PropMeta) => {
         const value = () => propValues()[prop.name];
@@ -106,9 +112,24 @@ const SpecDrivenPOC: Component = () => {
                 'margin-bottom': '30px',
                 'background': '#f9f9f9'
             }}>
-                <h3 style={{ margin: '0 0 16px 0', 'font-size': '14px', color: '#666' }}>
-                    Controls (from {buttonMeta.interface})
-                </h3>
+                <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '16px' }}>
+                    <h3 style={{ margin: '0', 'font-size': '14px', color: '#666' }}>
+                        Controls (from {buttonMeta.interface})
+                    </h3>
+                    <button
+                        onClick={resetToDefaults}
+                        style={{
+                            padding: '4px 12px',
+                            'font-size': '12px',
+                            background: '#f0f0f0',
+                            border: '1px solid #ccc',
+                            'border-radius': '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Reset to Defaults
+                    </button>
+                </div>
 
                 <div style={{ display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
                     {/* Children input */}
