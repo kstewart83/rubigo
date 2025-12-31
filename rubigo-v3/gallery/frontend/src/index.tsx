@@ -1,6 +1,6 @@
 /* @refresh reload */
 import { render } from 'solid-js/web';
-import '../../../components-ts/tokens/variables.css';  // Design tokens
+import '@rubigo/tokens/variables.css';  // Design tokens
 import App from './App';
 import ButtonTest from './ButtonTest';
 import SpecDrivenPOC from './SpecDrivenPOC';

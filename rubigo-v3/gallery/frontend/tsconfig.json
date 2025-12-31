@@ -18,6 +18,9 @@
             "@rubigo/components/*": [
                 "../../components-ts/*"
             ],
+            "@rubigo/tokens/*": [
+                "../../components-ts/tokens/*"
+            ],
             "@generated/*": [
                 "../../generated/*"
             ]
