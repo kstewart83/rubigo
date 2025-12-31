@@ -1,5 +1,22 @@
 /* Button Component Styles */
 
+/* Default (light mode) and dark mode CSS variables */
+:root {
+    --rubigo-text: #1f2937;
+    --rubigo-text-muted: #6b7280;
+    --rubigo-border: #e5e7eb;
+    --rubigo-bg-hover: #f3f4f6;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --rubigo-text: #e5e5e5;
+        --rubigo-text-muted: #9ca3af;
+        --rubigo-border: #4b5563;
+        --rubigo-bg-hover: #374151;
+    }
+}
+
 /* Base button style */
 .button {
     display: inline-flex;
