@@ -5,7 +5,7 @@
  */
 import { Component, createSignal, For, Show } from 'solid-js';
 import { Button } from '@rubigo/components/button';
-import buttonMeta from '../../../generated/button.meta.json';
+import buttonMeta from '@generated/button.meta.json';
 
 // Types from metadata
 interface PropMeta {

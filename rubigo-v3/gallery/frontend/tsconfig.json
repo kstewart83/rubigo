@@ -17,6 +17,9 @@
         "paths": {
             "@rubigo/components/*": [
                 "../../components-ts/*"
+            ],
+            "@generated/*": [
+                "../../generated/*"
             ]
         }
     },

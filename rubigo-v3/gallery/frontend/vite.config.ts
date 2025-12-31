@@ -11,6 +11,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@rubigo/components': fileURLToPath(new URL('../../components-ts', import.meta.url)),
+            '@generated': fileURLToPath(new URL('../../generated', import.meta.url)),
         },
     },
     build: {
