@@ -3,6 +3,6 @@
 runtime = "solid"
 
 [test]
-# Only run tests in source directories, not compiled dist
-root = "."
+# Bun test settings - runs *.test.ts files
+root = "tests"
 preload = ["./test-setup.ts"]
