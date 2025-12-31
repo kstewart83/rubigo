@@ -245,7 +245,7 @@ pub fn parse_typescript_interface(component_name: &str, typescript: &str) -> Com
     let lines: Vec<&str> = typescript.lines().collect();
     let mut pending_jsdoc: Option<String> = None;
 
-    for (i, line) in lines.iter().enumerate() {
+    for (_i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
         // Capture JSDoc comments
