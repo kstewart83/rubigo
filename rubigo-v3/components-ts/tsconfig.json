@@ -8,7 +8,13 @@
         "skipLibCheck": true,
         "declaration": true,
         "outDir": "./dist",
-        "rootDir": "./",
+        "rootDir": "..",
+        "baseUrl": ".",
+        "paths": {
+            "@generated/*": [
+                "../generated/*"
+            ]
+        },
         "resolveJsonModule": true,
         "jsx": "preserve",
         "jsxImportSource": "solid-js",
@@ -17,12 +23,14 @@
         ]
     },
     "include": [
+        "types.d.ts",
         "statechart/**/*",
         "switch/**/*",
         "solid/**/*",
         "button/**/*",
         "checkbox/**/*",
-        "tabs/**/*"
+        "tabs/**/*",
+        "../generated/*.types.ts"
     ],
     "exclude": [
         "node_modules",

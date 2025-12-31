@@ -180,6 +180,10 @@ pub fn extract_cue_version(output: &str) -> Option<String> {
 /// Generate a .types.ts file from the extracted Component API TypeScript
 /// Returns the file content ready to be written
 pub fn generate_types_file(component_name: &str, typescript_interface: &str) -> String {
+    // Extract interface name from the TypeScript content
+    let interface_name = extract_interface_name(typescript_interface)
+        .unwrap_or_else(|| format!("{}Props", capitalize_first(component_name)));
+
     format!(
         r#"// Auto-generated from {}.sudo.md – do not edit
 // Framework-agnostic types; override Slot in your component
@@ -188,12 +192,25 @@ type Slot = unknown;
 
 {}
 
-export type {{ {}Props }};
+export type {{ {} }};
 "#,
-        component_name,
-        typescript_interface,
-        capitalize_first(component_name)
+        component_name, typescript_interface, interface_name
     )
+}
+
+/// Extract interface name from TypeScript interface definition
+fn extract_interface_name(typescript: &str) -> Option<String> {
+    for line in typescript.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("interface ") {
+            // "interface FooProps {" -> "FooProps"
+            return trimmed
+                .strip_prefix("interface ")
+                .and_then(|rest| rest.split_whitespace().next())
+                .map(|s| s.trim_end_matches('{').trim().to_string());
+        }
+    }
+    None
 }
 
 fn capitalize_first(s: &str) -> String {

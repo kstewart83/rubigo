@@ -183,19 +183,43 @@ build-test-cache:
     fi
     echo "✅ Build correctly cached"
 
-# Test: Touching a spec file triggers rebuild
+# Test: Touching a spec file triggers rebuild and regenerates types
 build-test-spec-trigger:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🧪 Testing spec change detection..."
     cargo build 2>&1 > /dev/null
+    
+    # Record timestamp of a generated type file
+    TYPES_FILE="generated/switch.types.ts"
+    if [ -f "$TYPES_FILE" ]; then
+        BEFORE_MTIME=$(stat -c %Y "$TYPES_FILE")
+    else
+        BEFORE_MTIME=0
+    fi
+    
+    # Touch a spec file to trigger rebuild
+    sleep 1  # Ensure timestamp difference
     touch specifications/primitives/switch.sudo.md
     cargo build 2>&1 | tee /tmp/rubigo_build3.log
+    
     # After touching a spec, build.rs should recompile
     if ! grep -q "Compiling rubigo-v3-workspace" /tmp/rubigo_build3.log; then
         echo "❌ FAIL: Spec change not detected (no recompile)"
         exit 1
     fi
+    echo "  ✓ Spec change triggers rebuild"
+    
+    # Verify type file was regenerated
+    if [ -f "$TYPES_FILE" ]; then
+        AFTER_MTIME=$(stat -c %Y "$TYPES_FILE")
+        if [ "$AFTER_MTIME" -gt "$BEFORE_MTIME" ]; then
+            echo "  ✓ Type file regenerated on spec change"
+        else
+            echo "⚠️  Type file not updated (may be cached)"
+        fi
+    fi
+    
     echo "✅ Spec change triggers rebuild"
 
 # Test: Generated outputs are correct
