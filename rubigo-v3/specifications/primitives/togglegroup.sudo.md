@@ -418,6 +418,17 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State   | aria-disabled | aria-checked |
+|---------|---------------|--------------|
+| idle    | {disabled}    | {selected}   |
+| focused | {disabled}    | {selected}   |
+```
+
+> **Note:** Each toggle item has `aria-checked` based on whether its ID matches `selectedId`.
+
 ## State Diagram
 
 ```mermaid
@@ -430,4 +441,23 @@ stateDiagram-v2
     focused --> focused: FOCUS_PREV [canInteract]
     focused --> focused: ACTIVATE [canInteract]
     focused --> idle: BLUR
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<ToggleGroup.Root defaultValue="left" onValueChange={(v) => console.log(v)}>
+  <ToggleGroup.Item value="left">Left</ToggleGroup.Item>
+  <ToggleGroup.Item value="center">Center</ToggleGroup.Item>
+  <ToggleGroup.Item value="right">Right</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+```tsx example="disabled"
+<ToggleGroup.Root defaultValue="opt1" disabled>
+  <ToggleGroup.Item value="opt1">Option 1</ToggleGroup.Item>
+  <ToggleGroup.Item value="opt2">Option 2</ToggleGroup.Item>
+</ToggleGroup.Root>
 ```

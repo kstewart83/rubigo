@@ -30,7 +30,10 @@ export interface UseCollapsibleReturn {
     };
 }
 
-export function useCollapsible(options: UseCollapsibleOptions = {}): UseCollapsibleReturn {
+export function useCollapsible(optionsInput: UseCollapsibleOptions | (() => UseCollapsibleOptions) = {}): UseCollapsibleReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const machine = createMachine(createCollapsibleConfig({
         open: options.open ?? options.defaultOpen ?? false,
         disabled: options.disabled ?? false,
@@ -41,17 +44,18 @@ export function useCollapsible(options: UseCollapsibleOptions = {}): UseCollapsi
 
     // Sync controlled props
     createEffect(() => {
-        if (options.open !== undefined) {
+        const open = getOptions().open;
+        if (open !== undefined) {
             const ctx = machine.getContext();
-            if (ctx.open !== options.open) {
-                (machine as any).context.open = options.open;
+            if (ctx.open !== open) {
+                (machine as any).context.open = open;
                 triggerUpdate();
             }
         }
     });
 
     createEffect(() => {
-        const disabled = options.disabled ?? false;
+        const disabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== disabled) {
             (machine as any).context.disabled = disabled;
             triggerUpdate();
@@ -60,12 +64,12 @@ export function useCollapsible(options: UseCollapsibleOptions = {}): UseCollapsi
 
     const open = () => {
         bump();
-        return machine.getContext().open;
+        return getOptions().open ?? machine.getContext().open;
     };
 
     const disabled = () => {
         bump();
-        return machine.getContext().disabled;
+        return getOptions().disabled ?? machine.getContext().disabled;
     };
 
     const toggle = () => {
@@ -73,7 +77,7 @@ export function useCollapsible(options: UseCollapsibleOptions = {}): UseCollapsi
         if (ctx.disabled) return;
         const newOpen = !ctx.open;
         (machine as any).context.open = newOpen;
-        options.onOpenChange?.(newOpen);
+        getOptions().onOpenChange?.(newOpen);
         triggerUpdate();
     };
 
@@ -118,6 +122,7 @@ export function useCollapsible(options: UseCollapsibleOptions = {}): UseCollapsi
         toggle,
         expand,
         collapse,
+        close: collapse,
         triggerProps,
         contentProps,
     };

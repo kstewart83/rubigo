@@ -120,6 +120,9 @@ spec-gen: check-binaries
             fi
         fi
     done
+    
+    # Generate example files from specs
+    ./scripts/generate-examples.sh
 
 # Validate all specs
 validate: check-binaries
@@ -407,7 +410,28 @@ test-conformance:
     set -euo pipefail
     echo "🧪 Running spec conformance tests..."
     rm -rf components-ts/dist
-    cd components-ts && bun test tests/conformance.test.ts
+    cd components-ts && bun test tests/conformance.test.ts tests/*.conformance.test.ts
+
+# Run hook-level tests (useXxx hooks against unified vectors)
+test-hooks:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🪝 Running hook conformance tests..."
+    cd components-ts && bun test tests/*.hook.test.ts
+
+# Run component-level tests (ARIA and interaction tests)
+test-components:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Running component tests..."
+    cd components-ts && bun test tests/*.component.test.ts
+
+# Run all TypeScript tests
+test-ts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running all TypeScript tests..."
+    cd components-ts && bun test
 
 # Full formal verification pipeline
 verify-all: quint-check quint-verify quint-vectors unify-vectors conformance

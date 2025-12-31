@@ -296,6 +296,15 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State     | aria-expanded | aria-disabled |
+|-----------|---------------|---------------|
+| collapsed | false         | {disabled}    |
+| expanded  | true          | {disabled}    |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -305,4 +314,26 @@ stateDiagram-v2
     collapsed --> expanded: EXPAND [canInteract]
     expanded --> collapsed: TOGGLE [canInteract]
     expanded --> collapsed: COLLAPSE [canInteract]
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Collapsible.Root>
+  <Collapsible.Trigger>Toggle Content</Collapsible.Trigger>
+  <Collapsible.Content>
+    <p>Hidden content revealed on click.</p>
+  </Collapsible.Content>
+</Collapsible.Root>
+```
+
+```tsx example="defaultOpen"
+<Collapsible.Root defaultOpen>
+  <Collapsible.Trigger>Collapse Me</Collapsible.Trigger>
+  <Collapsible.Content>
+    <p>Visible by default.</p>
+  </Collapsible.Content>
+</Collapsible.Root>
 ```

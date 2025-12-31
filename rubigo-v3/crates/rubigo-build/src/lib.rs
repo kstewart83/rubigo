@@ -10,10 +10,12 @@
 //! - `quint` - Quint file generation and ITF trace generation
 //! - `vectors` - Parse ITF traces and generate unified test vectors
 //! - `interactions` - Generate interactions manifest
+//! - `testgen` - Generate TypeScript test files
 
 pub mod extraction;
 pub mod interactions;
 pub mod quint;
+pub mod testgen;
 pub mod types;
 pub mod validation;
 pub mod vectors;
@@ -29,6 +31,10 @@ pub use interactions::{
     extract_quint_events, generate_interactions_manifest,
 };
 pub use quint::{cross_reference_events, generate_itf_trace, write_quint_file};
+pub use testgen::{
+    extract_aria_mapping, generate_component_tests, generate_hook_tests, generate_keyboard_tests,
+    parse_keyboard_interactions, AriaMapping, KeyboardMapping,
+};
 pub use types::{SpecMeta, SpecType, SPEC_SUFFIX};
 pub use validation::{validate_quint_model, validate_spec_structure};
 pub use vectors::{

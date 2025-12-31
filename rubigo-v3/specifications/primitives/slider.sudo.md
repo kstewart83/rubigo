@@ -453,6 +453,16 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State    | aria-valuenow | aria-valuemin | aria-valuemax | aria-disabled |
+|----------|---------------|---------------|---------------|---------------|
+| idle     | {value}       | {min}         | {max}         | {disabled}    |
+| focused  | {value}       | {min}         | {max}         | {disabled}    |
+| dragging | {value}       | {min}         | {max}         | {disabled}    |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -469,3 +479,25 @@ stateDiagram-v2
     dragging --> focused: DRAG_END
     dragging --> dragging: DRAG_MOVE
 ```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Slider 
+  min={0} 
+  max={100} 
+  value={50}
+  onValueChange={(val) => console.log(val)}
+/>
+```
+
+```tsx example="range"
+<Slider min={0} max={1000} step={50} value={250} />
+```
+
+```tsx example="disabled"
+<Slider disabled value={50} />
+```
+

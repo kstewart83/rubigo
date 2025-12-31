@@ -297,6 +297,27 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+Define the ARIA attributes for each state. This is the accessibility contract.
+
+```aria-mapping
+# TEMPLATE: Replace with your component's ARIA attributes per state
+# Format: table with State column and aria-* attribute columns
+
+| State | aria-disabled | aria-[attribute] |
+|-------|---------------|------------------|
+| idle  | {disabled}    | [value]          |
+```
+
+> **Note:** Use `{context.field}` syntax for dynamic values derived from context.
+> Common patterns:
+> - `{disabled}` → maps to `context.disabled`
+> - `true` / `false` → static boolean
+> - `mixed` → tri-state (for checkbox indeterminate)
+
+---
+
 ## State Diagram
 
 Optional Mermaid diagram for visual documentation.
@@ -309,3 +330,23 @@ stateDiagram-v2
     focused --> idle: BLUR
     focused --> focused: SET_VALUE [canAct]
 ```
+
+---
+
+## Example Usages
+
+**Required:** At least one TSX example demonstrating component usage.
+Each example should be in a `tsx` code block with an `example="name"` attribute.
+
+```tsx example="basic"
+<Template onChange={(val) => console.log(val)}>
+  Default content
+</Template>
+```
+
+```tsx example="disabled"
+<Template enabled={false}>
+  Disabled state
+</Template>
+```
+

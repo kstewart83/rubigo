@@ -5,14 +5,30 @@
  * Supports switching between implemented components.
  */
 import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 'solid-js';
+import { SpecTestRunner } from './SpecTestRunner';
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
 import { Switch } from '@rubigo/components/switch';
 import { Input } from '@rubigo/components/input';
+import { Tabs } from '@rubigo/components/tabs';
+import { Slider } from '@rubigo/components/slider';
+import { Collapsible } from '@rubigo/components/collapsible';
+import { ToggleGroup } from '@rubigo/components/togglegroup';
+import { Tooltip } from '@rubigo/components/tooltip';
+import { Dialog } from '@rubigo/components/dialog';
+import { Select } from '@rubigo/components/select';
 import buttonMeta from '@generated/button.meta.json';
 import checkboxMeta from '@generated/checkbox.meta.json';
 import switchMeta from '@generated/switch.meta.json';
 import inputMeta from '@generated/input.meta.json';
+import tabsMeta from '@generated/tabs.meta.json';
+import sliderMeta from '@generated/slider.meta.json';
+import collapsibleMeta from '@generated/collapsible.meta.json';
+import togglegroupMeta from '@generated/togglegroup.meta.json';
+import tooltipMeta from '@generated/tooltip.meta.json';
+import dialogMeta from '@generated/dialog.meta.json';
+import selectMeta from '@generated/select.meta.json';
+import { getExamplesFor, type Example } from './examples';
 
 // Available components registry
 const COMPONENTS = {
@@ -20,6 +36,13 @@ const COMPONENTS = {
     checkbox: { meta: checkboxMeta, component: Checkbox, defaultChildren: 'Accept Terms' },
     switch: { meta: switchMeta, component: Switch, defaultChildren: 'Dark Mode' },
     input: { meta: inputMeta, component: Input, defaultChildren: '' },
+    tabs: { meta: tabsMeta, component: Tabs, defaultChildren: '' },
+    slider: { meta: sliderMeta, component: Slider, defaultChildren: '' },
+    collapsible: { meta: collapsibleMeta, component: Collapsible, defaultChildren: '' },
+    togglegroup: { meta: togglegroupMeta, component: ToggleGroup, defaultChildren: '' },
+    tooltip: { meta: tooltipMeta, component: Tooltip, defaultChildren: '' },
+    dialog: { meta: dialogMeta, component: Dialog, defaultChildren: '' },
+    select: { meta: selectMeta, component: Select, defaultChildren: '' },
 } as const;
 
 type ComponentKey = keyof typeof COMPONENTS;
@@ -174,6 +197,16 @@ const SpecDrivenPOC: Component = () => {
     const [propValues, setPropValues] = createSignal<Record<string, unknown>>(getInitialProps(getMeta()));
     const [childrenText, setChildrenText] = createSignal<string>(componentConfig().defaultChildren);
     const [eventLog, setEventLog] = createSignal<string[]>([]);
+    // -1 = Interactive mode (uses controls), 0+ = spec examples
+    const [selectedExample, setSelectedExample] = createSignal<number>(-1);
+
+    // Get examples for current component
+    const getExamples = createMemo(() => getExamplesFor(selectedComponent()));
+
+    // Check if component is compound (needs special structure, not just props)
+    // These components require sub-components like Tabs.List, Dialog.Portal, etc.
+    const COMPOUND_COMPONENTS: ComponentKey[] = ['tabs', 'collapsible', 'togglegroup', 'tooltip', 'dialog', 'select'];
+    const isCompoundComponent = createMemo(() => COMPOUND_COMPONENTS.includes(selectedComponent()));
 
     // Handle component switch
     const switchComponent = (key: ComponentKey) => {
@@ -182,6 +215,8 @@ const SpecDrivenPOC: Component = () => {
         setPropValues(getInitialProps(config.meta));
         setChildrenText(config.defaultChildren);
         setEventLog([]);
+        // Compound components start at example 0, simple components start at Interactive (-1)
+        setSelectedExample(COMPOUND_COMPONENTS.includes(key) ? 0 : -1);
         logEvent(`Switched to ${key}`);
     };
 
@@ -274,8 +309,11 @@ const SpecDrivenPOC: Component = () => {
     // Combined props for display
     const displayProps = () => {
         const props = { ...propValues() };
-        // Input uses value instead of children
-        if (selectedComponent() !== 'input') {
+        const meta = getMeta();
+        // Only show children if component uses simple children (not value prop, not Slot type)
+        const hasValueProp = meta.props.some((p: PropMeta) => p.name === 'value');
+        const hasSlotChildren = meta.props.some((p: PropMeta) => p.name === 'children' && p.type === 'Slot');
+        if (!hasValueProp && !hasSlotChildren) {
             (props as any).children = childrenText();
         }
         return props;
@@ -283,7 +321,27 @@ const SpecDrivenPOC: Component = () => {
 
     // Render preview component
     const renderPreview = () => {
-        const Comp = componentConfig().component;
+        const examples = getExamples();
+        const exampleIdx = selectedExample();
+
+        // If a specific example is selected (not Interactive mode), render it
+        if (exampleIdx >= 0 && examples.length > 0) {
+            const example = examples[exampleIdx];
+            if (example) {
+                const ExampleComp = example.component;
+                return <ExampleComp />;
+            }
+        }
+
+        // Interactive mode (-1) - render with controls
+        // But compound components can't use Interactive mode
+        if (COMPOUND_COMPONENTS.includes(selectedComponent())) {
+            return <div style={{ color: 'var(--rubigo-text-muted)', 'font-style': 'italic' }}>
+                Select an example above to preview this compound component.
+            </div>;
+        }
+
+        const Comp = componentConfig().component as Component<Record<string, unknown>>;
         // Input is a self-closing component that uses value, not children
         if (selectedComponent() === 'input') {
             return <Comp {...componentProps()} placeholder="Type here..." />;
@@ -294,6 +352,20 @@ const SpecDrivenPOC: Component = () => {
             </Comp>
         );
     };
+
+    // Get current example source code for display
+    const getExampleSource = () => {
+        const exampleIdx = selectedExample();
+        if (exampleIdx < 0) return ''; // Interactive mode has no source
+        const examples = getExamples();
+        if (examples.length > 0) {
+            return examples[exampleIdx]?.source ?? '';
+        }
+        return '';
+    };
+
+    // Check if currently in Interactive mode
+    const isInteractiveMode = () => selectedExample() === -1;
 
     return (
         <div style={{
@@ -324,7 +396,7 @@ const SpecDrivenPOC: Component = () => {
                     }}
                 >
                     <For each={Object.keys(COMPONENTS) as ComponentKey[]}>
-                        {(key) => <option value={key}>{key}</option>}
+                        {(key) => <option value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>}
                     </For>
                 </select>
             </div>
@@ -334,29 +406,100 @@ const SpecDrivenPOC: Component = () => {
                 interfaceName={getMeta().interface}
                 onReset={resetToDefaults}
             >
-                {/* Children input - hidden for Input component since it uses value, not children */}
-                <Show when={selectedComponent() !== 'input'}>
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
-                        <span>children:</span>
-                        <input
-                            type="text"
-                            value={childrenText()}
-                            onInput={(e) => setChildrenText(e.target.value)}
-                            style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
-                        />
-                        <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Label content)</span>
-                    </label>
-                </Show>
+                {/* Disable controls when viewing examples */}
+                <div style={{
+                    opacity: isInteractiveMode() ? 1 : 0.5,
+                    'pointer-events': isInteractiveMode() ? 'auto' : 'none',
+                }}>
+                    {/* Children input - show for simple components (not compound, not value-based) */}
+                    <Show when={!COMPOUND_COMPONENTS.includes(selectedComponent()) &&
+                        !getMeta().props.some((p: PropMeta) => p.name === 'value')}>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+                            <span>children:</span>
+                            <input
+                                type="text"
+                                value={childrenText()}
+                                onInput={(e) => setChildrenText(e.target.value)}
+                                style={{ padding: '4px 8px', 'border-radius': '4px', border: '1px solid var(--rubigo-input-border)', background: 'var(--rubigo-bg-panel)', color: 'var(--rubigo-text)' }}
+                            />
+                            <span style={{ color: 'var(--rubigo-text-muted)', 'font-size': '12px' }}>(Label content)</span>
+                        </label>
+                    </Show>
 
-                {/* Dynamic controls from metadata */}
-                <For each={getMeta().props as PropMeta[]}>
-                    {(prop) => renderControl(prop)}
-                </For>
+                    {/* Dynamic controls from metadata */}
+                    <For each={getMeta().props as PropMeta[]}>
+                        {(prop) => renderControl(prop)}
+                    </For>
+                </div>
+                <Show when={!isInteractiveMode()}>
+                    <span style={{ 'font-size': '12px', color: 'var(--rubigo-text-muted)', 'font-style': 'italic' }}>
+                        Switch to Interactive mode to use controls
+                    </span>
+                </Show>
             </ControlPanel>
+
+            {/* Example selector - always show for components with examples or simple components */}
+            <div style={{
+                display: 'flex',
+                'align-items': 'center',
+                gap: '12px',
+                'margin-bottom': '16px'
+            }}>
+                <span style={{ 'font-weight': '500', color: 'var(--rubigo-text-muted)' }}>Mode:</span>
+                <select
+                    value={selectedExample()}
+                    onChange={(e) => setSelectedExample(parseInt(e.target.value))}
+                    style={{
+                        padding: '6px 10px',
+                        'border-radius': '6px',
+                        border: '1px solid var(--rubigo-border)',
+                        background: 'var(--rubigo-bg-panel)',
+                        color: 'var(--rubigo-text)',
+                    }}
+                >
+                    {/* Interactive mode - only for simple components */}
+                    <Show when={!isCompoundComponent()}>
+                        <option value={-1}>⚡ Interactive (use controls)</option>
+                    </Show>
+                    {/* Spec examples */}
+                    <For each={getExamples()}>
+                        {(ex, i) => <option value={i()}>📄 {ex.name} - {ex.description}</option>}
+                    </For>
+                </select>
+            </div>
 
             <Preview>
                 {renderPreview()}
             </Preview>
+
+            {/* Source code display for examples */}
+            <Show when={getExampleSource()}>
+                <div style={{
+                    'margin-top': '16px',
+                    padding: '16px',
+                    background: '#1e1e1e',
+                    'border-radius': '8px',
+                    'overflow-x': 'auto'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        'justify-content': 'space-between',
+                        'align-items': 'center',
+                        'margin-bottom': '8px'
+                    }}>
+                        <span style={{ color: '#888', 'font-size': '12px' }}>TSX Source</span>
+                    </div>
+                    <pre style={{
+                        margin: 0,
+                        'font-family': 'monospace',
+                        'font-size': '12px',
+                        color: '#e0e0e0',
+                        'white-space': 'pre-wrap'
+                    }}>
+                        {getExampleSource()}
+                    </pre>
+                </div>
+            </Show>
 
             {/* Bottom panels */}
             <div style={{
@@ -367,6 +510,11 @@ const SpecDrivenPOC: Component = () => {
             }}>
                 <EventLog events={eventLog} onClear={() => setEventLog([])} />
                 <PropsPanel props={displayProps} />
+            </div>
+
+            {/* Spec Test Runner - always visible at bottom */}
+            <div style={{ 'margin-top': '32px', 'border-top': '1px solid var(--rubigo-border)', 'padding-top': '24px' }}>
+                <SpecTestRunner component={selectedComponent()} />
             </div>
         </div>
     );

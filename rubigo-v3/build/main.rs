@@ -30,19 +30,25 @@ macro_rules! warn {
 // Import types and functions from rubigo-build library
 use rubigo_build::{
     cross_reference_events,
+    // Test generation
+    extract_aria_mapping,
     extract_component_api_typescript,
     extract_cue_blocks,
     extract_cue_version,
     extract_quint_block,
     extract_test_vectors,
+    generate_component_tests,
+    generate_hook_tests,
     // Interactions
     generate_interactions_manifest,
+    generate_keyboard_tests,
     generate_meta_json,
     generate_types_file,
     // Vectors
     generate_unified_vectors,
     // Extraction
     parse_frontmatter,
+    parse_keyboard_interactions,
     parse_typescript_interface,
     // Validation
     validate_spec_structure,
@@ -71,6 +77,27 @@ fn main() {
         // 3. Generate interactions manifest for all specs
         if let Err(e) = generate_interactions_manifest(&spec_dir, &generated_dir) {
             warn!("Failed to generate interactions manifest: {}", e);
+        }
+
+        // 4. Generate keyboard interaction tests from interactions.json
+        let interactions_path = generated_dir.join("interactions.json");
+        if interactions_path.exists() {
+            if let Ok(interactions_json) = fs::read_to_string(&interactions_path) {
+                let keyboard_mappings = parse_keyboard_interactions(&interactions_json);
+                let tests_dir = manifest_dir.join("components-ts/tests");
+
+                if tests_dir.exists() {
+                    for (component, mappings) in &keyboard_mappings {
+                        let keyboard_test = generate_keyboard_tests(component, mappings);
+                        let test_path = tests_dir.join(format!("{}.keyboard.test.ts", component));
+                        if let Err(e) = fs::write(&test_path, keyboard_test) {
+                            warn!("Failed to write keyboard test for {}: {}", component, e);
+                        } else {
+                            info!("Generated keyboard test: {}.keyboard.test.ts", component);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -229,6 +256,41 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
                 spec_name,
                 meta.props.len()
             );
+        }
+
+        // Generate hook tests from metadata
+        let tests_dir = generated_dir
+            .parent()
+            .map(|p| p.join("components-ts/tests"))
+            .unwrap_or_else(|| generated_dir.join("tests"));
+
+        if tests_dir.exists() {
+            let hook_test = generate_hook_tests(spec_name, &meta);
+            let hook_test_path = tests_dir.join(format!("{}.hook.test.ts", spec_name));
+            if let Err(e) = fs::write(&hook_test_path, hook_test) {
+                warn!("Failed to write hook test for {}: {}", spec_name, e);
+            } else {
+                info!("Generated hook test: {}.hook.test.ts", spec_name);
+            }
+        }
+    }
+
+    // Generate component ARIA tests from spec ARIA Mapping section
+    let aria_mappings = extract_aria_mapping(&content);
+    if !aria_mappings.is_empty() {
+        let tests_dir = generated_dir
+            .parent()
+            .map(|p| p.join("components-ts/tests"))
+            .unwrap_or_else(|| generated_dir.join("tests"));
+
+        if tests_dir.exists() {
+            let component_test = generate_component_tests(spec_name, &aria_mappings);
+            let component_test_path = tests_dir.join(format!("{}.component.test.ts", spec_name));
+            if let Err(e) = fs::write(&component_test_path, component_test) {
+                warn!("Failed to write component test for {}: {}", spec_name, e);
+            } else {
+                info!("Generated component test: {}.component.test.ts", spec_name);
+            }
         }
     }
 

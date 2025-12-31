@@ -31,7 +31,11 @@ export interface UseSwitchReturn {
     rootProps: Accessor<JSX.HTMLAttributes<HTMLButtonElement>>;
 }
 
-export function useSwitch(options: UseSwitchOptions = {}): UseSwitchReturn {
+export function useSwitch(optionsInput: UseSwitchOptions | (() => UseSwitchOptions) = {}): UseSwitchReturn {
+    // Resolve options - support both plain object and getter function
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     // Initialize state machine with overrides from options
     const machine = createMachine(createSwitchConfig({
         checked: options.checked ?? false,
@@ -45,7 +49,7 @@ export function useSwitch(options: UseSwitchOptions = {}): UseSwitchReturn {
 
     // Sync disabled prop to machine context
     createEffect(() => {
-        const disabled = options.disabled ?? false;
+        const disabled = getOptions().disabled ?? false;
         if (machine.getContext().disabled !== disabled) {
             (machine as any).context.disabled = disabled;
             triggerUpdate();
@@ -54,7 +58,7 @@ export function useSwitch(options: UseSwitchOptions = {}): UseSwitchReturn {
 
     // Sync readOnly prop to machine context
     createEffect(() => {
-        const readOnly = options.readOnly ?? false;
+        const readOnly = getOptions().readOnly ?? false;
         if (machine.getContext().readOnly !== readOnly) {
             (machine as any).context.readOnly = readOnly;
             triggerUpdate();
@@ -63,7 +67,7 @@ export function useSwitch(options: UseSwitchOptions = {}): UseSwitchReturn {
 
     // Sync checked prop to machine context (controlled mode)
     createEffect(() => {
-        const checked = options.checked;
+        const checked = getOptions().checked;
         if (checked !== undefined) {
             const ctx = machine.getContext();
             if (ctx.checked !== checked) {
@@ -81,21 +85,21 @@ export function useSwitch(options: UseSwitchOptions = {}): UseSwitchReturn {
         if (result.handled) {
             const newChecked = machine.getContext().checked;
             if (prevChecked !== newChecked) {
-                options.onChange?.(newChecked);
+                getOptions().onChange?.(newChecked);
             }
             triggerUpdate();
         }
     };
 
-    // Reactive accessors
+    // Reactive accessors - props take precedence for immediate reactivity
     const checked = () => {
         bump(); // Subscribe to updates
-        return machine.getContext().checked;
+        return getOptions().checked ?? machine.getContext().checked;
     };
 
     const disabled = () => {
         bump();
-        return machine.getContext().disabled;
+        return getOptions().disabled ?? machine.getContext().disabled;
     };
 
     const focused = () => {

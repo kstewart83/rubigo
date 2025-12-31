@@ -86,6 +86,9 @@ interface TooltipProps {
   /** Delay before showing (ms) */
   delayDuration?: number;  // default: 300
   
+  /** Whether tooltip is disabled */
+  disabled?: boolean;  // default: false
+  
   /** Trigger element */
   children: Slot;
 }
@@ -369,6 +372,17 @@ Screen Reader:
 
 ---
 
+## ARIA Mapping
+
+```aria-mapping
+| State   | aria-hidden |
+|---------|-------------|
+| closed  | true        |
+| opening | true        |
+| open    | false       |
+| closing | true        |
+```
+
 ## State Diagram
 
 ```mermaid
@@ -384,4 +398,26 @@ stateDiagram-v2
     open --> closed: ESCAPE
     closing --> closed: CLOSE
     closing --> open: POINTER_ENTER
+```
+
+---
+
+## Example Usages
+
+```tsx example="basic"
+<Tooltip.Root>
+  <Tooltip.Trigger>Hover me</Tooltip.Trigger>
+  <Tooltip.Content>
+    Helpful tooltip text
+  </Tooltip.Content>
+</Tooltip.Root>
+```
+
+```tsx example="withDelay"
+<Tooltip.Root delayDuration={500}>
+  <Tooltip.Trigger>Delayed tooltip</Tooltip.Trigger>
+  <Tooltip.Content>
+    Appears after 500ms
+  </Tooltip.Content>
+</Tooltip.Root>
 ```

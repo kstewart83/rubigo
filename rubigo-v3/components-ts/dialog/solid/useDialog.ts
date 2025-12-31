@@ -31,16 +31,23 @@ export interface UseDialogReturn {
     };
 }
 
-export function useDialog(options: UseDialogOptions = {}): UseDialogReturn {
+export function useDialog(optionsInput: UseDialogOptions | (() => UseDialogOptions) = {}): UseDialogReturn {
+    const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
+    const options = getOptions();
+
     const closeOnEscape = options.closeOnEscape ?? true;
     const closeOnBackdrop = options.closeOnBackdrop ?? true;
 
-    const [open, setOpen] = createSignal(options.open ?? options.defaultOpen ?? false);
+    const [internalOpen, setInternalOpen] = createSignal(options.open ?? options.defaultOpen ?? false);
+
+    // Open accessor reads from props first for immediate reactivity
+    const open = () => getOptions().open ?? internalOpen();
 
     // Sync controlled prop
     createEffect(() => {
-        if (options.open !== undefined && open() !== options.open) {
-            setOpen(options.open);
+        const controlledOpen = getOptions().open;
+        if (controlledOpen !== undefined && internalOpen() !== controlledOpen) {
+            setInternalOpen(controlledOpen);
         }
     });
 
@@ -58,13 +65,13 @@ export function useDialog(options: UseDialogOptions = {}): UseDialogReturn {
     });
 
     const openDialog = () => {
-        setOpen(true);
-        options.onOpenChange?.(true);
+        setInternalOpen(true);
+        getOptions().onOpenChange?.(true);
     };
 
     const closeDialog = () => {
-        setOpen(false);
-        options.onOpenChange?.(false);
+        setInternalOpen(false);
+        getOptions().onOpenChange?.(false);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -101,6 +108,7 @@ export function useDialog(options: UseDialogOptions = {}): UseDialogReturn {
         open,
         openDialog,
         closeDialog,
+        close: closeDialog,
         triggerProps,
         dialogProps,
         backdropProps,
