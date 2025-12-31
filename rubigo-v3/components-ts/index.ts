@@ -11,3 +11,4 @@ import './tokens/variables.css';
 export { Button } from './button/solid/Button';
 export { Checkbox } from './checkbox/solid/Checkbox';
 export { Switch } from './switch/solid/Switch';
+export { Input } from './input/solid/Input';

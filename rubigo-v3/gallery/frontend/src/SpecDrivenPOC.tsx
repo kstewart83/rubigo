@@ -8,15 +8,18 @@ import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 's
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
 import { Switch } from '@rubigo/components/switch';
+import { Input } from '@rubigo/components/input';
 import buttonMeta from '@generated/button.meta.json';
 import checkboxMeta from '@generated/checkbox.meta.json';
 import switchMeta from '@generated/switch.meta.json';
+import inputMeta from '@generated/input.meta.json';
 
 // Available components registry
 const COMPONENTS = {
     button: { meta: buttonMeta, component: Button, defaultChildren: 'Click Me' },
     checkbox: { meta: checkboxMeta, component: Checkbox, defaultChildren: 'Accept Terms' },
     switch: { meta: switchMeta, component: Switch, defaultChildren: 'Dark Mode' },
+    input: { meta: inputMeta, component: Input, defaultChildren: '' },
 } as const;
 
 type ComponentKey = keyof typeof COMPONENTS;
@@ -258,6 +261,11 @@ const SpecDrivenPOC: Component = () => {
             props.onChange = (checked: boolean) => {
                 updateProp('checked', checked);
                 logEvent(`onChange fired: checked=${checked}`);
+            };
+        } else if (selectedComponent() === 'input') {
+            props.onChange = (value: string) => {
+                updateProp('value', value);
+                logEvent(`onChange fired: value="${value}"`);
             };
         }
         return props;
