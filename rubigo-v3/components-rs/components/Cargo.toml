@@ -12,6 +12,16 @@ path = "src/lib.rs"
 name = "switch"
 path = "switch/src/main.rs"
 
+# Button component
+[[bin]]
+name = "button"
+path = "button/src/main.rs"
+
+# Checkbox component
+[[bin]]
+name = "checkbox"
+path = "checkbox/src/main.rs"
+
 [dependencies]
 wasm-bindgen.workspace = true
 serde.workspace = true

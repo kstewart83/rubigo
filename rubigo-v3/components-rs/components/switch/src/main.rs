@@ -2,8 +2,8 @@
 //!
 //! This is a standalone binary target that compiles to its own WASM file.
 
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 /// Switch context - the extended state
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -154,8 +154,5 @@ impl Default for Switch {
     }
 }
 
-/// WASM entry point - called when the module loads
-#[wasm_bindgen(start)]
-pub fn main() {
-    // Component is ready for use
-}
+/// Binary entry point (required for binary target)
+fn main() {}
