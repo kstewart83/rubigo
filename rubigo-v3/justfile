@@ -17,6 +17,10 @@ export RUST_LOG := env_var_or_default("RUST_LOG", "debug")
 default:
     @just --list
 
+# Kill all processes on WIP port range (reads from ../wip.toml)
+kill:
+    cargo run -p rubigo-cli --bin rubigo -- kill-ports
+
 # === Development ===
 
 # Start full dev environment
