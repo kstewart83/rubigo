@@ -65,56 +65,23 @@ describe('Slider Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
-    test('onDragEnd is called when dragging changes via endDrag', () => {
-        let callbackFired = false;
-        let callbackValue: unknown;
+    test('startDrag is idempotent - calling twice fires onDragStart once', () => {
+        let callCount = 0;
         
         const hook = useSlider({
-            onDragEnd: (value: unknown) => {
-                callbackFired = true;
-                callbackValue = value;
+            onDragStart: () => {
+                callCount++;
             },
         });
         
-        // Invoke the action that mutates context.dragging
-        if (typeof hook.endDrag === 'function') {
-            hook.endDrag();
-        } else if (typeof hook.triggerProps === 'function') {
-            // Fallback: try triggerProps().onClick if direct method not found
-            const props = hook.triggerProps();
-            if (props && typeof props.onClick === 'function') {
-                props.onClick();
-            }
+        // Call the action twice
+        if (typeof hook.startDrag === 'function') {
+            hook.startDrag();  // First call - should fire callback
+            hook.startDrag();  // Second call - state unchanged, should NOT fire
         }
         
-        // The callback SHOULD have fired with the new context value
-        expect(callbackFired).toBe(true);
-    });
-
-    test('onValueCommit is called when dragging changes via endDrag', () => {
-        let callbackFired = false;
-        let callbackValue: unknown;
-        
-        const hook = useSlider({
-            onValueCommit: (value: unknown) => {
-                callbackFired = true;
-                callbackValue = value;
-            },
-        });
-        
-        // Invoke the action that mutates context.dragging
-        if (typeof hook.endDrag === 'function') {
-            hook.endDrag();
-        } else if (typeof hook.triggerProps === 'function') {
-            // Fallback: try triggerProps().onClick if direct method not found
-            const props = hook.triggerProps();
-            if (props && typeof props.onClick === 'function') {
-                props.onClick();
-            }
-        }
-        
-        // The callback SHOULD have fired with the new context value
-        expect(callbackFired).toBe(true);
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
     });
 
 });

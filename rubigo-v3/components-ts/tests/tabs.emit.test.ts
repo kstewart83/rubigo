@@ -39,4 +39,23 @@ describe('Tabs Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
+    test('setSelected is idempotent - calling twice fires onTabChange once', () => {
+        let callCount = 0;
+        
+        const hook = useTabs({
+            onTabChange: () => {
+                callCount++;
+            },
+        });
+        
+        // Call the action twice
+        if (typeof hook.setSelected === 'function') {
+            hook.setSelected();  // First call - should fire callback
+            hook.setSelected();  // Second call - state unchanged, should NOT fire
+        }
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    });
+
 });

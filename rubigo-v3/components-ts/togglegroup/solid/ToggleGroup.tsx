@@ -45,7 +45,7 @@ export const ToggleGroupItem: Component<ToggleGroupItemProps> = (props) => {
 
     const itemClass = () => {
         const classes = [styles.item];
-        if (group.selectedId() === props.value) classes.push(styles.selected);
+        if (group.isSelected(props.value)) classes.push(styles.selected);
         if (group.focusedId() === props.value) classes.push(styles.focused);
         if (props.disabled || group.disabled()) classes.push(styles.itemDisabled);
         if (props.class) classes.push(props.class);

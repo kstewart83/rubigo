@@ -39,4 +39,23 @@ describe('Collapsible Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
+    test('expand is idempotent - calling twice fires onOpenChange once', () => {
+        let callCount = 0;
+        
+        const hook = useCollapsible({
+            onOpenChange: () => {
+                callCount++;
+            },
+        });
+        
+        // Call the action twice
+        if (typeof hook.expand === 'function') {
+            hook.expand();  // First call - should fire callback
+            hook.expand();  // Second call - state unchanged, should NOT fire
+        }
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    });
+
 });

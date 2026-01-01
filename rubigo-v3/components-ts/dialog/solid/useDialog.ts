@@ -16,6 +16,7 @@ export interface UseDialogReturn {
     openDialog: () => void;
     closeDialog: () => void;
     close: () => void;
+    setOpen: () => void;
     rootProps: () => {
         'aria-hidden': boolean;
         'aria-modal': boolean;
@@ -71,11 +72,13 @@ export function useDialog(optionsInput: UseDialogOptions | (() => UseDialogOptio
     });
 
     const openDialog = () => {
+        if (internalOpen()) return;
         setInternalOpen(true);
         getOptions().onOpenChange?.(true);
     };
 
     const closeDialog = () => {
+        if (!internalOpen()) return;
         setInternalOpen(false);
         getOptions().onOpenChange?.(false);
     };
@@ -121,6 +124,7 @@ export function useDialog(optionsInput: UseDialogOptions | (() => UseDialogOptio
         openDialog,
         closeDialog,
         close: closeDialog,
+        setOpen: openDialog,  // Spec-compliant alias
         rootProps,
         triggerProps,
         dialogProps,

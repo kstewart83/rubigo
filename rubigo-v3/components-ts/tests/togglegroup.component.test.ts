@@ -18,11 +18,7 @@ describe('ToggleGroup ARIA Conformance', () => {
         expect(typeof props).toBe('object');
     });
 
-    test('rootProps() includes aria-checked', () => {
-        const hook = useToggleGroup({});
-        const props = hook.rootProps();
-        expect('aria-checked' in props).toBe(true);
-    });
+    // Note: aria-checked belongs on items, not on root element
 
     test('rootProps() includes aria-disabled', () => {
         const hook = useToggleGroup({});

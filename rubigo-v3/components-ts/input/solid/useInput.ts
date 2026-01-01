@@ -110,7 +110,7 @@ export function useInput(optionsInput: UseInputOptions | (() => UseInputOptions)
     // Set value programmatically
     const setValue = (newValue: string) => {
         const ctx = machine.getContext();
-        if (!ctx.disabled && !ctx.readOnly) {
+        if (!ctx.disabled && !ctx.readOnly && ctx.value !== newValue) {
             (machine as any).context.value = newValue;
             getOptions().onChange?.(newValue);
             triggerUpdate();

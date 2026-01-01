@@ -290,12 +290,14 @@ export function useSlider(optionsInput: UseSliderOptions | (() => UseSliderOptio
         setMin,
         setMax,
         startDrag: () => {
-            if (machine.getContext().disabled) return;
+            const ctx = machine.getContext();
+            if (ctx.disabled || ctx.dragging) return;
             (machine as any).context.dragging = true;
             getOptions().onDragStart?.();
             triggerUpdate();
         },
         endDrag: () => {
+            if (!machine.getContext().dragging) return;
             (machine as any).context.dragging = false;
             getOptions().onDragEnd?.();
             getOptions().onValueCommit?.(machine.getContext().value);

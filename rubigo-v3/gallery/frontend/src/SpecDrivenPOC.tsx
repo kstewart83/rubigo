@@ -224,11 +224,12 @@ const SpecDrivenPOC: Component = () => {
         setPropValues(getInitialProps(config.meta));
         setChildrenText(config.defaultChildren);
         setEventLog([]);
-        // Compound components without controllable props start at example 0
-        // All other components (including compounds with controllable props) start at Interactive (-1)
+        // Compound components without controllable props AND without interactive templates start at example 0
+        // All other components (including compounds with controllable props OR interactive templates) start at Interactive (-1)
         const isCompound = COMPOUND_COMPONENTS.includes(key);
         const hasControls = hasControllableProps(config.meta);
-        setSelectedExample(isCompound && !hasControls ? 0 : -1);
+        const hasInteractiveTemplate = ['tooltip', 'collapsible', 'dialog', 'tabs', 'togglegroup', 'select'].includes(key);
+        setSelectedExample(isCompound && !hasControls && !hasInteractiveTemplate ? 0 : -1);
         logEvent(`Switched to ${key}`);
     };
 
@@ -327,15 +328,45 @@ const SpecDrivenPOC: Component = () => {
         // Add appropriate callback based on component
         if (selectedComponent() === 'button') {
             props.onClick = () => logEvent('onClick fired');
-        } else if (selectedComponent() === 'checkbox' || selectedComponent() === 'switch') {
+        } else if (selectedComponent() === 'checkbox') {
             props.onChange = (checked: boolean) => {
                 updateProp('checked', checked);
                 logEvent(`onChange fired: checked=${checked}`);
+            };
+        } else if (selectedComponent() === 'switch') {
+            props.onCheckedChange = (checked: boolean) => {
+                updateProp('checked', checked);
+                logEvent(`onCheckedChange fired: checked=${checked}`);
             };
         } else if (selectedComponent() === 'input') {
             props.onChange = (value: string) => {
                 updateProp('value', value);
                 logEvent(`onChange fired: value="${value}"`);
+            };
+        } else if (selectedComponent() === 'collapsible' || selectedComponent() === 'dialog') {
+            props.onOpenChange = (open: boolean) => {
+                updateProp('open', open);
+                logEvent(`onOpenChange fired: open=${open}`);
+            };
+        } else if (selectedComponent() === 'tooltip') {
+            // Tooltip doesn't support controlled open prop - just log events
+            props.onOpenChange = (open: boolean) => {
+                logEvent(`onOpenChange fired: open=${open}`);
+            };
+        } else if (selectedComponent() === 'tabs') {
+            props.onValueChange = (value: string) => {
+                updateProp('value', value);
+                logEvent(`onValueChange fired: value="${value}"`);
+            };
+        } else if (selectedComponent() === 'togglegroup') {
+            props.onValueChange = (value: string) => {
+                updateProp('value', value);
+                logEvent(`onValueChange fired: value="${value}"`);
+            };
+        } else if (selectedComponent() === 'select') {
+            props.onValueChange = (value: string) => {
+                updateProp('value', value);
+                logEvent(`onValueChange fired: value="${value}"`);
             };
         }
         return props;
@@ -369,15 +400,20 @@ const SpecDrivenPOC: Component = () => {
         }
 
         // Interactive mode (-1) - render with controls
-        // Compound components without controllable props can't use Interactive mode
-        if (COMPOUND_COMPONENTS.includes(selectedComponent()) && !hasControllableProps(getMeta())) {
+        // Compound components with specific interactive templates
+        const INTERACTIVE_COMPOUND_COMPONENTS: ComponentKey[] = ['tooltip', 'collapsible', 'dialog', 'tabs', 'togglegroup', 'select'];
+
+        // For compound components without interactive templates AND without controllable props, show fallback
+        if (COMPOUND_COMPONENTS.includes(selectedComponent()) &&
+            !INTERACTIVE_COMPOUND_COMPONENTS.includes(selectedComponent()) &&
+            !hasControllableProps(getMeta())) {
             return <div style={{ color: 'var(--rubigo-text-muted)', 'font-style': 'italic' }}>
                 Select an example above to preview this compound component.
             </div>;
         }
 
-        // For compound components with controllable props, render with dynamic props
-        if (COMPOUND_COMPONENTS.includes(selectedComponent()) && hasControllableProps(getMeta())) {
+        // For compound components with interactive templates, render with dynamic props
+        if (INTERACTIVE_COMPOUND_COMPONENTS.includes(selectedComponent())) {
             const props = componentProps();
 
             // Tooltip
@@ -386,6 +422,7 @@ const SpecDrivenPOC: Component = () => {
                     <Tooltip.Root
                         delayDuration={props.delayDuration as number ?? 300}
                         disabled={props.disabled as boolean ?? false}
+                        onOpenChange={props.onOpenChange as (open: boolean) => void}
                     >
                         <Tooltip.Trigger>Hover me (Interactive)</Tooltip.Trigger>
                         <Tooltip.Content>
@@ -401,6 +438,7 @@ const SpecDrivenPOC: Component = () => {
                     <Collapsible.Root
                         open={props.open as boolean ?? false}
                         disabled={props.disabled as boolean ?? false}
+                        onOpenChange={props.onOpenChange as (open: boolean) => void}
                     >
                         <Collapsible.Trigger>Toggle (Interactive)</Collapsible.Trigger>
                         <Collapsible.Content>
@@ -415,7 +453,10 @@ const SpecDrivenPOC: Component = () => {
             // Dialog
             if (selectedComponent() === 'dialog') {
                 return (
-                    <Dialog.Root open={props.open as boolean ?? false}>
+                    <Dialog.Root
+                        open={props.open as boolean ?? false}
+                        onOpenChange={props.onOpenChange as (open: boolean) => void}
+                    >
                         <Dialog.Trigger>Open Dialog (Interactive)</Dialog.Trigger>
                         <Dialog.Portal>
                             <Dialog.Overlay />
@@ -428,6 +469,76 @@ const SpecDrivenPOC: Component = () => {
                             </Dialog.Content>
                         </Dialog.Portal>
                     </Dialog.Root>
+                );
+            }
+
+            // Tabs
+            if (selectedComponent() === 'tabs') {
+                const currentValue = (props.value as string) || 'tab1';
+                return (
+                    <Tabs.Root
+                        value={currentValue}
+                        onValueChange={props.onValueChange as (value: string) => void}
+                    >
+                        <Tabs.List>
+                            <Tabs.Tab value="tab1">Tab 1</Tabs.Tab>
+                            <Tabs.Tab value="tab2">Tab 2</Tabs.Tab>
+                            <Tabs.Tab value="tab3">Tab 3</Tabs.Tab>
+                        </Tabs.List>
+                        <Tabs.Panel value="tab1">
+                            <div style={{ padding: '12px', background: 'var(--rubigo-bg-panel)', 'border-radius': '4px', 'margin-top': '8px' }}>
+                                Content for Tab 1 (active: {currentValue})
+                            </div>
+                        </Tabs.Panel>
+                        <Tabs.Panel value="tab2">
+                            <div style={{ padding: '12px', background: 'var(--rubigo-bg-panel)', 'border-radius': '4px', 'margin-top': '8px' }}>
+                                Content for Tab 2 (active: {currentValue})
+                            </div>
+                        </Tabs.Panel>
+                        <Tabs.Panel value="tab3">
+                            <div style={{ padding: '12px', background: 'var(--rubigo-bg-panel)', 'border-radius': '4px', 'margin-top': '8px' }}>
+                                Content for Tab 3 (active: {currentValue})
+                            </div>
+                        </Tabs.Panel>
+                    </Tabs.Root>
+                );
+            }
+
+            // ToggleGroup
+            if (selectedComponent() === 'togglegroup') {
+                const currentValue = (props.value as string) || 'opt1';
+                return (
+                    <ToggleGroup.Root
+                        value={currentValue}
+                        type={(props.type as 'single' | 'multiple') || 'single'}
+                        disabled={props.disabled as boolean ?? false}
+                        onValueChange={props.onValueChange as (value: string | string[]) => void}
+                    >
+                        <ToggleGroup.Item value="opt1">Option 1</ToggleGroup.Item>
+                        <ToggleGroup.Item value="opt2">Option 2</ToggleGroup.Item>
+                        <ToggleGroup.Item value="opt3">Option 3</ToggleGroup.Item>
+                    </ToggleGroup.Root>
+                );
+            }
+
+            // Select
+            if (selectedComponent() === 'select') {
+                const currentValue = (props.value as string) || '';
+                return (
+                    <Select.Root
+                        value={currentValue}
+                        disabled={props.disabled as boolean ?? false}
+                        onValueChange={props.onValueChange as (value: string) => void}
+                    >
+                        <Select.Trigger>
+                            <Select.Value placeholder={props.placeholder as string || 'Select an option...'} />
+                        </Select.Trigger>
+                        <Select.Content>
+                            <Select.Item value="opt1">Option 1</Select.Item>
+                            <Select.Item value="opt2">Option 2</Select.Item>
+                            <Select.Item value="opt3">Option 3</Select.Item>
+                        </Select.Content>
+                    </Select.Root>
                 );
             }
         }
@@ -548,8 +659,8 @@ const SpecDrivenPOC: Component = () => {
                         color: 'var(--rubigo-text)',
                     }}
                 >
-                    {/* Interactive mode - for simple components or compounds with controllable props */}
-                    <Show when={!isCompoundComponent() || hasControllableProps(getMeta())}>
+                    {/* Interactive mode - for simple components, compounds with controllable props, or compounds with interactive templates */}
+                    <Show when={!isCompoundComponent() || hasControllableProps(getMeta()) || ['tooltip', 'collapsible', 'dialog', 'tabs', 'togglegroup', 'select'].includes(selectedComponent())}>
                         <option value={-1}>⚡ Interactive (use controls)</option>
                     </Show>
                     {/* Spec examples */}

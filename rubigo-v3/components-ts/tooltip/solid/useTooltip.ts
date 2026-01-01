@@ -66,13 +66,14 @@ export function useTooltip(optionsInput: UseTooltipOptions | (() => UseTooltipOp
     onCleanup(() => clearTimeouts());
 
     const show = () => {
-        if (disabled()) return;
+        if (disabled() || open()) return;
         clearTimeouts();
         setOpen(true);
         getOptions().onOpenChange?.(true);
     };
 
     const hide = () => {
+        if (!open()) return;
         clearTimeouts();
         setOpen(false);
         getOptions().onOpenChange?.(false);
