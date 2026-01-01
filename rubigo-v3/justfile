@@ -17,36 +17,55 @@ export RUST_LOG := env_var_or_default("RUST_LOG", "debug")
 default:
     @just --list
 
+# Run rubigo CLI with any arguments (e.g., just rubigo kill-ports)
+rubigo +args:
+    cargo run -p rubigo-cli --bin rubigo -- {{args}}
+
 # Kill all processes on WIP port range (reads from ../wip.toml)
 kill:
-    cargo run -p rubigo-cli --bin rubigo -- kill-ports
+    just rubigo kill-ports
 
 # === Development ===
 
-# Start full dev environment
+# Start full dev environment (main + gallery)
 dev: spec-gen
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Starting Rubigo V3 development environment..."
+    echo "🚀 Starting Rubigo V3 full development environment..."
+    echo "   Main App: http://127.0.0.1:$PORT"
+    echo "   Gallery:  http://127.0.0.1:37002"
+    trap 'echo "Shutting down all..."; kill $(jobs -p) 2>/dev/null' EXIT
+    just main-backend &
+    just gallery-backend &
+    sleep 2
+    just main-frontend &
+    just gallery-frontend &
+    wait
+
+# Start main app only (Axum + Vite)
+main: spec-gen
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting Main App..."
     echo "   Backend:  http://127.0.0.1:$PORT"
     echo "   Frontend: http://127.0.0.1:$VITE_PORT (proxied through backend)"
     trap 'echo "Shutting down..."; kill $(jobs -p) 2>/dev/null' EXIT
-    just backend-dev &
+    just main-backend &
     sleep 2
-    just frontend-dev &
+    just main-frontend &
     wait
 
-# Backend with hot reload
-backend-dev:
+# Main backend with hot reload
+main-backend:
     cd apps/main/backend && cargo watch -x run
 
-# Frontend Vite dev server
-frontend-dev:
+# Main frontend Vite dev server
+main-frontend:
     cd apps/main/frontend && bun run dev -- --port $VITE_PORT
 
 # === Component Gallery (port 37002) ===
 
-# Start full gallery environment (Axum + Vite)
+# Start gallery only (Axum + Vite)
 gallery:
     #!/usr/bin/env bash
     set -euo pipefail
