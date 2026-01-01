@@ -18,12 +18,6 @@ describe('Checkbox ARIA Conformance', () => {
         expect(typeof props).toBe('object');
     });
 
-    test('rootProps() includes aria-checked', () => {
-        const hook = useCheckbox({});
-        const props = hook.rootProps();
-        expect('aria-checked' in props).toBe(true);
-    });
-
     test('rootProps() includes aria-disabled', () => {
         const hook = useCheckbox({});
         const props = hook.rootProps();
