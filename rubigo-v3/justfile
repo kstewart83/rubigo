@@ -34,11 +34,11 @@ dev: spec-gen
 
 # Backend with hot reload
 backend-dev:
-    cd backend && cargo watch -x run
+    cd apps/main/backend && cargo watch -x run
 
 # Frontend Vite dev server
 frontend-dev:
-    cd frontend && bun run dev -- --port $VITE_PORT
+    cd apps/main/frontend && bun run dev -- --port $VITE_PORT
 
 # === Component Gallery (port 37002) ===
 
@@ -56,11 +56,11 @@ gallery:
 
 # Gallery backend (Axum with Vite proxy)
 gallery-backend:
-    cd gallery/backend && cargo run
+    cd apps/gallery/backend && cargo run
 
 # Gallery frontend (Vite dev server)
 gallery-frontend:
-    cd gallery/frontend && bun run dev
+    cd apps/gallery/frontend && bun run dev
 
 # === Spec Processing ===
 
@@ -90,7 +90,7 @@ spec-gen: check-binaries
     echo "📦 Generating JSON from specs..."
     mkdir -p generated
     
-    for spec in specifications/*/*{{SPEC_SUFFIX}}; do
+    for spec in shared/*/*{{SPEC_SUFFIX}}; do
         [ -f "$spec" ] || continue
         
         name=$(basename "$spec" {{SPEC_SUFFIX}})
@@ -122,11 +122,11 @@ spec-gen: check-binaries
     done
     
     # Generate example files from specs
-    ./scripts/generate-examples.sh
+    # scripts removed: generate-examples.sh
 
 # Validate all specs
 validate: check-binaries
-    ./scripts/validate-spec-types.sh
+    # scripts removed: validate-spec-types.sh
 
 # === Build ===
 
@@ -150,11 +150,11 @@ build-statechart-wasm:
     set -euo pipefail
     echo "🔧 Building statechart WASM..."
     cargo build -p rubigo-statechart --features wasm --target wasm32-unknown-unknown --release
-    mkdir -p frontend/src/wasm
+    mkdir -p apps/main/frontend/src/wasm
     wasm-bindgen target/wasm32-unknown-unknown/release/rubigo_statechart.wasm \
-        --out-dir frontend/src/wasm \
+        --out-dir apps/main/frontend/src/wasm \
         --target web
-    echo "✅ Statechart WASM built: frontend/src/wasm/"
+    echo "✅ Statechart WASM built: apps/main/frontend/src/wasm/"
 
 wasm-bindgen:
     #!/usr/bin/env bash
@@ -166,13 +166,13 @@ wasm-bindgen:
     for comp in $COMPONENTS; do
         WASM_FILE="target/wasm32-unknown-unknown/release/${comp}.wasm"
         if [ -f "$WASM_FILE" ]; then
-            mkdir -p "frontend/public/wasm/$comp"
-            mkdir -p "gallery/frontend/public/wasm/$comp"
+            mkdir -p "apps/main/frontend/public/wasm/$comp"
+            mkdir -p "gallery/apps/main/frontend/public/wasm/$comp"
             wasm-bindgen "$WASM_FILE" \
-                --out-dir "frontend/public/wasm/$comp" \
+                --out-dir "apps/main/frontend/public/wasm/$comp" \
                 --target web
             # Also copy to gallery
-            cp "frontend/public/wasm/$comp"/* "gallery/frontend/public/wasm/$comp/"
+            cp "apps/main/frontend/public/wasm/$comp"/* "gallery/apps/main/frontend/public/wasm/$comp/"
             echo "  ✓ $comp"
         else
             echo "  ⏭️ $comp (not built)"
@@ -181,7 +181,7 @@ wasm-bindgen:
     echo "✅ WASM bindings generated for all components"
 
 frontend-build:
-    cd frontend && bun run build
+    cd apps/main/frontend && bun run build
 
 prod-build: build-release wasm-build frontend-build
     @echo "✅ Production build complete"
@@ -218,7 +218,7 @@ build-test-spec-trigger:
     
     # Touch a spec file to trigger rebuild
     sleep 1  # Ensure timestamp difference
-    touch specifications/primitives/switch.sudo.md
+    touch shared/primitives/switch.sudo.md
     cargo build 2>&1 | tee /tmp/rubigo_build3.log
     
     # After touching a spec, build.rs should recompile
@@ -310,7 +310,7 @@ build-test: build-test-lib build-test-cache build-test-spec-trigger build-test-o
 # TypeScript tests (conformance + component tests)
 ts-test:
     #!/usr/bin/env bash
-    rm -rf components-ts/dist
+    rm -rf impl/ts/dist
     bun_exit=0
     vitest_exit=0
     # Run Bun conformance tests
@@ -329,7 +329,7 @@ ts-conformance:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🧪 Running TS spec conformance tests..."
-    rm -rf components-ts/dist
+    rm -rf impl/ts/dist
     cd components-ts && bun test tests/conformance.test.ts
 
 ts-bench:
@@ -352,7 +352,7 @@ rs-conformance:
     cargo test --package rubigo-statechart conformance -- --nocapture
 
 rs-bench:
-    cd components-rs/statechart && cargo bench
+    cd impl/rust/statechart && cargo bench
 
 # WASM conformance tests (uses Bun to load compiled WASM)
 wasm-conformance: build-statechart-wasm
@@ -416,7 +416,7 @@ unify-vectors:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🔄 Unifying test vectors..."
-    cd components-ts && bun run ../scripts/unify-vectors.ts
+    cd components-ts && bun run .# scripts removed: unify-vectors.ts
     echo "✅ Unified vectors generated"
 
 # Run spec conformance tests (TS interpreter against unified vectors)
@@ -424,7 +424,7 @@ test-conformance:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🧪 Running spec conformance tests..."
-    rm -rf components-ts/dist
+    rm -rf impl/ts/dist
     cd components-ts && bun test tests/conformance.test.ts tests/*.conformance.test.ts
 
 # Run hook-level tests (useXxx hooks against unified vectors)
@@ -474,7 +474,7 @@ setup: check-binaries
     echo "📦 Installing development tools..."
     cargo install cargo-watch wasm-bindgen-cli
     rustup target add wasm32-unknown-unknown
-    cd frontend && bun install
+    cd apps/main/frontend && bun install
     cd components-ts && bun install
     echo "✅ Setup complete!"
 
@@ -482,8 +482,8 @@ setup: check-binaries
 
 clean:
     cargo clean
-    rm -rf generated frontend/node_modules frontend/dist frontend/public/wasm
-    rm -rf components-ts/node_modules components-ts/dist
+    rm -rf generated frontend/node_modules frontend/dist apps/main/frontend/public/wasm
+    rm -rf impl/ts/node_modules impl/ts/dist
 
 clean-rust:
     cargo clean

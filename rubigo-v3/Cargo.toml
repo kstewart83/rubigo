@@ -1,11 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
-    "backend",
-    "components-rs/components",
-    "components-rs/statechart",
-    "gallery/backend",
-    "crates/rubigo-build",
+    "apps/main/backend",
+    "apps/gallery/backend",
+    "impl/rust/components",
+    "impl/rust/statechart",
+    "tooling/rubigo-build",
+    "tooling/cli",
 ]
 
 # Root package for build.rs
@@ -14,14 +15,14 @@ name = "rubigo-v3-workspace"
 version = "0.1.0"
 edition = "2021"
 publish = false
-build = "build/main.rs"
+build = "tooling/cli/src/main.rs"
 
 [build-dependencies]
 pulldown-cmark = "0.10"
 chrono = "0.4"
 serde_json = "1"
 regex = "1"
-rubigo-build = { path = "crates/rubigo-build" }
+rubigo-build = { path = "tooling/rubigo-build" }
 
 [workspace.package]
 version = "0.1.0"

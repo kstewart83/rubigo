@@ -1,0 +1,19 @@
+# Rubigo V3 - Project Configuration
+# This file defines path aliases for spec imports and build configuration
+
+[project]
+name = "rubigo-v3"
+version = "0.1.0"
+
+# Path aliases for spec imports
+# Usage in specs: imports: ["@rubigo/primitives/button"]
+[aliases]
+"@rubigo/primitives" = "shared/primitives"
+"@rubigo/composites" = "shared/composites"
+"@schema" = "schema"
+
+[build]
+# Where generated outputs are written
+generated_output = "generated"
+# Spec file pattern for discovery
+spec_pattern = "*.spec.md"
