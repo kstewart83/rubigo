@@ -12,7 +12,9 @@
 //! - `interactions` - Generate interactions manifest
 //! - `testgen` - Generate TypeScript test files
 //! - `testgen_rust` - Generate Rust test files
+//! - `codegen_rust` - Generate Rust component scaffolds
 
+pub mod codegen_rust;
 pub mod extraction;
 pub mod interactions;
 pub mod quint;
@@ -23,6 +25,10 @@ pub mod validation;
 pub mod vectors;
 
 // Re-export common types
+pub use codegen_rust::{
+    extract_actions, extract_context_fields, generate_component_tests_rs, generate_rust_scaffold,
+    ActionDef, ContextField,
+};
 pub use extraction::{
     extract_component_api_typescript, extract_cue_blocks, extract_cue_version, extract_quint_block,
     extract_test_vectors, generate_meta_json, generate_types_file, parse_frontmatter,

@@ -39,6 +39,8 @@ use rubigo_build::{
     extract_quint_block,
     extract_test_vectors,
     generate_component_tests,
+    // Rust code generation
+    generate_component_tests_rs,
     generate_emit_tests,
     generate_hook_tests,
     // Interactions
@@ -47,6 +49,7 @@ use rubigo_build::{
     generate_meta_json,
     // Rust test generation
     generate_rust_conformance_test,
+    generate_rust_scaffold,
     generate_types_file,
     // Vectors
     generate_unified_vectors,
@@ -138,6 +141,52 @@ fn main() {
                     warn!("Failed to write Rust test mod.rs: {}", e);
                 } else {
                     info!("Generated Rust test mod.rs with {} modules", modules.len());
+                }
+            }
+        }
+
+        // 6. Auto-generate [[bin]] entries in Cargo.toml for components
+        let components_dir = manifest_dir.join("components-rs/components");
+        let cargo_toml_path = components_dir.join("Cargo.toml");
+        if cargo_toml_path.exists() {
+            // Read existing Cargo.toml
+            if let Ok(cargo_content) = fs::read_to_string(&cargo_toml_path) {
+                // Find all component directories with src/main.rs
+                if let Ok(entries) = fs::read_dir(&components_dir) {
+                    let mut components: Vec<String> = entries
+                        .filter_map(|e| e.ok())
+                        .filter(|e| e.path().is_dir())
+                        .filter(|e| e.path().join("src/main.rs").exists())
+                        .filter_map(|e| e.file_name().to_str().map(String::from))
+                        .filter(|name| name != "src" && name != "target")
+                        .collect();
+
+                    components.sort();
+
+                    // Check which components need bin entries
+                    let mut new_entries = Vec::new();
+                    for comp in &components {
+                        let bin_pattern = format!("name = \"{}\"", comp);
+                        if !cargo_content.contains(&bin_pattern) {
+                            new_entries.push(format!(
+                                "\n# {} component\n[[bin]]\nname = \"{}\"\npath = \"{}/src/main.rs\"\n",
+                                comp, comp, comp
+                            ));
+                        }
+                    }
+
+                    // If there are new entries, append them
+                    if !new_entries.is_empty() {
+                        let updated_content = format!("{}{}", cargo_content, new_entries.join(""));
+                        if let Err(e) = fs::write(&cargo_toml_path, &updated_content) {
+                            warn!("Failed to update Cargo.toml with bin entries: {}", e);
+                        } else {
+                            info!(
+                                "Added {} new [[bin]] entries to Cargo.toml",
+                                new_entries.len()
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -373,6 +422,38 @@ fn process_spec_file(spec_path: &Path, generated_dir: &Path) {
         );
     } else {
         info!("Generated Rust test: {}_conformance.rs", spec_name);
+    }
+
+    // Generate Rust component scaffold at components-rs/components/{name}/src/main.rs
+    // Only generate for primitive specs (skip schema, compound, presentational)
+    if meta.spec_type == SpecType::Primitive {
+        let component_dir = generated_dir
+            .parent()
+            .map(|p| p.join(format!("components-rs/components/{}/src", spec_name)))
+            .unwrap_or_else(|| generated_dir.join(format!("components/{}/src", spec_name)));
+
+        fs::create_dir_all(&component_dir).ok();
+
+        let scaffold = generate_rust_scaffold(spec_name, &content);
+        let main_rs_path = component_dir.join("main.rs");
+
+        // Only write if main.rs doesn't exist (don't overwrite existing implementations)
+        if !main_rs_path.exists() {
+            if let Err(e) = fs::write(&main_rs_path, scaffold) {
+                warn!("Failed to write scaffold for {}: {}", spec_name, e);
+            } else {
+                info!("Generated Rust component: {}/src/main.rs", spec_name);
+            }
+        }
+
+        // Always generate/regenerate tests.rs from spec (tests are regeneratable)
+        let tests_rs = generate_component_tests_rs(spec_name, &content);
+        let tests_rs_path = component_dir.join("tests.rs");
+        if let Err(e) = fs::write(&tests_rs_path, tests_rs) {
+            warn!("Failed to write tests for {}: {}", spec_name, e);
+        } else {
+            info!("Generated Rust tests: {}/src/tests.rs", spec_name);
+        }
     }
 
     // Extract Cue blocks (use full content to include any frontmatter cue blocks)
