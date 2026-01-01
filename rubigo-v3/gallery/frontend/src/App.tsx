@@ -1,9 +1,10 @@
-import { createSignal, createResource, For, Show } from 'solid-js';
+import { createSignal, createResource, For, Show, createEffect } from 'solid-js';
 import type { Component } from 'solid-js';
 import { ComponentPreview } from './components/ComponentPreview';
 import { ControlsPanel } from './components/ControlsPanel';
 import { StateInspector } from './components/StateInspector';
 import { ActionsLog } from './components/ActionsLog';
+import { useWasmComponent } from './lib/wasmAdapter';
 
 interface SpecListItem {
     id: string;
@@ -46,6 +47,17 @@ const App: Component = () => {
     const [specs] = createResource(fetchSpecs);
     const [currentSpec] = createResource(selectedId, fetchSpec);
 
+    // WASM component integration
+    const wasm = useWasmComponent(currentSpec()?.name, engine());
+
+    // Sync WASM state to local state when wasm is ready
+    createEffect(() => {
+        if (engine() === 'wasm' && wasm.ready()) {
+            setContext(wasm.context());
+            setCurrentState(wasm.stateName());
+        }
+    });
+
     // Initialize context when spec loads
     const initializeContext = () => {
         const spec = currentSpec();
@@ -65,6 +77,13 @@ const App: Component = () => {
     const handleAction = (name: string, payload?: any) => {
         // Log the action
         setActions(prev => [...prev, { timestamp: Date.now(), name, payload }]);
+
+        // If using WASM engine, dispatch to WASM and sync state
+        if (engine() === 'wasm' && wasm.ready()) {
+            wasm.dispatch(name, payload);
+            // State is synced via createEffect
+            return;
+        }
 
         // Get the spec's actions definitions
         const spec = currentSpec();
