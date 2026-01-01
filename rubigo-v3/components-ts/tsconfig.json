@@ -1,0 +1,39 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "outDir": "./dist",
+        "rootDir": "..",
+        "baseUrl": ".",
+        "paths": {
+            "@generated/*": [
+                "../generated/*"
+            ]
+        },
+        "resolveJsonModule": true,
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "types": [
+            "bun-types"
+        ]
+    },
+    "include": [
+        "types.d.ts",
+        "statechart/**/*",
+        "switch/**/*",
+        "solid/**/*",
+        "button/**/*",
+        "checkbox/**/*",
+        "tabs/**/*",
+        "../generated/*.types.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

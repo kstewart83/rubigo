@@ -1,0 +1,74 @@
+/* Checkbox Component Styles */
+/* Uses design tokens from tokens/variables.css */
+
+/* Container wraps checkbox and label */
+.container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.container.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* The checkbox box itself */
+.checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--rubigo-border);
+    border-radius: var(--rubigo-radius-sm, 4px);
+    background: var(--rubigo-bg);
+    transition: all 150ms ease-out;
+    flex-shrink: 0;
+}
+
+.checkbox:focus {
+    outline: none;
+    box-shadow: var(--rubigo-focus-ring);
+}
+
+.checkbox:hover:not([aria-disabled="true"]) {
+    border-color: var(--rubigo-accent);
+}
+
+/* Checked state */
+.checkbox.checked {
+    background: var(--rubigo-accent);
+    border-color: var(--rubigo-accent);
+}
+
+/* Indeterminate state */
+.checkbox.indeterminate {
+    background: var(--rubigo-accent);
+    border-color: var(--rubigo-accent);
+}
+
+/* Icon styling */
+.icon {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: white;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Label text */
+.label {
+    color: var(--rubigo-text);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Disabled label */
+.container.disabled .label {
+    color: var(--rubigo-text-muted);
+}

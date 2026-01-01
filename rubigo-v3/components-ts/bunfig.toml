@@ -1,0 +1,8 @@
+# JSX config for SolidJS
+[jsx]
+runtime = "solid"
+
+[test]
+# Bun test settings - runs *.test.ts files
+root = "tests"
+preload = ["./test-setup.ts"]

@@ -1,0 +1,54 @@
+[workspace]
+resolver = "2"
+members = [
+    "backend",
+    "components-rs/components",
+    "components-rs/statechart",
+    "gallery/backend",
+    "crates/rubigo-build",
+]
+
+# Root package for build.rs
+[package]
+name = "rubigo-v3-workspace"
+version = "0.1.0"
+edition = "2021"
+publish = false
+build = "build/main.rs"
+
+[build-dependencies]
+pulldown-cmark = "0.10"
+chrono = "0.4"
+serde_json = "1"
+regex = "1"
+rubigo-build = { path = "crates/rubigo-build" }
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Rubigo Team"]
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Web framework
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs", "trace"] }
+
+# WASM
+wasm-bindgen = "0.2"
+
+# Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Release profile optimizations (for WASM)
+[profile.release]
+lto = true
+opt-level = "z"

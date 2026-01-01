@@ -1,0 +1,132 @@
+/* Button Component Styles */
+/* Uses design tokens from tokens/variables.css */
+
+/* Base button style */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: var(--rubigo-radius, 6px);
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    outline: none;
+}
+
+.button:focus-visible {
+    box-shadow: 0 0 0 2px var(--rubigo-bg, #fff), 0 0 0 4px var(--rubigo-accent, #3b82f6);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Variants */
+.primary {
+    background: var(--rubigo-accent, #3b82f6);
+    color: white;
+}
+
+.primary:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--rubigo-accent-dark, #2563eb);
+}
+
+.secondary {
+    background: transparent;
+    border: 1px solid var(--rubigo-border, #e5e7eb);
+    color: var(--rubigo-text, #1f2937);
+}
+
+.secondary:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--rubigo-bg-hover, #f3f4f6);
+}
+
+.ghost {
+    background: transparent;
+    color: var(--rubigo-text, #1f2937);
+}
+
+.ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--rubigo-bg-hover, #f3f4f6);
+}
+
+.outline {
+    background: transparent;
+    border: 1px solid var(--rubigo-accent, #3b82f6);
+    color: var(--rubigo-accent, #3b82f6);
+}
+
+.outline:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--rubigo-accent, #3b82f6);
+    color: white;
+}
+
+.destructive {
+    background: var(--rubigo-destructive, #ef4444);
+    color: white;
+}
+
+.destructive:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--rubigo-destructive-dark, #dc2626);
+}
+
+.link {
+    background: transparent;
+    color: var(--rubigo-accent, #3b82f6);
+    text-decoration: underline;
+    padding: 0;
+}
+
+.link:hover:not(:disabled):not([aria-disabled="true"]) {
+    color: var(--rubigo-accent-dark, #2563eb);
+}
+
+/* Sizes */
+.sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.md {
+    padding: 0.5rem 1rem;
+    font-size: 0.9375rem;
+}
+
+.lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+/* States */
+.pressed {
+    transform: scale(0.98);
+}
+
+.loading {
+    cursor: wait;
+}
+
+/* Spinner */
+.spinner {
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.contentHidden {
+    visibility: hidden;
+}

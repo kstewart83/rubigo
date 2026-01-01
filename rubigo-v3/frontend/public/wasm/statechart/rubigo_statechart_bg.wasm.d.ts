@@ -1,0 +1,17 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_wasmmachine_free: (a: number, b: number) => void;
+export const wasmmachine_currentState: (a: number) => [number, number];
+export const wasmmachine_from_json: (a: number, b: number) => [number, number, number];
+export const wasmmachine_getContext: (a: number) => [number, number, number];
+export const wasmmachine_send: (a: number, b: number, c: number) => [number, number, number];
+export const wasmmachine_setContextBool: (a: number, b: number, c: number, d: number) => void;
+export const wasmmachine_setContextNumber: (a: number, b: number, c: number, d: number) => void;
+export const wasmmachine_setContextString: (a: number, b: number, c: number, d: number, e: number) => void;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;
