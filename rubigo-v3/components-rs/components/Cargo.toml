@@ -41,3 +41,38 @@ wasm-bindgen-test = "0.3"
 [features]
 default = []
 console_error_panic_hook = []
+
+# collapsible component
+[[bin]]
+name = "collapsible"
+path = "collapsible/src/main.rs"
+
+# dialog component
+[[bin]]
+name = "dialog"
+path = "dialog/src/main.rs"
+
+# select component
+[[bin]]
+name = "select"
+path = "select/src/main.rs"
+
+# slider component
+[[bin]]
+name = "slider"
+path = "slider/src/main.rs"
+
+# tabs component
+[[bin]]
+name = "tabs"
+path = "tabs/src/main.rs"
+
+# togglegroup component
+[[bin]]
+name = "togglegroup"
+path = "togglegroup/src/main.rs"
+
+# tooltip component
+[[bin]]
+name = "tooltip"
+path = "tooltip/src/main.rs"
