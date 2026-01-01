@@ -3,8 +3,9 @@
  * 
  * Controls are dynamically generated from component metadata.
  * Supports switching between implemented components.
+ * Supports [TypeScript] [WASM] engine toggle for isomorphic testing.
  */
-import { Component, createSignal, createMemo, For, Show, Accessor, JSX } from 'solid-js';
+import { Component, createSignal, createMemo, For, Show, Accessor, JSX, createEffect } from 'solid-js';
 import { Button } from '@rubigo/components/button';
 import { Checkbox } from '@rubigo/components/checkbox';
 import { Switch } from '@rubigo/components/switch';
@@ -28,6 +29,7 @@ import tooltipMeta from '@generated/tooltip.meta.json';
 import dialogMeta from '@generated/dialog.meta.json';
 import selectMeta from '@generated/select.meta.json';
 import { getExamplesFor, type Example } from './examples';
+import { useWasmComponent } from './lib/wasmAdapter';
 
 // Available components registry
 const COMPONENTS = {
@@ -174,9 +176,22 @@ const SpecDrivenPOC: Component = () => {
     // Component selection
     const [selectedComponent, setSelectedComponent] = createSignal<ComponentKey>('checkbox');
 
+    // Engine toggle: 'ts' = TypeScript components, 'wasm' = WASM-backed state
+    const [engine, setEngine] = createSignal<'ts' | 'wasm'>('ts');
+
     // Get current component config
     const componentConfig = createMemo(() => COMPONENTS[selectedComponent()]);
     const getMeta = () => componentConfig().meta;
+
+    // WASM component integration
+    const wasm = useWasmComponent(selectedComponent(), engine());
+
+    // Log WASM state changes
+    createEffect(() => {
+        if (engine() === 'wasm' && wasm.ready()) {
+            logEvent(`[WASM] Loaded ${selectedComponent()}, state: ${wasm.stateName()}`);
+        }
+    });
 
     // Initialize props from metadata defaults
     const getInitialProps = (meta: typeof buttonMeta): Record<string, unknown> => {
@@ -601,6 +616,40 @@ const SpecDrivenPOC: Component = () => {
                         {(key) => <option value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>}
                     </For>
                 </select>
+
+                {/* Engine Toggle */}
+                <div style={{ display: 'flex', gap: '4px', 'margin-left': 'auto' }}>
+                    <button
+                        onClick={() => setEngine('ts')}
+                        style={{
+                            padding: '6px 12px',
+                            background: engine() === 'ts' ? 'var(--rubigo-accent, #6366f1)' : 'var(--rubigo-bg-panel)',
+                            border: '1px solid var(--rubigo-border)',
+                            color: engine() === 'ts' ? '#fff' : 'var(--rubigo-text-muted)',
+                            cursor: 'pointer',
+                            'border-radius': '4px 0 0 4px',
+                            'font-size': '12px',
+                            'font-weight': '500'
+                        }}
+                    >
+                        TypeScript
+                    </button>
+                    <button
+                        onClick={() => setEngine('wasm')}
+                        style={{
+                            padding: '6px 12px',
+                            background: engine() === 'wasm' ? 'var(--rubigo-accent, #6366f1)' : 'var(--rubigo-bg-panel)',
+                            border: '1px solid var(--rubigo-border)',
+                            color: engine() === 'wasm' ? '#fff' : 'var(--rubigo-text-muted)',
+                            cursor: 'pointer',
+                            'border-radius': '0 4px 4px 0',
+                            'font-size': '12px',
+                            'font-weight': '500'
+                        }}
+                    >
+                        WASM {wasm.ready() && engine() === 'wasm' ? '✓' : ''}
+                    </button>
+                </div>
             </div>
 
             <ControlPanel
