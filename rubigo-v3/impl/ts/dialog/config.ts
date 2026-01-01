@@ -1,7 +1,7 @@
 /**
  * Dialog Component Configuration
  */
-import dialogSpec from '../../generated/dialog.json';
+import dialogSpec from '../../../generated/dialog.json';
 import type { MachineConfig } from '../statechart';
 
 export interface DialogContext {

@@ -10,9 +10,9 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@rubigo/components': fileURLToPath(new URL('../../components-ts', import.meta.url)),
-            '@rubigo/tokens': fileURLToPath(new URL('../../components-ts/tokens', import.meta.url)),
-            '@generated': fileURLToPath(new URL('../../generated', import.meta.url)),
+            '@rubigo/components': fileURLToPath(new URL('../../../impl/ts', import.meta.url)),
+            '@rubigo/tokens': fileURLToPath(new URL('../../../impl/ts/tokens', import.meta.url)),
+            '@generated': fileURLToPath(new URL('../../../generated', import.meta.url)),
         },
     },
     build: {

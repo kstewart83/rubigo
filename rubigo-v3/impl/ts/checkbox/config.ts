@@ -6,7 +6,7 @@
  */
 
 // Import the generated spec (from `just spec-gen`)
-import checkboxSpec from '../../generated/checkbox.json';
+import checkboxSpec from '../../../generated/checkbox.json';
 import type { MachineConfig } from '../statechart';
 
 // Context type for the checkbox component

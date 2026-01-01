@@ -12,7 +12,7 @@
         "baseUrl": ".",
         "paths": {
             "@generated/*": [
-                "../generated/*"
+                "../../generated/*"
             ]
         },
         "resolveJsonModule": true,
@@ -30,7 +30,7 @@
         "button/**/*",
         "checkbox/**/*",
         "tabs/**/*",
-        "../generated/*.types.ts"
+        "../../generated/*.types.ts"
     ],
     "exclude": [
         "node_modules",

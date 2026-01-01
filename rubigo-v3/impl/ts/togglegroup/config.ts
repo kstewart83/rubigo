@@ -1,7 +1,7 @@
 /**
  * ToggleGroup Component Configuration
  */
-import togglegroupSpec from '../../generated/togglegroup.json';
+import togglegroupSpec from '../../../generated/togglegroup.json';
 import type { MachineConfig } from '../statechart';
 
 export interface ToggleGroupContext {

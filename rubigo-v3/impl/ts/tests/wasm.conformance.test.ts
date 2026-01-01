@@ -15,8 +15,8 @@ import { join } from 'path';
 // import.meta.dir = components-ts/tests, project root = ../..
 const WASM_JS_PATH = '../../frontend/src/wasm/rubigo_statechart.js';
 const WASM_BIN_PATH = '../../frontend/src/wasm/rubigo_statechart_bg.wasm';
-const VECTORS_PATH = '../../generated/test-vectors/switch.unified.json';
-const SPEC_PATH = '../../generated/switch.json';
+const VECTORS_PATH = '../../../generated/test-vectors/switch.unified.json';
+const SPEC_PATH = '../../../generated/switch.json';
 
 // Types
 interface TestContext {
@@ -159,8 +159,8 @@ describe('WASM Conformance Tests', () => {
 
 // === Checkbox WASM Conformance ===
 
-const CHECKBOX_VECTORS_PATH = '../../generated/test-vectors/checkbox.unified.json';
-const CHECKBOX_SPEC_PATH = '../../generated/checkbox.json';
+const CHECKBOX_VECTORS_PATH = '../../../generated/test-vectors/checkbox.unified.json';
+const CHECKBOX_SPEC_PATH = '../../../generated/checkbox.json';
 
 interface CheckboxContext {
     checked: boolean;
@@ -257,8 +257,8 @@ describe('WASM Checkbox Conformance Tests', () => {
 
 // === Button WASM Conformance ===
 
-const BUTTON_VECTORS_PATH = '../../generated/test-vectors/button.unified.json';
-const BUTTON_SPEC_PATH = '../../generated/button.json';
+const BUTTON_VECTORS_PATH = '../../../generated/test-vectors/button.unified.json';
+const BUTTON_SPEC_PATH = '../../../generated/button.json';
 
 interface ButtonContext {
     disabled: boolean;
@@ -357,8 +357,8 @@ describe('WASM Button Conformance Tests', () => {
 
 // === Tabs WASM Conformance ===
 
-const TABS_VECTORS_PATH = '../../generated/test-vectors/tabs.unified.json';
-const TABS_SPEC_PATH = '../../generated/tabs.json';
+const TABS_VECTORS_PATH = '../../../generated/test-vectors/tabs.unified.json';
+const TABS_SPEC_PATH = '../../../generated/tabs.json';
 
 interface TabsContext {
     selectedId: string;

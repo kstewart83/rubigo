@@ -10,8 +10,8 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 // Load unified vectors
-const vectorsPath = join(import.meta.dir, '../../generated/test-vectors/button.unified.json');
-const specPath = join(import.meta.dir, '../../generated/button.json');
+const vectorsPath = join(import.meta.dir, '../../../generated/test-vectors/button.unified.json');
+const specPath = join(import.meta.dir, '../../../generated/button.json');
 
 interface ButtonContext {
     disabled: boolean;

@@ -4,7 +4,7 @@
  * Single source of truth - imports from generated/tabs.json
  */
 
-import tabsSpec from '../../generated/tabs.json';
+import tabsSpec from '../../../generated/tabs.json';
 import type { MachineConfig } from '../statechart';
 
 export interface TabsContext {

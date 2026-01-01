@@ -1,7 +1,7 @@
 /**
  * Tooltip Component Configuration
  */
-import tooltipSpec from '../../generated/tooltip.json';
+import tooltipSpec from '../../../generated/tooltip.json';
 import type { MachineConfig } from '../statechart';
 
 export interface TooltipContext {

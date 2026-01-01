@@ -10,8 +10,8 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 // Load unified vectors
-const vectorsPath = join(import.meta.dir, '../../generated/test-vectors/tabs.unified.json');
-const specPath = join(import.meta.dir, '../../generated/tabs.json');
+const vectorsPath = join(import.meta.dir, '../../../generated/test-vectors/tabs.unified.json');
+const specPath = join(import.meta.dir, '../../../generated/tabs.json');
 
 interface TabsContext {
     selectedId: string;

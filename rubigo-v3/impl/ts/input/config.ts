@@ -6,7 +6,7 @@
  */
 
 // Import the generated spec (from `just spec-gen`)
-import inputSpec from '../../generated/input.json';
+import inputSpec from '../../../generated/input.json';
 import type { MachineConfig } from '../statechart';
 
 // Context type for the input component

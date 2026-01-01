@@ -1,7 +1,7 @@
 /**
  * Slider Component Configuration
  */
-import sliderSpec from '../../generated/slider.json';
+import sliderSpec from '../../../generated/slider.json';
 import type { MachineConfig } from '../statechart';
 
 export interface SliderContext {

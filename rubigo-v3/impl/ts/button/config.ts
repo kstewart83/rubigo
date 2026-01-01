@@ -6,7 +6,7 @@
  */
 
 // Import the generated spec (from `just spec-gen`)
-import buttonSpec from '../../generated/button.json';
+import buttonSpec from '../../../generated/button.json';
 import type { MachineConfig } from '../statechart';
 
 // Context type for the button component

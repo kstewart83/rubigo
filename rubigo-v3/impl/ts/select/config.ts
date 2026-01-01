@@ -1,7 +1,7 @@
 /**
  * Select Component Configuration
  */
-import selectSpec from '../../generated/select.json';
+import selectSpec from '../../../generated/select.json';
 import type { MachineConfig } from '../statechart';
 
 export interface SelectContext {

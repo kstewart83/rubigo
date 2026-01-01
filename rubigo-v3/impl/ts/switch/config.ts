@@ -6,7 +6,7 @@
  */
 
 // Import the generated spec (from `just spec-gen`)
-import switchSpec from '../../generated/switch.json';
+import switchSpec from '../../../generated/switch.json';
 import type { MachineConfig } from '../statechart';
 
 // Context type for the switch component

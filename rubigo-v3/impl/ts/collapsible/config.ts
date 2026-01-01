@@ -1,7 +1,7 @@
 /**
  * Collapsible Component Configuration
  */
-import collapsibleSpec from '../../generated/collapsible.json';
+import collapsibleSpec from '../../../generated/collapsible.json';
 import type { MachineConfig } from '../statechart';
 
 export interface CollapsibleContext {
