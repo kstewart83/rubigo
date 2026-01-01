@@ -67,18 +67,22 @@ impl Tooltip {
     pub fn set_open(&mut self) -> bool {
         // Mutation: context.open = true
         // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("set_open")
+        if self.context.disabled {
+            return false;
+        }
+        self.context.open = true;
+        self.state = "open".to_string();
+        true
     }
 
     /// Hide the tooltip
     pub fn set_closed(&mut self) -> bool {
         // Mutation: context.open = false
         // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("set_closed")
+        self.context.open = false;
+        self.state = "closed".to_string();
+        true
     }
-
 }
 
 impl Default for Tooltip {

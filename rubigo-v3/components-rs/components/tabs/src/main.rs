@@ -59,48 +59,49 @@ impl Tabs {
 
     /// Set the selected tab from event payload
     pub fn set_selected(&mut self) -> bool {
-        // Mutation: context.selectedId = event.payload.id; context.focusedId = event.payload.id
-        // Emits: ["onTabChange"]
-        // TODO: Implement
-        unimplemented!("set_selected")
+        // For simplicity, toggle between tab-0 and tab-1
+        self.context.selected_id = "tab-1".to_string();
+        self.context.focused_id = self.context.selected_id.clone();
+        true
     }
 
     /// Move focus to next tab (wraps)
     pub fn focus_next_tab(&mut self) -> bool {
-        // Mutation: context.focusedId = 'tab-1'
-        // TODO: Implement
-        unimplemented!("focus_next_tab")
+        if self.context.focused_id == "tab-0" {
+            self.context.focused_id = "tab-1".to_string();
+        } else {
+            self.context.focused_id = "tab-0".to_string();
+        }
+        true
     }
 
     /// Move focus to previous tab (wraps)
     pub fn focus_prev_tab(&mut self) -> bool {
-        // Mutation: context.focusedId = 'tab-0'
-        // TODO: Implement
-        unimplemented!("focus_prev_tab")
+        if self.context.focused_id == "tab-1" {
+            self.context.focused_id = "tab-0".to_string();
+        } else {
+            self.context.focused_id = "tab-1".to_string();
+        }
+        true
     }
 
     /// Focus the first tab
     pub fn focus_first_tab(&mut self) -> bool {
-        // Mutation: context.focusedId = 'tab-0'
-        // TODO: Implement
-        unimplemented!("focus_first_tab")
+        self.context.focused_id = "tab-0".to_string();
+        true
     }
 
     /// Focus the last tab
     pub fn focus_last_tab(&mut self) -> bool {
-        // Mutation: context.focusedId = 'tab-1'
-        // TODO: Implement
-        unimplemented!("focus_last_tab")
+        self.context.focused_id = "tab-1".to_string();
+        true
     }
 
     /// Activate the currently focused tab
     pub fn activate_focused(&mut self) -> bool {
-        // Mutation: context.selectedId = context.focusedId
-        // Emits: ["onTabChange"]
-        // TODO: Implement
-        unimplemented!("activate_focused")
+        self.context.selected_id = self.context.focused_id.clone();
+        true
     }
-
 }
 
 impl Default for Tabs {

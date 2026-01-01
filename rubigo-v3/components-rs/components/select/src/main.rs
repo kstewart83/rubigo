@@ -65,56 +65,68 @@ impl Select {
 
     /// Open the dropdown and sync highlight to selected
     pub fn open_menu(&mut self) -> bool {
-        // Mutation: context.open = true; context.highlightedValue = context.selectedValue
-        // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("open_menu")
+        if self.context.disabled {
+            return false;
+        }
+        self.context.open = true;
+        self.context.highlighted_value = self.context.selected_value.clone();
+        self.state = "open".to_string();
+        true
     }
 
     /// Close the dropdown
     pub fn close_menu(&mut self) -> bool {
-        // Mutation: context.open = false
-        // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("close_menu")
+        self.context.open = false;
+        self.state = "closed".to_string();
+        true
     }
 
     /// Select the highlighted option and close
     pub fn select_option(&mut self) -> bool {
-        // Mutation: context.selectedValue = context.highlightedValue; context.open = false
-        // Emits: ["onValueChange", "onOpenChange"]
-        // TODO: Implement
-        unimplemented!("select_option")
+        self.context.selected_value = self.context.highlighted_value.clone();
+        self.context.open = false;
+        self.state = "selected".to_string();
+        true
     }
 
     /// Highlight the next option in the list
     pub fn highlight_next(&mut self) -> bool {
-        // Mutation: context.highlightedValue = nextOption(context.highlightedValue)
-        // TODO: Implement
-        unimplemented!("highlight_next")
+        // Simple increment: option-0 -> option-1 -> option-2
+        if let Some(num) = self
+            .context
+            .highlighted_value
+            .strip_prefix("option-")
+            .and_then(|s| s.parse::<i32>().ok())
+        {
+            self.context.highlighted_value = format!("option-{}", (num + 1).min(2));
+        }
+        true
     }
 
     /// Highlight the previous option in the list
     pub fn highlight_prev(&mut self) -> bool {
-        // Mutation: context.highlightedValue = prevOption(context.highlightedValue)
-        // TODO: Implement
-        unimplemented!("highlight_prev")
+        if let Some(num) = self
+            .context
+            .highlighted_value
+            .strip_prefix("option-")
+            .and_then(|s| s.parse::<i32>().ok())
+        {
+            self.context.highlighted_value = format!("option-{}", (num - 1).max(0));
+        }
+        true
     }
 
     /// Highlight the first option
     pub fn highlight_first(&mut self) -> bool {
-        // Mutation: context.highlightedValue = 'option-0'
-        // TODO: Implement
-        unimplemented!("highlight_first")
+        self.context.highlighted_value = "option-0".to_string();
+        true
     }
 
     /// Highlight the last option
     pub fn highlight_last(&mut self) -> bool {
-        // Mutation: context.highlightedValue = 'option-2'
-        // TODO: Implement
-        unimplemented!("highlight_last")
+        self.context.highlighted_value = "option-2".to_string();
+        true
     }
-
 }
 
 impl Default for Select {
