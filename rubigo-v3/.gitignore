@@ -1,12 +1,43 @@
+# === Build Artifacts ===
+target/
 
-# Generated files
+# === Generated Files ===
 generated/
 
-# Node modules
-components-ts/node_modules/
-components-ts/dist/
+# === Node Modules (all apps and implementations) ===
+node_modules/
+**/node_modules/
 
-target/
-frontend/node_modules/
-backend/target/
-components-rs/target/
+# === TypeScript/Vite Build Artifacts ===
+dist/
+.vite/
+*.tsbuildinfo
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === Environment ===
+.env
+.env.local
+.env.*.local
+
+# === Cargo/Rust ===
+Cargo.lock
+*.rlib
+*.rmeta
+
+# === WASM Build ===
+pkg/
