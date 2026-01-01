@@ -70,39 +70,57 @@ run target: spec-gen
             ;;
     esac
 
-# Start full dev environment (main + gallery) with hot reload
-dev: spec-gen
+# Start app with hot reload: just watch main|gallery|dev
+watch target: spec-gen
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Starting Rubigo V3 full development environment (with watch)..."
-    echo "   Main App: http://127.0.0.1:$PORT"
-    echo "   Gallery:  http://127.0.0.1:37002"
-    trap 'echo "Shutting down all..."; kill $(jobs -p) 2>/dev/null' EXIT
-    just main-backend &
-    just gallery-backend &
-    sleep 2
-    just main-frontend &
-    just gallery-frontend &
-    wait
+    case "{{target}}" in
+        main)
+            echo "🚀 Starting Main App (with watch)..."
+            echo "   Backend:  http://127.0.0.1:$PORT"
+            echo "   Frontend: http://127.0.0.1:$VITE_PORT"
+            trap 'echo "Shutting down..."; kill $(jobs -p) 2>/dev/null' EXIT
+            just main-backend &
+            sleep 2
+            just main-frontend &
+            wait
+            ;;
+        gallery)
+            echo "🖼️  Starting Component Gallery (with watch)..."
+            echo "   Gallery:  http://127.0.0.1:37002"
+            trap 'echo "Shutting down gallery..."; kill $(jobs -p) 2>/dev/null' EXIT
+            just gallery-backend &
+            sleep 2
+            just gallery-frontend &
+            wait
+            ;;
+        dev)
+            echo "🚀 Starting Rubigo V3 full environment (with watch)..."
+            echo "   Main App: http://127.0.0.1:$PORT"
+            echo "   Gallery:  http://127.0.0.1:37002"
+            trap 'echo "Shutting down all..."; kill $(jobs -p) 2>/dev/null' EXIT
+            just main-backend &
+            just gallery-backend &
+            sleep 2
+            just main-frontend &
+            just gallery-frontend &
+            wait
+            ;;
+        *)
+            echo "❌ Unknown target: {{target}}"
+            echo "   Valid targets: main, gallery, dev"
+            exit 1
+            ;;
+    esac
 
-# === Main App (ports 37000/37001) ===
+# Aliases for watch mode (default)
+dev: (watch "dev")
+main: (watch "main")
+gallery: (watch "gallery")
 
-# Start main app with hot reload (default)
-main: spec-gen
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "🚀 Starting Main App (with watch)..."
-    echo "   Backend:  http://127.0.0.1:$PORT"
-    echo "   Frontend: http://127.0.0.1:$VITE_PORT (proxied through backend)"
-    trap 'echo "Shutting down..."; kill $(jobs -p) 2>/dev/null' EXIT
-    just main-backend &
-    sleep 2
-    just main-frontend &
-    wait
+# === Backend/Frontend Components ===
 
-
-
-# Main backend with hot reload (default)
+# Main backend with hot reload
 main-backend:
     cd apps/main/backend && cargo watch -x run
 
@@ -114,23 +132,7 @@ _main-backend-run:
 main-frontend:
     cd apps/main/frontend && bun run dev -- --port $VITE_PORT
 
-# === Component Gallery (ports 37002/37003) ===
-
-# Start gallery with hot reload (default)
-gallery: spec-gen
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "🖼️  Starting Component Gallery (with watch)..."
-    echo "   Gallery:  http://127.0.0.1:37002"
-    trap 'echo "Shutting down gallery..."; kill $(jobs -p) 2>/dev/null' EXIT
-    just gallery-backend &
-    sleep 2
-    just gallery-frontend &
-    wait
-
-
-
-# Gallery backend with hot reload (default)
+# Gallery backend with hot reload
 gallery-backend:
     cd apps/gallery/backend && cargo watch -x run
 
