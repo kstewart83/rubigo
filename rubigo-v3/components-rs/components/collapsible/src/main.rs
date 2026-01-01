@@ -61,18 +61,25 @@ impl Collapsible {
     pub fn expand(&mut self) -> bool {
         // Mutation: context.open = true
         // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("expand")
+        if self.context.disabled {
+            return false;
+        }
+        self.context.open = true;
+        self.state = "expanded".to_string();
+        true // Would trigger onOpenChange callback in JS
     }
 
     /// Collapse the content panel
     pub fn collapse(&mut self) -> bool {
         // Mutation: context.open = false
         // Emits: ["onOpenChange"]
-        // TODO: Implement
-        unimplemented!("collapse")
+        if self.context.disabled {
+            return false;
+        }
+        self.context.open = false;
+        self.state = "collapsed".to_string();
+        true // Would trigger onOpenChange callback in JS
     }
-
 }
 
 impl Default for Collapsible {
