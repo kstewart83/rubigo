@@ -159,11 +159,26 @@ build-statechart-wasm:
 wasm-bindgen:
     #!/usr/bin/env bash
     set -euo pipefail
-    mkdir -p frontend/public/wasm/switch
-    wasm-bindgen target/wasm32-unknown-unknown/release/switch.wasm \
-        --out-dir frontend/public/wasm/switch \
-        --target web
-    echo "✅ WASM bindings generated"
+    
+    # All 11 primitive components
+    COMPONENTS="button checkbox collapsible dialog input select slider switch tabs togglegroup tooltip"
+    
+    for comp in $COMPONENTS; do
+        WASM_FILE="target/wasm32-unknown-unknown/release/${comp}.wasm"
+        if [ -f "$WASM_FILE" ]; then
+            mkdir -p "frontend/public/wasm/$comp"
+            mkdir -p "gallery/frontend/public/wasm/$comp"
+            wasm-bindgen "$WASM_FILE" \
+                --out-dir "frontend/public/wasm/$comp" \
+                --target web
+            # Also copy to gallery
+            cp "frontend/public/wasm/$comp"/* "gallery/frontend/public/wasm/$comp/"
+            echo "  ✓ $comp"
+        else
+            echo "  ⏭️ $comp (not built)"
+        fi
+    done
+    echo "✅ WASM bindings generated for all components"
 
 frontend-build:
     cd frontend && bun run build
