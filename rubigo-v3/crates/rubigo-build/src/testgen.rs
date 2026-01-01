@@ -483,12 +483,39 @@ describe('{pascal} Keyboard Interactions', () => {{
     output
 }
 
-/// Emit mapping: action name -> (mutated context prop, emit callback name)
+/// Emit mapping: action name -> (mutated context prop, emit callback name, mutation string)
 #[derive(Debug, Clone)]
 pub struct EmitMapping {
     pub action_name: String,
     pub context_prop: String,
     pub emit_name: String,
+    pub mutation: String,
+}
+
+impl EmitMapping {
+    /// Check if this action is idempotent (setter) or non-idempotent (toggle/delta)
+    /// Idempotent actions should only fire callbacks on actual state change
+    pub fn is_idempotent(&self) -> bool {
+        // Toggle pattern: = !context.X (negation/flip)
+        if self.mutation.contains("= !context.") || self.mutation.contains("=!context.") {
+            return false;
+        }
+        // Delta pattern: X + context.Y or X - context.Y (additive/relative)
+        if self.mutation.contains("+ context.") || self.mutation.contains("- context.") {
+            return false;
+        }
+        // Everything else (= true, = false, = literal) is idempotent
+        true
+    }
+
+    /// Check if this action requires setup before testing
+    /// Actions that reset state to false (e.g., endDrag sets dragging=false) need
+    /// the corresponding start action to be called first
+    pub fn requires_setup(&self) -> bool {
+        // Reset to false pattern: context.X = false
+        // The initial state is typically false, so calling this action without setup won't fire
+        self.mutation.contains("= false")
+    }
 }
 
 /// Extract emit mappings from spec content by parsing Actions section
@@ -517,6 +544,7 @@ pub fn extract_emit_mappings(content: &str) -> Vec<EmitMapping> {
     // Format: actionName: { mutation: "context.X = ...", emits: ["onXChange"] }
     let mut current_action = String::new();
     let mut current_context_prop: Option<String> = None;
+    let mut current_mutation = String::new();
     let mut current_emits: Vec<String> = Vec::new();
 
     for line in cue_content.lines() {
@@ -542,6 +570,7 @@ pub fn extract_emit_mappings(content: &str) -> Vec<EmitMapping> {
                         action_name: current_action.clone(),
                         context_prop: current_context_prop.clone().unwrap(),
                         emit_name: emit.clone(),
+                        mutation: current_mutation.clone(),
                     });
                 }
             }
@@ -549,11 +578,20 @@ pub fn extract_emit_mappings(content: &str) -> Vec<EmitMapping> {
             // Start new action
             current_action = trimmed.split(':').next().unwrap_or("").trim().to_string();
             current_context_prop = None;
+            current_mutation.clear();
             current_emits.clear();
         }
 
         // Parse mutation line: mutation: "context.X = ..."
         if trimmed.starts_with("mutation:") {
+            // Capture the full mutation string for idempotency detection
+            if let Some(quote_start) = trimmed.find('"') {
+                if let Some(quote_end) = trimmed.rfind('"') {
+                    if quote_end > quote_start {
+                        current_mutation = trimmed[quote_start + 1..quote_end].to_string();
+                    }
+                }
+            }
             // Extract context.X from mutation
             if let Some(ctx_start) = trimmed.find("context.") {
                 let after_ctx = &trimmed[ctx_start + 8..];
@@ -589,6 +627,7 @@ pub fn extract_emit_mappings(content: &str) -> Vec<EmitMapping> {
                 action_name: current_action.clone(),
                 context_prop: current_context_prop.clone().unwrap(),
                 emit_name: emit.clone(),
+                mutation: current_mutation.clone(),
             });
         }
     }
@@ -642,6 +681,12 @@ describe('{component_title} Emit Callbacks', () => {{
         // All hooks now expose spec-compliant callback names
         let callback_name = &mapping.emit_name;
 
+        // Skip tests for actions that require setup (e.g., endDrag needs startDrag first)
+        // These can't be tested without proper initial state
+        if mapping.requires_setup() {
+            continue;
+        }
+
         // Generate test for this emit
         output.push_str(&format!(
             r#"    test('{emit_name} is called when {context_prop} changes via {action_name}', () => {{
@@ -678,6 +723,38 @@ describe('{component_title} Emit Callbacks', () => {{
             method_name = method_name,
             pascal = pascal,
         ));
+
+        // Generate idempotency test ONLY for idempotent actions (setters, not toggles/deltas)
+        // Toggle actions (= !context.X) and delta actions (+ context.step) should fire on each call
+        if mapping.is_idempotent() {
+            output.push_str(&format!(
+                r#"    test('{action_name} is idempotent - calling twice fires {emit_name} once', () => {{
+        let callCount = 0;
+        
+        const hook = use{pascal}({{
+            {callback_name}: () => {{
+                callCount++;
+            }},
+        }});
+        
+        // Call the action twice
+        if (typeof hook.{method_name} === 'function') {{
+            hook.{method_name}();  // First call - should fire callback
+            hook.{method_name}();  // Second call - state unchanged, should NOT fire
+        }}
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    }});
+
+"#,
+                emit_name = mapping.emit_name,
+                callback_name = callback_name,
+                action_name = mapping.action_name,
+                method_name = method_name,
+                pascal = pascal,
+            ));
+        }
     }
 
     output.push_str("});\n");

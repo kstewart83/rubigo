@@ -39,4 +39,23 @@ describe('ToggleGroup Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
+    test('selectItem is idempotent - calling twice fires onValueChange once', () => {
+        let callCount = 0;
+        
+        const hook = useToggleGroup({
+            onValueChange: () => {
+                callCount++;
+            },
+        });
+        
+        // Call the action twice
+        if (typeof hook.selectItem === 'function') {
+            hook.selectItem();  // First call - should fire callback
+            hook.selectItem();  // Second call - state unchanged, should NOT fire
+        }
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    });
+
 });

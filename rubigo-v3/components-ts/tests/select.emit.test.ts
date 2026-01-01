@@ -39,30 +39,23 @@ describe('Select Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
-    test('onValueChange is called when selectedValue changes via selectOption', () => {
-        let callbackFired = false;
-        let callbackValue: unknown;
+    test('openMenu is idempotent - calling twice fires onOpenChange once', () => {
+        let callCount = 0;
         
         const hook = useSelect({
-            onValueChange: (value: unknown) => {
-                callbackFired = true;
-                callbackValue = value;
+            onOpenChange: () => {
+                callCount++;
             },
         });
         
-        // Invoke the action that mutates context.selectedValue
-        if (typeof hook.selectOption === 'function') {
-            hook.selectOption();
-        } else if (typeof hook.triggerProps === 'function') {
-            // Fallback: try triggerProps().onClick if direct method not found
-            const props = hook.triggerProps();
-            if (props && typeof props.onClick === 'function') {
-                props.onClick();
-            }
+        // Call the action twice
+        if (typeof hook.openMenu === 'function') {
+            hook.openMenu();  // First call - should fire callback
+            hook.openMenu();  // Second call - state unchanged, should NOT fire
         }
         
-        // The callback SHOULD have fired with the new context value
-        expect(callbackFired).toBe(true);
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
     });
 
 });

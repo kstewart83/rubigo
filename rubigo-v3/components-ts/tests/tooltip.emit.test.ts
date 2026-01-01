@@ -39,4 +39,23 @@ describe('Tooltip Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
+    test('setOpen is idempotent - calling twice fires onOpenChange once', () => {
+        let callCount = 0;
+        
+        const hook = useTooltip({
+            onOpenChange: () => {
+                callCount++;
+            },
+        });
+        
+        // Call the action twice
+        if (typeof hook.setOpen === 'function') {
+            hook.setOpen();  // First call - should fire callback
+            hook.setOpen();  // Second call - state unchanged, should NOT fire
+        }
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    });
+
 });

@@ -6,16 +6,19 @@ import { createMachine } from '../../statechart';
 import { createToggleGroupConfig, type ToggleGroupContext } from '../config';
 
 export interface UseToggleGroupOptions {
-    value?: string;
-    defaultValue?: string;
+    value?: string | string[];
+    defaultValue?: string | string[];
     disabled?: boolean;
-    onValueChange?: (value: string) => void;
+    type?: 'single' | 'multiple';
+    onValueChange?: (value: string | string[]) => void;
 }
 
 export interface UseToggleGroupReturn {
     selectedId: Accessor<string>;
+    selectedIds: Accessor<string[]>;
     focusedId: Accessor<string>;
     disabled: Accessor<boolean>;
+    type: Accessor<'single' | 'multiple'>;
     select: (id: string) => void;
     /** Spec-compliant alias for select */
     selectItem: (id: string) => void;
@@ -25,8 +28,9 @@ export interface UseToggleGroupReturn {
     focusLast: () => void;
     activate: () => void;
     registerItem: (id: string) => void;
+    isSelected: (id: string) => boolean;
     getItemProps: (id: string) => {
-        role: 'radio';
+        role: 'radio' | 'checkbox';
         'aria-checked': boolean;
         'aria-disabled': boolean | undefined;
         tabIndex: number;
@@ -34,7 +38,7 @@ export interface UseToggleGroupReturn {
         onKeyDown: (e: KeyboardEvent) => void;
     };
     rootProps: () => {
-        role: 'radiogroup';
+        role: 'radiogroup' | 'group';
         'aria-disabled': boolean | undefined;
     };
 }
@@ -43,7 +47,10 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
     const getOptions = typeof optionsInput === 'function' ? optionsInput : () => optionsInput;
     const options = getOptions();
 
-    const defaultId = options.value ?? options.defaultValue ?? 'item-0';
+    // Handle initial value (can be string or string[])
+    const initialValue = options.value ?? options.defaultValue;
+    const defaultId = Array.isArray(initialValue) ? initialValue[0] ?? 'item-0' : initialValue ?? 'item-0';
+    const defaultIds = Array.isArray(initialValue) ? initialValue : initialValue ? [initialValue] : [];
 
     const machine = createMachine(createToggleGroupConfig({
         selectedId: defaultId,
@@ -55,6 +62,7 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
     const triggerUpdate = () => setBump(b => b + 1);
 
     const [itemIds, setItemIds] = createSignal<string[]>([]);
+    const [selectedIdsState, setSelectedIdsState] = createSignal<string[]>(defaultIds);
 
     // Sync controlled props
     createEffect(() => {
@@ -82,6 +90,11 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
         return machine.getContext().selectedId;
     };
 
+    const selectedIds = () => {
+        bump();
+        return selectedIdsState();
+    };
+
     const focusedId = () => {
         bump();
         return machine.getContext().focusedId;
@@ -92,17 +105,46 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
         return getOptions().disabled ?? machine.getContext().disabled;
     };
 
+    const type = (): 'single' | 'multiple' => {
+        return getOptions().type ?? 'single';
+    };
+
+    const isSelected = (id: string): boolean => {
+        bump();
+        if (type() === 'multiple') {
+            return selectedIdsState().includes(id);
+        }
+        return machine.getContext().selectedId === id;
+    };
+
     const getItemIndex = (id: string): number => itemIds().indexOf(id);
 
     const select = (id: string) => {
         const ctx = machine.getContext();
         if (ctx.disabled) return;
-        if (ctx.selectedId === id) return;
 
-        (machine as any).context.selectedId = id;
-        (machine as any).context.focusedId = id;
-        getOptions().onValueChange?.(id);
-        triggerUpdate();
+        if (type() === 'multiple') {
+            // Toggle selection in multiple mode
+            const current = selectedIdsState();
+            let newIds: string[];
+            if (current.includes(id)) {
+                newIds = current.filter(x => x !== id);
+            } else {
+                newIds = [...current, id];
+            }
+            setSelectedIdsState(newIds);
+            (machine as any).context.focusedId = id;
+            getOptions().onValueChange?.(newIds);
+            triggerUpdate();
+        } else {
+            // Single mode - same as before but with guard
+            if (ctx.selectedId === id) return;
+            (machine as any).context.selectedId = id;
+            (machine as any).context.focusedId = id;
+            setSelectedIdsState([id]);
+            getOptions().onValueChange?.(id);
+            triggerUpdate();
+        }
     };
 
     const focusNext = () => {
@@ -192,29 +234,34 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
 
     const getItemProps = (id: string) => {
         registerItem(id);
-        const isSelected = selectedId() === id;
+        const itemSelected = isSelected(id);
+        const isMulti = type() === 'multiple';
 
         return {
-            role: 'radio' as const,
-            'aria-checked': isSelected,
+            role: isMulti ? 'checkbox' as const : 'radio' as const,
+            'aria-checked': itemSelected,
             'aria-disabled': disabled() || undefined,
-            tabIndex: isSelected ? 0 : -1,
+            tabIndex: focusedId() === id ? 0 : -1,
             onClick: () => select(id),
             onKeyDown: handleKeyDown,
         };
     };
 
-    const rootProps = () => ({
-        role: 'radiogroup' as const,
-        'aria-disabled': disabled() || undefined,
-        'aria-checked': true,
-        onKeyDown: handleKeyDown,
-    });
+    const rootProps = () => {
+        const isMulti = type() === 'multiple';
+        return {
+            role: isMulti ? 'group' as const : 'radiogroup' as const,
+            'aria-disabled': disabled() || undefined,
+            onKeyDown: handleKeyDown,
+        };
+    };
 
     return {
         selectedId,
+        selectedIds,
         focusedId,
         disabled,
+        type,
         select,
         selectItem: select,  // Spec-compliant alias
         focusNext,
@@ -223,6 +270,7 @@ export function useToggleGroup(optionsInput: UseToggleGroupOptions | (() => UseT
         focusLast,
         activate,
         registerItem,
+        isSelected,
         getItemProps,
         rootProps,
     };

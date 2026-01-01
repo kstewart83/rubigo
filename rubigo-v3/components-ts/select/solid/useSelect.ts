@@ -110,13 +110,14 @@ export function useSelect(optionsInput: UseSelectOptions | (() => UseSelectOptio
     });
 
     const openDropdown = () => {
-        if (disabled()) return;
+        if (disabled() || open()) return;
         setOpen(true);
         setHighlightedValue(selectedValue() || optionValues()[0] || '');
         options.onOpenChange?.(true);
     };
 
     const closeDropdown = () => {
+        if (!open()) return;
         setOpen(false);
         options.onOpenChange?.(false);
     };

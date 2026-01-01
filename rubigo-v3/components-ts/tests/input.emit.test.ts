@@ -39,4 +39,23 @@ describe('Input Emit Callbacks', () => {
         expect(callbackFired).toBe(true);
     });
 
+    test('setValue is idempotent - calling twice fires onChange once', () => {
+        let callCount = 0;
+        
+        const hook = useInput({
+            onChange: () => {
+                callCount++;
+            },
+        });
+        
+        // Call the action twice
+        if (typeof hook.setValue === 'function') {
+            hook.setValue();  // First call - should fire callback
+            hook.setValue();  // Second call - state unchanged, should NOT fire
+        }
+        
+        // Callback should only fire once (on state change), not on redundant calls
+        expect(callCount).toBe(1);
+    });
+
 });
