@@ -16,4 +16,4 @@ version = "0.1.0"
 # Where generated outputs are written
 generated_output = "generated"
 # Spec file pattern for discovery
-spec_pattern = "*.spec.md"
+spec_pattern = "*.sudo.md"

@@ -1,11 +1,10 @@
 //! Rubigo V3 Components
 //!
 //! This crate provides UI components as separate WASM binary targets.
-//! Each component lives in its own folder with:
-//! - `component.sudo.md` - SudoLang + Cue specification
-//! - `src/main.rs` - Rust WASM implementation
+//! Each component lives in `shared/primitives/{name}/src/wasm.rs`.
 //!
 //! Components:
-//! - `switch` - Binary toggle control
+//! - button, checkbox, collapsible, dialog, input
+//! - select, slider, switch, tabs, togglegroup, tooltip
 
 pub mod common;

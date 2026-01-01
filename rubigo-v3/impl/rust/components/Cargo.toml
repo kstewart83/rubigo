@@ -7,25 +7,50 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
-# Switch component - compiles to its own WASM file
+# WASM binaries - shared/primitives components
 [[bin]]
 name = "switch"
-path = "switch/src/main.rs"
+path = "../shared/primitives/switch/src/wasm.rs"
 
-# Button component
 [[bin]]
 name = "button"
-path = "button/src/main.rs"
+path = "../shared/primitives/button/src/wasm.rs"
 
-# Checkbox component
 [[bin]]
 name = "checkbox"
-path = "checkbox/src/main.rs"
+path = "../shared/primitives/checkbox/src/wasm.rs"
 
-# Input component
 [[bin]]
 name = "input"
-path = "input/src/main.rs"
+path = "../shared/primitives/input/src/wasm.rs"
+
+[[bin]]
+name = "collapsible"
+path = "../shared/primitives/collapsible/src/wasm.rs"
+
+[[bin]]
+name = "dialog"
+path = "../shared/primitives/dialog/src/wasm.rs"
+
+[[bin]]
+name = "select"
+path = "../shared/primitives/select/src/wasm.rs"
+
+[[bin]]
+name = "slider"
+path = "../shared/primitives/slider/src/wasm.rs"
+
+[[bin]]
+name = "tabs"
+path = "../shared/primitives/tabs/src/wasm.rs"
+
+[[bin]]
+name = "togglegroup"
+path = "../shared/primitives/togglegroup/src/wasm.rs"
+
+[[bin]]
+name = "tooltip"
+path = "../shared/primitives/tooltip/src/wasm.rs"
 
 [dependencies]
 wasm-bindgen.workspace = true
@@ -41,38 +66,3 @@ wasm-bindgen-test = "0.3"
 [features]
 default = []
 console_error_panic_hook = []
-
-# collapsible component
-[[bin]]
-name = "collapsible"
-path = "collapsible/src/main.rs"
-
-# dialog component
-[[bin]]
-name = "dialog"
-path = "dialog/src/main.rs"
-
-# select component
-[[bin]]
-name = "select"
-path = "select/src/main.rs"
-
-# slider component
-[[bin]]
-name = "slider"
-path = "slider/src/main.rs"
-
-# tabs component
-[[bin]]
-name = "tabs"
-path = "tabs/src/main.rs"
-
-# togglegroup component
-[[bin]]
-name = "togglegroup"
-path = "togglegroup/src/main.rs"
-
-# tooltip component
-[[bin]]
-name = "tooltip"
-path = "tooltip/src/main.rs"

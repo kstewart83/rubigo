@@ -7,8 +7,8 @@
 // Design tokens (CSS custom properties)
 import './tokens/variables.css';
 
-// Re-export components
-export { Button } from './button/solid/Button';
-export { Checkbox } from './checkbox/solid/Checkbox';
-export { Switch } from './switch/solid/Switch';
-export { Input } from './input/solid/Input';
+// Re-export components from shared/primitives
+export { Button } from './shared/primitives/button/bindings/solid/Button';
+export { Checkbox } from './shared/primitives/checkbox/bindings/solid/Checkbox';
+export { Switch } from './shared/primitives/switch/bindings/solid/Switch';
+export { Input } from './shared/primitives/input/bindings/solid/Input';

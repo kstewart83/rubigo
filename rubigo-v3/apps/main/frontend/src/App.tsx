@@ -1,6 +1,6 @@
 import { createSignal, onMount, createEffect, Show } from 'solid-js';
-import { createMachine } from '../../components-ts/statechart';
-import { createSwitchConfig, type SwitchContext } from '../../components-ts/switch/config';
+import { createMachine } from '@rubigo/statechart';
+import { createSwitchConfig, type SwitchContext } from '@rubigo/components/switch/config';
 
 // TypeScript reactive wrapper
 function createReactiveSwitch(overrides?: Partial<SwitchContext>) {

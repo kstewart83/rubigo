@@ -165,50 +165,13 @@ check-binaries:
     JUST_VERSION=$(just --version | awk '{print $2}')
     echo "  ✅ just $JUST_VERSION"
 
-# Generate JSON from all specs
+# Generate JSON from all specs using rubigo CLI (with mirrored paths)
 spec-gen: check-binaries
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "📦 Generating JSON from specs..."
-    mkdir -p generated
-    
-    for spec in shared/*/*{{SPEC_SUFFIX}}; do
-        [ -f "$spec" ] || continue
-        
-        name=$(basename "$spec" {{SPEC_SUFFIX}})
-        dir=$(dirname "$spec")
-        cue_dir="generated/${name}_cue"
-        mkdir -p "$cue_dir"
-        
-        echo "  Processing $spec..."
-        
-        # Extract cue blocks from markdown
-        awk '/^```cue$/,/^```$/' "$spec" | grep -v '^```' > "$cue_dir/${name}.cue" || true
-        
-        # Export to JSON (skip if result is empty)
-        if [ -s "$cue_dir/${name}.cue" ]; then
-            if cue export --out json "$cue_dir/${name}.cue" > "$cue_dir/${name}.tmp.json" 2>/dev/null; then
-                # Check if output is empty or just whitespace/empty object
-                if [ -s "$cue_dir/${name}.tmp.json" ] && [ "$(cat "$cue_dir/${name}.tmp.json")" != "{}" ]; then
-                    mv "$cue_dir/${name}.tmp.json" "generated/${name}.json"
-                    echo "    ✅ generated/${name}.json"
-                else
-                    rm -f "$cue_dir/${name}.tmp.json" "generated/${name}.json"
-                    echo "    ⏭️  skipped (schema-only, no data)"
-                fi
-            else
-                rm -f "$cue_dir/${name}.tmp.json"
-                echo "    ⚠️  cue export failed (may have incomplete types)"
-            fi
-        fi
-    done
-    
-    # Generate example files from specs
-    # scripts removed: generate-examples.sh
+    cargo run -p rubigo-cli --bin rubigo -- spec-gen
 
 # Validate all specs
 validate: check-binaries
-    # scripts removed: validate-spec-types.sh
+    # TODO: implement validate command in rubigo CLI
 
 # === Build ===
 

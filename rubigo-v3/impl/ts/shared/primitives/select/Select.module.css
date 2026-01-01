@@ -1,0 +1,114 @@
+/**
+ * Select Component Styles
+ */
+@import '../../../tokens/variables.css';
+
+.root {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+}
+
+.trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--rubigo-text);
+    background: var(--rubigo-bg, white);
+    border: 1px solid var(--rubigo-border, #e5e7eb);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+    outline: none;
+}
+
+.trigger:hover {
+    border-color: var(--rubigo-border-hover, #d1d5db);
+}
+
+.trigger:focus {
+    border-color: var(--rubigo-primary, #3b82f6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.value {
+    flex: 1;
+    text-align: left;
+}
+
+.chevron {
+    font-size: 10px;
+    color: var(--rubigo-text-muted, #6b7280);
+    transition: transform 0.15s ease;
+}
+
+.open .chevron {
+    transform: rotate(180deg);
+}
+
+.content {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--rubigo-bg, white);
+    border: 1px solid var(--rubigo-border, #e5e7eb);
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    animation: selectOpen 0.15s ease-out;
+}
+
+@keyframes selectOpen {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--rubigo-text);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.item:hover,
+.item.highlighted {
+    background: var(--rubigo-bg-subtle, #f3f4f6);
+}
+
+.item.selected {
+    font-weight: 500;
+}
+
+.itemDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.checkmark {
+    color: var(--rubigo-primary, #3b82f6);
+}
+
+.disabled {
+    opacity: 0.5;
+}
+
+.disabled .trigger {
+    cursor: not-allowed;
+}

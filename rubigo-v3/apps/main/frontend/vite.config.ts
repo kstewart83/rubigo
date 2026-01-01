@@ -13,11 +13,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@rubigo/components': fileURLToPath(new URL('../../../impl/ts', import.meta.url)),
+      '@rubigo/components': fileURLToPath(new URL('../../../impl/ts/shared/primitives', import.meta.url)),
+      '@rubigo/statechart': fileURLToPath(new URL('../../../impl/ts/statechart', import.meta.url)),
       '@rubigo/tokens': fileURLToPath(new URL('../../../impl/ts/tokens', import.meta.url)),
       '@generated': fileURLToPath(new URL('../../../generated', import.meta.url)),
-      // Legacy alias for existing imports
-      '../../components-ts': fileURLToPath(new URL('../../../impl/ts', import.meta.url)),
     },
   },
   build: {

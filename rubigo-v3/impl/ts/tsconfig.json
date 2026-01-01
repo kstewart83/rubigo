@@ -8,11 +8,13 @@
         "skipLibCheck": true,
         "declaration": true,
         "outDir": "./dist",
-        "rootDir": "..",
         "baseUrl": ".",
         "paths": {
             "@generated/*": [
                 "../../generated/*"
+            ],
+            "@/shared/primitives/*": [
+                "./shared/primitives/*"
             ]
         },
         "resolveJsonModule": true,
@@ -25,12 +27,8 @@
     "include": [
         "types.d.ts",
         "statechart/**/*",
-        "switch/**/*",
-        "solid/**/*",
-        "button/**/*",
-        "checkbox/**/*",
-        "tabs/**/*",
-        "../../generated/*.types.ts"
+        "shared/primitives/**/*",
+        "../../generated/**/*.types.ts"
     ],
     "exclude": [
         "node_modules",
