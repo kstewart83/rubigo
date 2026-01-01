@@ -11,11 +11,13 @@
 //! - `vectors` - Parse ITF traces and generate unified test vectors
 //! - `interactions` - Generate interactions manifest
 //! - `testgen` - Generate TypeScript test files
+//! - `testgen_rust` - Generate Rust test files
 
 pub mod extraction;
 pub mod interactions;
 pub mod quint;
 pub mod testgen;
+pub mod testgen_rust;
 pub mod types;
 pub mod validation;
 pub mod vectors;
@@ -35,6 +37,9 @@ pub use testgen::{
     extract_aria_mapping, extract_emit_mappings, generate_component_tests, generate_emit_tests,
     generate_hook_tests, generate_keyboard_tests, parse_keyboard_interactions, AriaMapping,
     EmitMapping, KeyboardMapping,
+};
+pub use testgen_rust::{
+    generate_rust_aria_test, generate_rust_conformance_test, generate_rust_keyboard_test,
 };
 pub use types::{SpecMeta, SpecType, SPEC_SUFFIX};
 pub use validation::{validate_quint_model, validate_spec_structure};

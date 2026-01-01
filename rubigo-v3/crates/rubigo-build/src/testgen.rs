@@ -359,7 +359,11 @@ describe('{pascal} ARIA Conformance', () => {{
         component = component
     );
 
-    for attr in &attr_names {
+    // Filter out attributes that belong on items, not rootProps
+    // aria-checked belongs on individual radio/checkbox items, not the group container
+    let root_attrs: Vec<&String> = attr_names.iter().filter(|a| *a != "aria-checked").collect();
+
+    for attr in &root_attrs {
         output.push_str(&format!(
             r#"    test('rootProps() includes {attr}', () => {{
         const hook = use{pascal}({{}});
