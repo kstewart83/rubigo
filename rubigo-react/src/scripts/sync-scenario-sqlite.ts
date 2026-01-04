@@ -229,6 +229,9 @@ interface SyncEntityOptions<T, E> {
     // Delete an item by remote ID
     deleteFn?: (id: string) => Promise<{ success: boolean; error?: string }>;
 
+    // Update an existing item by remote ID (for upsert mode)
+    updateFn?: (id: string, item: T) => Promise<{ success: boolean; error?: string }>;
+
     // Extract the seed ID from a seed item
     getSeedId: (item: T) => string;
 
@@ -257,7 +260,7 @@ async function syncEntityWithMapping<T, E>(
     const stats = initStats();
     const {
         entityName, entityType, items, mode, dryRun, idMaps,
-        listFn, createFn, deleteFn,
+        listFn, createFn, deleteFn, updateFn,
         getSeedId, getRemoteId, getSeedKey, getRemoteKey,
         formatName, protectedIds, protectedKeys
     } = options;
@@ -316,10 +319,27 @@ async function syncEntityWithMapping<T, E>(
         const existing = existingByKey.get(seedKey);
 
         if (existing) {
-            // Already exists - record the ID mapping and skip
+            // Already exists - record the ID mapping
             const remoteId = getRemoteId(existing);
             idMap.set(seedId, remoteId);
-            stats.skipped++;
+
+            // In upsert mode, update existing items if updateFn is provided
+            if ((mode === "upsert" || mode === "full") && updateFn) {
+                if (dryRun) {
+                    console.log(`   🔄 [DRY-RUN] Would update: ${formatName(item)}`);
+                    stats.updated++;
+                } else {
+                    const result = await updateFn(remoteId, item);
+                    if (result.success) {
+                        stats.updated++;
+                    } else {
+                        stats.failed++;
+                        console.log(`   ❌ Failed to update: ${formatName(item)} - ${result.error}`);
+                    }
+                }
+            } else {
+                stats.skipped++;
+            }
             continue;
         }
 
@@ -414,6 +434,24 @@ async function main() {
             cellPhone: p.cell_phone,
             bio: p.bio,
             isAgent: p.is_agent === 1,
+            clearanceLevel: p.clearance_level,
+            compartmentClearances: p.compartment_clearances || "[]",
+        }),
+        updateFn: (id, p) => client.updatePersonnel(id, {
+            name: p.name,
+            title: p.title,
+            department: p.department,
+            site: p.site,
+            building: p.building,
+            level: p.level,
+            space: p.space,
+            manager: resolveId(idMaps, "personnel", p.manager),
+            deskPhone: p.desk_phone,
+            cellPhone: p.cell_phone,
+            bio: p.bio,
+            isAgent: p.is_agent === 1,
+            clearanceLevel: p.clearance_level,
+            compartmentClearances: p.compartment_clearances || "[]",
         }),
         deleteFn: (id) => client.deletePersonnel(id),
         getSeedId: (p) => p.id,
@@ -423,6 +461,17 @@ async function main() {
         formatName: (p) => p.name,
         protectedKeys: PROTECTED_PERSONNEL_KEYS,
     });
+
+    // Build personnelByEmail map for calendar organizer resolution
+    // This maps email -> remote ID for business key resolution
+    const personnelByEmail = new Map<string, string>();
+    const allPersonnelResult = await client.listPersonnel({ pageSize: 1000 }) as { success: boolean; data?: RemotePersonnel[] };
+    if (allPersonnelResult.success && allPersonnelResult.data) {
+        for (const p of allPersonnelResult.data) {
+            personnelByEmail.set(p.email, p.id);
+        }
+    }
+    idMaps.set("personnelByEmail", personnelByEmail);
 
     // 1b. Headshots - upload photos and update personnel records
     console.log(`\n📷 Syncing headshots...`);
@@ -834,7 +883,10 @@ async function main() {
             continue;
         }
 
-        const remoteOrganizerId = resolveId(idMaps, "personnel", event.organizer_id);
+        // Resolve organizer email to personnel ID using the emailToRemoteId map from personnel sync
+        const remoteOrganizerId = event.organizer_email
+            ? idMaps.get("personnelByEmail")?.get(event.organizer_email)
+            : undefined;
 
         if (args.dryRun) {
             console.log(`   🆕 [DRY-RUN] Would create event: ${event.title}`);
@@ -854,6 +906,8 @@ async function main() {
                 organizerId: remoteOrganizerId,
                 location: event.location || undefined,
                 virtualUrl: event.virtual_url || undefined,
+                aco: event.aco || undefined,
+                descriptionAco: event.description_aco || undefined,
             });
             if (result.success) {
                 calendarCreated++;
@@ -1075,6 +1129,11 @@ async function main() {
                 aco: t.aco,
             });
         },
+        updateFn: (id, t) => client.updateTeam(id, {
+            name: t.name,
+            description: t.description,
+            aco: t.aco,
+        }),
         deleteFn: (id) => client.deleteTeam(id),
         getSeedId: (t) => t.id,
         getRemoteId: (t) => t.id,

@@ -78,7 +78,7 @@ export function SecurityLabelPicker({
     className,
 }: SecurityLabelPickerProps) {
     const [open, setOpen] = useState(false);
-    const { maxClearanceLevel, activeTenants: userTenants } = useSecurity();
+    const { maxClearanceLevel, activeCompartments: userTenants } = useSecurity();
 
     // User can only assign up to their clearance or the specified max
     const effectiveMax = maxSensitivity ?? maxClearanceLevel;
@@ -93,17 +93,17 @@ export function SecurityLabelPicker({
 
     const handleTenantToggle = useCallback(
         (tenant: string) => {
-            const currentTenants = value.tenants ?? [];
+            const currentTenants = value.compartments ?? [];
             const newTenants = currentTenants.includes(tenant)
                 ? currentTenants.filter((t) => t !== tenant)
                 : [...currentTenants, tenant];
-            onChange({ ...value, tenants: newTenants.length > 0 ? newTenants : undefined });
+            onChange({ ...value, compartments: newTenants.length > 0 ? newTenants : undefined });
         },
         [value, onChange]
     );
 
     const config = LEVEL_CONFIG[value.sensitivity];
-    const selectedTenants = value.tenants ?? [];
+    const selectedTenants = value.compartments ?? [];
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -226,11 +226,11 @@ export function SecurityLabelPicker({
                                                 const newTenants = currentTenants.filter(t =>
                                                     t !== tenant && !t.endsWith(`:${tenant}`)
                                                 );
-                                                onChange({ ...value, tenants: newTenants.length > 0 ? newTenants : undefined });
+                                                onChange({ ...value, compartments: newTenants.length > 0 ? newTenants : undefined });
                                             } else {
                                                 // Add tenant with base level
                                                 const newTenant = `${value.sensitivity}:${tenant}`;
-                                                onChange({ ...value, tenants: [...currentTenants, newTenant] });
+                                                onChange({ ...value, compartments: [...currentTenants, newTenant] });
                                             }
                                         }}
                                         className={cn(
@@ -254,7 +254,7 @@ export function SecurityLabelPicker({
                                                 const newTenants = selectedTenants
                                                     .filter(t => t !== tenant && !t.endsWith(`:${tenant}`))
                                                     .concat(newTenant);
-                                                onChange({ ...value, tenants: newTenants });
+                                                onChange({ ...value, compartments: newTenants });
                                             }}
                                             className="h-6 px-1 text-xs bg-zinc-800 border border-zinc-700 rounded"
                                         >

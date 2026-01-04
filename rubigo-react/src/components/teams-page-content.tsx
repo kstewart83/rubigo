@@ -518,7 +518,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
         if (obj.aco && typeof obj.aco === 'string') {
             try {
                 const parsed = JSON.parse(obj.aco);
-                return parsed.tenants || [];
+                return parsed.compartments || [];
             } catch {
                 return [];
             }
@@ -715,7 +715,7 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                             </div>
                             <div className="grid grid-cols-1 gap-3 p-3 pt-0">
                                 {paginatedPersonnel.map((person) => {
-                                    // Build aco from clearanceLevel and tenantClearances
+                                    // Build aco from clearanceLevel and compartmentClearances
                                     type SLevel = 'public' | 'low' | 'moderate' | 'high';
                                     const levelToSensitivity: Record<string, SLevel> = {
                                         public: 'public',
@@ -723,11 +723,11 @@ export function TeamsPageContent({ teams, allPersonnel }: Props) {
                                         moderate: 'moderate',
                                         high: 'high',
                                     };
-                                    // Parse tenantClearances if available
+                                    // Parse compartmentClearances if available
                                     let tenants: string[] = [];
-                                    if (person.tenantClearances) {
+                                    if (person.compartmentClearances) {
                                         try {
-                                            tenants = JSON.parse(person.tenantClearances);
+                                            tenants = JSON.parse(person.compartmentClearances);
                                         } catch {
                                             tenants = [];
                                         }

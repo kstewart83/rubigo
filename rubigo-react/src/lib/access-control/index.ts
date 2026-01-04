@@ -24,8 +24,8 @@ export {
 
 // Type helpers
 export {
-    formatTenantClearance,
-    parseTenantClearance,
+    formatCompartmentClearance,
+    parseCompartmentClearance,
     sensitivityIndex,
 } from "./types";
 

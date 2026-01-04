@@ -15,6 +15,13 @@
       "when": 1766968400000,
       "tag": "0001_real_time_events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1767458458495,
+      "tag": "0002_great_fenris",
+      "breakpoints": true
     }
   ]
 }

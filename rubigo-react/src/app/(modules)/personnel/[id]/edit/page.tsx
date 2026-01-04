@@ -52,7 +52,7 @@ export default async function EditPersonnelPage({ params }: PageProps) {
         isGlobalAdmin: Boolean(person[0].isGlobalAdmin),
         isAgent: Boolean(person[0].isAgent),
         clearanceLevel: person[0].clearanceLevel ?? undefined,
-        tenantClearances: person[0].tenantClearances ?? undefined,
+        compartmentClearances: person[0].compartmentClearances ?? undefined,
         accessRoles: person[0].accessRoles ?? undefined,
     };
 

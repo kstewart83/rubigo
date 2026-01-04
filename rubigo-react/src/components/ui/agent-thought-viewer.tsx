@@ -87,7 +87,7 @@ export function AgentThoughtViewer({
                     <SecureTableWrapper
                         items={thoughts}
                         getSensitivity={(thought) => parseAco(thought.aco).sensitivity}
-                        getTenants={(thought) => parseAco(thought.aco).tenants}
+                        getTenants={(thought) => parseAco(thought.aco).compartments}
                         defaultLevel="low"
                         className="border rounded-lg overflow-hidden"
                     >

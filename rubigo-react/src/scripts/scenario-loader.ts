@@ -34,6 +34,8 @@ export interface PersonnelRecord {
     cell_phone?: string;
     bio?: string;
     is_agent?: number;
+    clearance_level?: string;
+    compartment_clearances?: string;
 }
 
 export interface SolutionRecord {
@@ -121,10 +123,12 @@ export interface CalendarEventRecord {
     recurrence_interval?: number;
     recurrence_days?: string;
     recurrence_until?: string;
-    organizer_id?: string;
+    organizer_email?: string;  // Business key: resolve to personnel_id
     location?: string;
     virtual_url?: string;
     timezone?: string;
+    aco?: string;
+    description_aco?: string;
 }
 
 export interface CalendarDeviationRecord {

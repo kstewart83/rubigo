@@ -34,7 +34,7 @@ export interface PersonnelInput {
     isAgent?: boolean;
     // Security fields
     clearanceLevel?: string;
-    tenantClearances?: string;
+    compartmentClearances?: string;
     accessRoles?: string;
 }
 
@@ -134,7 +134,7 @@ export async function createPersonnel(
             isGlobalAdmin: false,
             isAgent: input.isAgent ?? false,
             clearanceLevel: (input.clearanceLevel || "low") as "public" | "low" | "moderate" | "high",
-            tenantClearances: input.tenantClearances || "[]",
+            compartmentClearances: input.compartmentClearances || "[]",
             accessRoles: input.accessRoles || "[]",
         });
 
@@ -200,7 +200,7 @@ export async function updatePersonnel(
         if (input.bio !== undefined) updates.bio = input.bio?.trim() || null;
         if (input.isAgent !== undefined) updates.isAgent = input.isAgent ? 1 : 0;
         if (input.clearanceLevel !== undefined) updates.clearanceLevel = input.clearanceLevel;
-        if (input.tenantClearances !== undefined) updates.tenantClearances = input.tenantClearances;
+        if (input.compartmentClearances !== undefined) updates.compartmentClearances = input.compartmentClearances;
         if (input.accessRoles !== undefined) updates.accessRoles = input.accessRoles;
 
         if (Object.keys(updates).length === 0) {
@@ -391,7 +391,7 @@ export async function getPersonnelPage(
                 isAgent: p.isAgent ?? false,
                 // Security/ABAC fields (subject attributes)
                 clearanceLevel: p.clearanceLevel,
-                tenantClearances: p.tenantClearances,
+                compartmentClearances: p.compartmentClearances,
                 accessRoles: p.accessRoles,
                 // Access Control Object (record classification)
                 aco: p.aco,

@@ -32,7 +32,7 @@ function mapDbToPerson(p: typeof schema.personnel.$inferSelect): Person {
         isGlobalAdmin: p.isGlobalAdmin ?? false,
         // Security/ABAC fields
         clearanceLevel: p.clearanceLevel ?? undefined,
-        tenantClearances: p.tenantClearances ?? undefined,
+        compartmentClearances: p.compartmentClearances ?? undefined,
         accessRoles: p.accessRoles ?? undefined,
     };
 }

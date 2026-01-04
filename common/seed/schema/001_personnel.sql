@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS personnel (
     is_agent INTEGER DEFAULT 0,
     -- Security/ABAC fields
     clearance_level TEXT DEFAULT 'low',
-    tenant_clearances TEXT DEFAULT '[]',
+    compartment_clearances TEXT DEFAULT '[]',
     access_roles TEXT DEFAULT '[]',
     PRIMARY KEY (id, profile_id)
 );

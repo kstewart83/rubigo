@@ -177,19 +177,19 @@ const SENSITIVITY_ORDER: Record<SensitivityLevel, number> = {
 
 function parseAco(aco: string | undefined): {
     sensitivity: SensitivityLevel;
-    tenants: string[];
-    tenantNames: string[];
-    tenantLevels: Record<string, SensitivityLevel>;
+    compartments: string[];
+    compartmentNames: string[];
+    compartmentLevels: Record<string, SensitivityLevel>;
 } {
-    if (!aco) return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
+    if (!aco) return { sensitivity: "low", compartments: [], compartmentNames: [], compartmentLevels: {} };
     try {
         const parsed = JSON.parse(aco);
         const sensitivity = (parsed.sensitivity || "low") as SensitivityLevel;
-        const rawTenants: string[] = parsed.tenants || [];
+        const rawTenants: string[] = parsed.compartments || [];
 
         // Extract tenant names and levels from "LEVEL:TENANT" format
-        const tenantNames: string[] = [];
-        const tenantLevels: Record<string, SensitivityLevel> = {};
+        const compartmentNames: string[] = [];
+        const compartmentLevels: Record<string, SensitivityLevel> = {};
 
         for (const t of rawTenants) {
             if (typeof t === "string" && t.includes(":")) {
@@ -197,27 +197,27 @@ function parseAco(aco: string | undefined): {
                 if (level && name) {
                     const normalizedLevel = level.toLowerCase() as SensitivityLevel;
                     if (["public", "low", "moderate", "high"].includes(normalizedLevel)) {
-                        tenantNames.push(name);
-                        tenantLevels[name] = normalizedLevel;
+                        compartmentNames.push(name);
+                        compartmentLevels[name] = normalizedLevel;
                     } else {
-                        tenantNames.push(t);
-                        tenantLevels[t] = sensitivity;
+                        compartmentNames.push(t);
+                        compartmentLevels[t] = sensitivity;
                     }
                 }
             } else if (typeof t === "string") {
-                tenantNames.push(t);
-                tenantLevels[t] = sensitivity;
+                compartmentNames.push(t);
+                compartmentLevels[t] = sensitivity;
             }
         }
 
         return {
             sensitivity,
-            tenants: rawTenants,
-            tenantNames,
-            tenantLevels,
+            compartments: rawTenants,
+            compartmentNames,
+            compartmentLevels,
         };
     } catch {
-        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
+        return { sensitivity: "low", compartments: [], compartmentNames: [], compartmentLevels: {} };
     }
 }
 
@@ -225,15 +225,15 @@ function parseAco(aco: string | undefined): {
  * Parse raw tenant array (like ["moderate:apples"]) into display-ready format
  */
 function parseTenants(rawTenants: string[] | undefined, fallbackLevel: SensitivityLevel = "low"): {
-    tenantNames: string[];
-    tenantLevels: Record<string, SensitivityLevel>;
+    compartmentNames: string[];
+    compartmentLevels: Record<string, SensitivityLevel>;
 } {
     if (!rawTenants || rawTenants.length === 0) {
-        return { tenantNames: [], tenantLevels: {} };
+        return { compartmentNames: [], compartmentLevels: {} };
     }
 
-    const tenantNames: string[] = [];
-    const tenantLevels: Record<string, SensitivityLevel> = {};
+    const compartmentNames: string[] = [];
+    const compartmentLevels: Record<string, SensitivityLevel> = {};
 
     for (const t of rawTenants) {
         if (typeof t === "string" && t.includes(":")) {
@@ -241,20 +241,20 @@ function parseTenants(rawTenants: string[] | undefined, fallbackLevel: Sensitivi
             if (level && name) {
                 const normalizedLevel = level.toLowerCase() as SensitivityLevel;
                 if (["public", "low", "moderate", "high"].includes(normalizedLevel)) {
-                    tenantNames.push(name);
-                    tenantLevels[name] = normalizedLevel;
+                    compartmentNames.push(name);
+                    compartmentLevels[name] = normalizedLevel;
                 } else {
-                    tenantNames.push(t);
-                    tenantLevels[t] = fallbackLevel;
+                    compartmentNames.push(t);
+                    compartmentLevels[t] = fallbackLevel;
                 }
             }
         } else if (typeof t === "string") {
-            tenantNames.push(t);
-            tenantLevels[t] = fallbackLevel;
+            compartmentNames.push(t);
+            compartmentLevels[t] = fallbackLevel;
         }
     }
 
-    return { tenantNames, tenantLevels };
+    return { compartmentNames, compartmentLevels };
 }
 
 function getMaxSensitivity(events: Array<{ aco?: string }>): SensitivityLevel {
@@ -271,8 +271,8 @@ function getMaxSensitivity(events: Array<{ aco?: string }>): SensitivityLevel {
 function getAllTenants(events: Array<{ aco?: string }>): string[] {
     const tenantSet = new Set<string>();
     for (const event of events) {
-        const { tenantNames } = parseAco(event.aco);
-        tenantNames.forEach(t => tenantSet.add(t));
+        const { compartmentNames } = parseAco(event.aco);
+        compartmentNames.forEach(t => tenantSet.add(t));
     }
     return Array.from(tenantSet);
 }
@@ -280,8 +280,8 @@ function getAllTenants(events: Array<{ aco?: string }>): string[] {
 function getAllTenantLevels(events: Array<{ aco?: string }>): Record<string, SensitivityLevel> {
     const levels: Record<string, SensitivityLevel> = {};
     for (const event of events) {
-        const { tenantLevels } = parseAco(event.aco);
-        Object.assign(levels, tenantLevels);
+        const { compartmentLevels } = parseAco(event.aco);
+        Object.assign(levels, compartmentLevels);
     }
     return levels;
 }
@@ -293,7 +293,7 @@ function getAllTenantLevels(events: Array<{ aco?: string }>): Record<string, Sen
 function isDescriptionAccessible(
     event: { descriptionAco?: string | null; aco?: string },
     sessionLevel: SensitivityLevel,
-    activeTenants: string[]
+    activeCompartments: string[]
 ): boolean {
     const descAco = parseAco(event.descriptionAco || event.aco);
 
@@ -303,8 +303,8 @@ function isDescriptionAccessible(
     }
 
     // Check tenants
-    if (descAco.tenants.length > 0) {
-        const hasAllTenants = descAco.tenants.every(t => activeTenants.includes(t));
+    if (descAco.compartments.length > 0) {
+        const hasAllTenants = descAco.compartments.every(t => activeCompartments.includes(t));
         if (!hasAllTenants) return false;
     }
 
@@ -590,7 +590,7 @@ export function CalendarPageContent() {
     const [pendingAction, setPendingAction] = useState<"delete" | "edit" | null>(null);
 
     // Fetch events for current view using server actions
-    const { sessionLevel, activeTenants, activeTenantLevels } = useSecurity();
+    const { sessionLevel, activeCompartments, activeCompartmentLevels } = useSecurity();
 
 
     const fetchEvents = useCallback(async () => {
@@ -613,7 +613,7 @@ export function CalendarPageContent() {
                 `${startStr}T00:00:00`,
                 `${endStr}T23:59:59`,
                 // Pass session context for server-side ABAC filtering (includes tenant-specific levels)
-                { sessionLevel, activeTenants, activeTenantLevels },
+                { sessionLevel, activeCompartments, activeCompartmentLevels },
                 // Pass current persona ID for participation filtering
                 // Global Administrator sees all events (no participation filter)
                 currentPersona?.name === "Global Administrator" ? undefined : currentPersona?.id
@@ -647,7 +647,7 @@ export function CalendarPageContent() {
         } finally {
             setLoading(false);
         }
-    }, [currentDate, sessionLevel, activeTenants, activeTenantLevels, currentPersona?.id]);
+    }, [currentDate, sessionLevel, activeCompartments, activeCompartmentLevels, currentPersona?.id]);
 
     useEffect(() => {
         fetchEvents();
@@ -660,6 +660,10 @@ export function CalendarPageContent() {
         if (isGlobalAdmin) return events; // Admin sees all
 
         return events.filter(event => {
+            // Public events (holidays) are visible to everyone regardless of participation
+            const aco = parseAco((event as { aco?: string }).aco);
+            if (aco.sensitivity === "public") return true;
+
             // Use server-resolved userRoles which includes team-based participation
             const eventWithRoles = event as CalendarEvent & { userRoles?: string[] };
             const userRoles = eventWithRoles.userRoles ?? [];
@@ -835,8 +839,8 @@ export function CalendarPageContent() {
                 {/* Calendar Grid with Security Header/Footer */}
                 <SecurePanelWrapper
                     level={getMaxSensitivity(visibleEvents)}
-                    tenants={getAllTenants(visibleEvents)}
-                    tenantLevels={getAllTenantLevels(visibleEvents)}
+                    compartments={getAllTenants(visibleEvents)}
+                    compartmentLevels={getAllTenantLevels(visibleEvents)}
                     className="flex-1 flex flex-col border rounded-lg overflow-hidden"
                 >
                     {loading ? (
@@ -1760,7 +1764,7 @@ function EventPill({
             data-testid="event-pill"
         >
             <SecurityBadge
-                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                aco={{ sensitivity: aco.sensitivity, compartments: aco.compartments }}
                 size="sm"
                 className="shrink-0"
             />
@@ -1829,7 +1833,7 @@ function PositionedEventPill({
         >
             <div className={`flex items-center gap-1 ${isCompact ? "" : "mb-0.5"}`}>
                 <SecurityBadge
-                    aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                    aco={{ sensitivity: aco.sensitivity, compartments: aco.compartments }}
                     size="sm"
                     className="shrink-0"
                 />
@@ -1908,7 +1912,7 @@ function GridPositionedEventPill({
         >
             {/* Badge column */}
             <SecurityBadge
-                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                aco={{ sensitivity: aco.sensitivity, compartments: aco.compartments }}
                 size="sm"
                 className="shrink-0"
             />
@@ -1956,7 +1960,7 @@ function AllDayEventPill({
             data-testid="all-day-event-pill"
         >
             <SecurityBadge
-                aco={{ sensitivity: aco.sensitivity, tenants: aco.tenants }}
+                aco={{ sensitivity: aco.sensitivity, compartments: aco.compartments }}
                 size="sm"
                 className="shrink-0"
             />
@@ -2215,8 +2219,8 @@ function EventModal({
 
     // Tab and ACO state for Create Event
     const [activeTab, setActiveTab] = useState<"basic" | "series" | "description" | "participants">("basic");
-    const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: "low" });
-    const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: "low" });
+    const [basicInfoAco, setBasicInfoAco] = useState<{ sensitivity: SensitivityLevel | null; compartments?: string[] }>({ sensitivity: "low" });
+    const [descriptionAco, setDescriptionAco] = useState<{ sensitivity: SensitivityLevel | null; compartments?: string[] }>({ sensitivity: "low" });
 
     // Personnel state
     const [personnelList, setPersonnelList] = useState<Array<{ id: string; name: string; title?: string | null }>>([]);
@@ -2224,7 +2228,7 @@ function EventModal({
     const [selectedPersonnel, setSelectedPersonnel] = useState<ParticipantItem[]>([]);
     const [personnelLoading, setPersonnelLoading] = useState(false);
     const [addingRole, setAddingRole] = useState<"organizer" | "required" | "optional">("required");
-    const [personnelAco, setPersonnelAco] = useState<{ sensitivity: SensitivityLevel | null; tenants?: string[] }>({ sensitivity: null });
+    const [personnelAco, setPersonnelAco] = useState<{ sensitivity: SensitivityLevel | null; compartments?: string[] }>({ sensitivity: null });
 
     // Check if we're editing just one instance of a recurring event
     const isEditingInstanceOnly = (editingEvent as CalendarEvent & { _editingInstanceOnly?: boolean })?._editingInstanceOnly === true;
@@ -2282,9 +2286,9 @@ function EventModal({
                 setTimezone(editingEvent.timezone || getBrowserTimezone());
                 // Set ACO state from existing event
                 const parsedAco = parseAco(editingEvent.aco);
-                setBasicInfoAco({ sensitivity: parsedAco.sensitivity, tenants: parsedAco.tenants.length > 0 ? parsedAco.tenants : undefined });
+                setBasicInfoAco({ sensitivity: parsedAco.sensitivity, compartments: parsedAco.compartments.length > 0 ? parsedAco.compartments : undefined });
                 const parsedDescAco = parseAco(editingEvent.descriptionAco || editingEvent.aco);
-                setDescriptionAco({ sensitivity: parsedDescAco.sensitivity, tenants: parsedDescAco.tenants.length > 0 ? parsedDescAco.tenants : undefined });
+                setDescriptionAco({ sensitivity: parsedDescAco.sensitivity, compartments: parsedDescAco.compartments.length > 0 ? parsedDescAco.compartments : undefined });
                 // Reset selected personnel - will be loaded separately
                 setSelectedPersonnel([]);
             } else {
@@ -2373,11 +2377,11 @@ function EventModal({
         setSaving(true);
 
         // Format ACO for saving - JSON format matching database schema
-        const formatAcoForSave = (aco: { sensitivity: SensitivityLevel | null; tenants?: string[] }): string | undefined => {
+        const formatAcoForSave = (aco: { sensitivity: SensitivityLevel | null; compartments?: string[] }): string | undefined => {
             if (!aco.sensitivity) return undefined;
             return JSON.stringify({
                 sensitivity: aco.sensitivity,
-                tenants: aco.tenants || [],
+                compartments: aco.compartments || [],
             });
         };
 
@@ -2444,8 +2448,8 @@ function EventModal({
                             <div className="flex items-center justify-between pb-3 border-b">
                                 <Label>Classification</Label>
                                 <SecurityLabelPicker
-                                    value={{ sensitivity: basicInfoAco.sensitivity || "low", tenants: basicInfoAco.tenants }}
-                                    onChange={(aco) => setBasicInfoAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                    value={{ sensitivity: basicInfoAco.sensitivity || "low", compartments: basicInfoAco.compartments }}
+                                    onChange={(aco) => setBasicInfoAco({ sensitivity: aco.sensitivity, compartments: aco.compartments })}
                                 />
                             </div>
 
@@ -2595,7 +2599,7 @@ function EventModal({
                         return (
                             <SecurePanelWrapper
                                 level={basicInfoAco.sensitivity}
-                                tenants={basicInfoAco.tenants || []}
+                                compartments={basicInfoAco.compartments || []}
                                 className="border rounded-lg overflow-hidden"
                             >
                                 {content}
@@ -2710,7 +2714,7 @@ function EventModal({
                         return (
                             <SecurePanelWrapper
                                 level={basicInfoAco.sensitivity}
-                                tenants={basicInfoAco.tenants || []}
+                                compartments={basicInfoAco.compartments || []}
                                 className="border rounded-lg overflow-hidden"
                             >
                                 {content}
@@ -2747,8 +2751,8 @@ function EventModal({
                                             {(() => {
                                                 const baseSens = basicInfoAco.sensitivity;
                                                 const descSens = descriptionAco.sensitivity;
-                                                const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
-                                                const descTenants = (descriptionAco.tenants || []).sort().join(",");
+                                                const baseTenants = (basicInfoAco.compartments || []).sort().join(",");
+                                                const descTenants = (descriptionAco.compartments || []).sort().join(",");
                                                 const sensMismatch = baseSens && descSens && descSens !== baseSens;
                                                 const tenantMismatch = baseTenants !== descTenants;
 
@@ -2774,8 +2778,8 @@ function EventModal({
                                                 );
                                             })()}
                                             <SecurityLabelPicker
-                                                value={{ sensitivity: descriptionAco.sensitivity || "low", tenants: descriptionAco.tenants }}
-                                                onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                                value={{ sensitivity: descriptionAco.sensitivity || "low", compartments: descriptionAco.compartments }}
+                                                onChange={(aco) => setDescriptionAco({ sensitivity: aco.sensitivity, compartments: aco.compartments })}
                                             />
                                         </div>
                                     </div>
@@ -2799,7 +2803,7 @@ function EventModal({
                         return (
                             <SecurePanelWrapper
                                 level={editingEvent?._descriptionRedacted ? null : descriptionAco.sensitivity}
-                                tenants={editingEvent?._descriptionRedacted ? [] : (descriptionAco.tenants || [])}
+                                compartments={editingEvent?._descriptionRedacted ? [] : (descriptionAco.compartments || [])}
                                 className="border rounded-lg overflow-hidden"
                             >
                                 {content}
@@ -2811,9 +2815,9 @@ function EventModal({
 
                 {/* Personnel Tab - Three Column Layout */}
                 {activeTab === "participants" && (() => {
-                    const rawTenants = personnelAco.tenants || basicInfoAco.tenants || [];
+                    const rawTenants = personnelAco.compartments || basicInfoAco.compartments || [];
                     const level = personnelAco.sensitivity || basicInfoAco.sensitivity;
-                    const { tenantNames, tenantLevels } = parseTenants(rawTenants, level || "low");
+                    const { compartmentNames, compartmentLevels } = parseTenants(rawTenants, level || "low");
 
                     const content = (
                         <div className="p-4 space-y-4">
@@ -2825,8 +2829,8 @@ function EventModal({
                                     {(() => {
                                         const baseSens = basicInfoAco.sensitivity;
                                         const persSens = personnelAco.sensitivity;
-                                        const baseTenants = (basicInfoAco.tenants || []).sort().join(",");
-                                        const persTenants = (personnelAco.tenants || []).sort().join(",");
+                                        const baseTenants = (basicInfoAco.compartments || []).sort().join(",");
+                                        const persTenants = (personnelAco.compartments || []).sort().join(",");
                                         const sensMismatch = baseSens && persSens && persSens !== baseSens;
                                         const tenantMismatch = persTenants !== "" && baseTenants !== persTenants;
 
@@ -2854,9 +2858,9 @@ function EventModal({
                                     <SecurityLabelPicker
                                         value={{
                                             sensitivity: personnelAco.sensitivity || basicInfoAco.sensitivity || "low",
-                                            tenants: personnelAco.tenants || basicInfoAco.tenants
+                                            compartments: personnelAco.compartments || basicInfoAco.compartments
                                         }}
-                                        onChange={(aco) => setPersonnelAco({ sensitivity: aco.sensitivity, tenants: aco.tenants })}
+                                        onChange={(aco) => setPersonnelAco({ sensitivity: aco.sensitivity, compartments: aco.compartments })}
                                     />
                                 </div>
                             </div>
@@ -2916,8 +2920,8 @@ function EventModal({
                         return (
                             <SecurePanelWrapper
                                 level={level}
-                                tenants={tenantNames}
-                                tenantLevels={tenantLevels}
+                                compartments={compartmentNames}
+                                compartmentLevels={compartmentLevels}
                                 className="border rounded-lg overflow-hidden"
                             >
                                 {content}
@@ -3007,7 +3011,7 @@ function EventDetailsPanel({
     onEdit: () => void;
     onDelete: () => void;
 }) {
-    const { sessionLevel, activeTenants } = useSecurity();
+    const { sessionLevel, activeCompartments } = useSecurity();
 
     if (!event) return null;
 
@@ -3047,8 +3051,8 @@ function EventDetailsPanel({
             <div className="p-4 max-h-[50vh] overflow-y-auto">
                 <SecurePanelWrapper
                     level={parseAco(event.aco).sensitivity}
-                    tenants={parseAco(event.aco).tenantNames}
-                    tenantLevels={parseAco(event.aco).tenantLevels}
+                    compartments={parseAco(event.aco).compartmentNames}
+                    compartmentLevels={parseAco(event.aco).compartmentLevels}
                     className="rounded-lg border overflow-hidden"
                 >
                     <div className="p-4 relative">

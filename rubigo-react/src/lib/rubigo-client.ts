@@ -32,6 +32,8 @@ export interface PersonnelInput {
     cellPhone?: string;
     bio?: string;
     isAgent?: boolean;
+    clearanceLevel?: string;
+    compartmentClearances?: string;
 }
 
 export interface PersonnelListParams {
@@ -213,6 +215,8 @@ export interface CalendarEventInput {
         role: "organizer" | "required" | "optional";
     }>;
     organizerId?: string;
+    aco?: string;
+    descriptionAco?: string;
 }
 
 export interface CalendarDeviationInput {

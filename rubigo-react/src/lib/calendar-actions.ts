@@ -44,6 +44,7 @@ export interface CalendarEventInput {
     recurrenceUntil?: string;
     timezone?: string;
     location?: string;
+    virtualUrl?: string;
     participantIds?: string[]; // Legacy - deprecated
     participants?: Array<{
         type: "personnel" | "team";
@@ -51,6 +52,7 @@ export interface CalendarEventInput {
         role: "organizer" | "required" | "optional";
     }>;
     allDay?: boolean;
+    organizerId?: string; // Personnel ID to use as organizer
     // Security/ABAC fields
     aco?: string;
     descriptionAco?: string;
@@ -76,7 +78,7 @@ export async function createCalendarEvent(
         const parsedAco = parseAco(acoJson);
         const acoId = await getOrCreateAcoId({
             sensitivity: parsedAco.sensitivity,
-            tenants: parsedAco.tenants,
+            compartments: parsedAco.compartments,
         });
 
         // Insert event
@@ -167,6 +169,10 @@ export async function getCalendarEvents(
     sessionContext?: SessionContext,
     personnelId?: string // Filter to events where this person is a participant
 ): Promise<CalendarEventWithParticipants[]> {
+    // Normalize endDate to include the full day for proper string comparison
+    // "2026-01-01" becomes "2026-01-01T23:59:59" so "2026-01-01T00:00:00" <= endDate is true
+    const endDateNormalized = endDate.includes("T") ? endDate : endDate + "T23:59:59";
+
     // If personnelId provided, get event IDs where person is a participant
     // (either directly or through team membership)
     let participatingEventIds: string[] | undefined;
@@ -220,7 +226,7 @@ export async function getCalendarEvents(
                     and(
                         eq(calendarEvents.recurrence, "none"),
                         gte(calendarEvents.startTime, startDate),
-                        lte(calendarEvents.startTime, endDate)
+                        lte(calendarEvents.startTime, endDateNormalized)
                     ),
                     // Recurring events that started before end of range
                     and(
@@ -230,15 +236,23 @@ export async function getCalendarEvents(
                             eq(calendarEvents.recurrence, "monthly"),
                             eq(calendarEvents.recurrence, "yearly")
                         ),
-                        lte(calendarEvents.startTime, endDate)
+                        lte(calendarEvents.startTime, endDateNormalized)
                     )
                 )
             )
         );
 
     // Filter to participating events if personnelId was provided
+    // Also include public events (holidays) for everyone regardless of participation
     const filteredEvents = personnelId && participatingEventIds
-        ? events.filter(e => participatingEventIds!.includes(e.id))
+        ? events.filter(e => {
+            // Include if user is a participant
+            if (participatingEventIds!.includes(e.id)) return true;
+            // Include public events (holidays) for everyone
+            const acoData = e.aco ? JSON.parse(e.aco) : {};
+            if (acoData.sensitivity === "public") return true;
+            return false;
+        })
         : events;
 
     // Get user's team IDs if personnelId provided (for resolving team-based participation)
@@ -297,29 +311,29 @@ export async function getCalendarEvents(
         const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(sessionContext.sessionLevel);
 
         // Get tenant-specific session levels (defaults to base session level if not provided)
-        const activeTenantLevels = sessionContext.activeTenantLevels ?? {};
+        const activeCompartmentLevels = sessionContext.activeCompartmentLevels ?? {};
 
         // Helper to check if an ACO is accessible based on tenant-specific levels
         const isAcoAccessible = (parsedAco: ReturnType<typeof parseAco>): boolean => {
             // For untenanted data, check base level only
-            if (parsedAco.tenantNames.length === 0) {
+            if (parsedAco.compartmentNames.length === 0) {
                 const objectLevelIndex = SENSITIVITY_ORDER.indexOf(parsedAco.sensitivity);
                 return sessionLevelIndex >= objectLevelIndex;
             }
 
             // For tenanted data, check each tenant's level
-            for (const tenantName of parsedAco.tenantNames) {
+            for (const tenantName of parsedAco.compartmentNames) {
                 // User must have this tenant in their active session
-                if (!sessionContext.activeTenants.includes(tenantName)) {
+                if (!sessionContext.activeCompartments.includes(tenantName)) {
                     return false;
                 }
 
                 // Get the required level for this tenant from the ACO
-                const requiredLevel = parsedAco.tenantLevels[tenantName] ?? parsedAco.sensitivity;
+                const requiredLevel = parsedAco.compartmentLevels[tenantName] ?? parsedAco.sensitivity;
                 const requiredLevelIndex = SENSITIVITY_ORDER.indexOf(requiredLevel);
 
                 // Get user's session level for this tenant
-                const userTenantLevel = activeTenantLevels[tenantName] ?? sessionContext.sessionLevel;
+                const userTenantLevel = activeCompartmentLevels[tenantName] ?? sessionContext.sessionLevel;
                 const userTenantLevelIndex = SENSITIVITY_ORDER.indexOf(userTenantLevel);
 
                 // User's tenant level must be >= required level
@@ -408,7 +422,7 @@ export async function updateCalendarEvent(
             const parsedAco = parseAco(input.aco);
             acoId = await getOrCreateAcoId({
                 sensitivity: parsedAco.sensitivity,
-                tenants: parsedAco.tenants,
+                compartments: parsedAco.compartments,
             });
         }
 
@@ -787,8 +801,12 @@ export async function addEventParticipant(input: {
             return { success: false, error: "Must specify exactly one of personnelId or teamId" };
         }
 
-        // Check for existing participant (dedup)
-        const conditions = [eq(calendarParticipants.eventId, input.eventId)];
+        // Check for existing participant (dedup by eventId + personnelId/teamId + role)
+        const role = input.role ?? "required";
+        const conditions = [
+            eq(calendarParticipants.eventId, input.eventId),
+            eq(calendarParticipants.role, role),
+        ];
         if (input.personnelId) {
             conditions.push(eq(calendarParticipants.personnelId, input.personnelId));
         } else {
@@ -811,7 +829,7 @@ export async function addEventParticipant(input: {
             eventId: input.eventId,
             personnelId: input.personnelId ?? null,
             teamId: input.teamId ?? null,
-            role: input.role ?? "required",
+            role,
             addedAt: now,
             addedBy: input.addedBy ?? null,
         });

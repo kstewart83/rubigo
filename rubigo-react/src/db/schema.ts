@@ -45,7 +45,7 @@ export const personnel = sqliteTable("personnel", {
     clearanceLevel: text("clearance_level", {
         enum: ["public", "low", "moderate", "high"]
     }).default("low"),
-    tenantClearances: text("tenant_clearances"), // JSON: ["moderate:🍎"]
+    compartmentClearances: text("compartment_clearances"), // JSON: ["moderate:🍎"]
     accessRoles: text("access_roles").default('["employee"]'), // JSON: ["employee"]
     // Access Control: Object attributes
     aco: text("aco").notNull().default('{"sensitivity":"low"}'),
@@ -120,7 +120,7 @@ export const teamOwners = sqliteTable("team_owners", {
 /**
  * ACO Objects - Immutable registry of unique Access Control Objects
  * 
- * Each unique combination of sensitivity/tenants/roles gets one row.
+ * Each unique combination of sensitivity/compartments/roles gets one row.
  * Business objects reference these by ID for efficient query filtering.
  * Auto-incrementing IDs enable staleness detection for session caching.
  */
@@ -130,7 +130,7 @@ export const acoObjects = sqliteTable("aco_objects", {
     sensitivity: text("sensitivity", {
         enum: ["public", "low", "moderate", "high"]
     }).notNull(),
-    tenants: text("tenants").notNull().default("[]"), // JSON array, sorted
+    compartments: text("compartments").notNull().default("[]"), // JSON array, sorted
     roles: text("roles").notNull().default("[]"), // JSON array, sorted
     createdAt: text("created_at").notNull(),
 });
@@ -147,7 +147,7 @@ export const securitySessions = sqliteTable("security_sessions", {
     sessionLevel: text("session_level", {
         enum: ["public", "low", "moderate", "high"]
     }).notNull(),
-    activeTenants: text("active_tenants").notNull().default("[]"), // JSON array
+    activeCompartments: text("active_compartments").notNull().default("[]"), // JSON array
     validatedAcoIds: text("validated_aco_ids").notNull().default("[]"), // JSON array of ACO IDs
     highestAcoId: integer("highest_aco_id").notNull().default(0),
     createdAt: text("created_at").notNull(),
@@ -682,7 +682,7 @@ export const agentEvents = sqliteTable("agent_events", {
     targetEntity: text("target_entity"), // e.g., "email:123", "chat:456"
     parentEventId: text("parent_event_id"), // For ReAct chains
     metadata: text("metadata"), // JSON for additional context
-    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
+    aco: text("aco"), // Access Control Object: {sensitivity, compartments?[]}
 });
 
 /**
@@ -742,7 +742,7 @@ export const agentScheduledEvents = sqliteTable("agent_scheduled_events", {
     payload: text("payload"), // JSON with event-specific details
     createdAt: text("created_at").notNull(), // ISO 8601
     processedAt: text("processed_at"), // ISO 8601, null until processed
-    aco: text("aco"), // Access Control Object: {sensitivity, tenants[]}
+    aco: text("aco"), // Access Control Object: {sensitivity, compartments?[]}
 });
 
 // Collaboration: Presentations
@@ -830,7 +830,7 @@ export const classificationGuides = sqliteTable("classification_guides", {
     version: integer("version").notNull().default(1),
     title: text("title").notNull(),
     sensitivityGuidance: text("sensitivity_guidance").notNull(), // JSON: {public, low, moderate, high}
-    tenantGuidance: text("tenant_guidance"), // JSON: {tenant: description}
+    compartmentGuidance: text("compartment_guidance"), // JSON: {compartment: description}
     roleGuidance: text("role_guidance"), // JSON: {role: description}
     effectiveDate: text("effective_date").notNull(), // ISO 8601
     status: text("status", {

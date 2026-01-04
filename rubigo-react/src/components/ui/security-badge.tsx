@@ -79,7 +79,7 @@ export function SecurityBadge({
     className,
 }: SecurityBadgeProps) {
     const sensitivity = aco?.sensitivity ?? directSensitivity ?? "low";
-    const rawTenants = aco?.tenants ?? [];
+    const rawTenants = aco?.compartments ?? [];
     const roles = aco?.roles ?? [];
 
     // Parse tenant names and levels from "LEVEL:TENANT" format
@@ -97,7 +97,7 @@ export function SecurityBadge({
         return { name: t, level: sensitivity, isDifferent: false };
     });
 
-    const tenantNames = parsedTenants.map(t => t.name);
+    const compartmentNames = parsedTenants.map(t => t.name);
 
     const label = LEVEL_LABELS[sensitivity];
 
@@ -140,7 +140,7 @@ export function SecurityBadge({
     );
 
     // Only show tooltip if there are MULTIPLE tenants (single tenant shown inline)
-    if (tenantNames.length <= 1 && roles.length === 0) {
+    if (compartmentNames.length <= 1 && roles.length === 0) {
         return badge;
     }
 

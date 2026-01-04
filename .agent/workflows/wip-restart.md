@@ -14,6 +14,16 @@ When the dev server restarts, a new init phrase and API token are generated. Thi
 
 If a dev server is running, stop it (Ctrl+C in the terminal or find/kill the process).
 
+> [!CAUTION]
+> **NEVER use `pkill -f "bun"`** - The pattern "bun" matches "ubuntu" and will kill user sessions!
+> 
+> Always kill by specific port:
+> ```bash
+> fuser -k 28000/tcp
+> # Or with lsof
+> lsof -ti :28000 | xargs kill -9
+> ```
+
 ## Step 2: Start Dev Server
 
 From the WIP worktree:
