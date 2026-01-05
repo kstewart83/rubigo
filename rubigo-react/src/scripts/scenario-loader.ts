@@ -293,6 +293,18 @@ export interface TeamOwnerRecord {
     added_at: string;
 }
 
+export interface ClassificationGuideRecord {
+    id: string;
+    profile_id: string;
+    title: string;
+    guide_type: "sensitivity" | "compartment" | "role";
+    level: string;
+    content_markdown: string;
+    icon?: string;
+    color?: string;
+    status?: "draft" | "active" | "superseded";
+}
+
 export interface ScenarioData {
     profileId: string;
     personnel: PersonnelRecord[];
@@ -321,6 +333,7 @@ export interface ScenarioData {
     teamTeams: TeamTeamRecord[];
     teamOwners: TeamOwnerRecord[];
     calendarParticipants: CalendarParticipantRecord[];
+    classificationGuides: ClassificationGuideRecord[];
 }
 
 // ============================================================================
@@ -391,6 +404,7 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             teamTeams: q("team_teams") as TeamTeamRecord[],
             teamOwners: q("team_owners") as TeamOwnerRecord[],
             calendarParticipants: q("calendar_participants") as CalendarParticipantRecord[],
+            classificationGuides: q("classification_guides") as ClassificationGuideRecord[],
         };
     } finally {
         db.close();

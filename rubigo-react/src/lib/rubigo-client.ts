@@ -883,6 +883,23 @@ export class RubigoClient {
     async removeChildTeam(parentTeamId: string, childTeamId: string): Promise<ApiResult> {
         return this.request<ApiResult>("DELETE", `/api/teams/hierarchy?parentTeamId=${parentTeamId}&childTeamId=${childTeamId}`);
     }
+
+    // ========================================================================
+    // Security API
+    // ========================================================================
+
+    async addClassificationGuide(input: {
+        id?: string;
+        title: string;
+        guideType: "sensitivity" | "compartment" | "role";
+        level: string;
+        contentMarkdown: string;
+        icon?: string;
+        color?: string;
+        status?: "draft" | "active" | "superseded";
+    }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/security/guides", input);
+    }
 }
 
 /**

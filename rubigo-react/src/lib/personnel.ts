@@ -74,6 +74,13 @@ export function getPersonByName(name: string): Person | undefined {
 }
 
 /**
+ * Get person by email
+ */
+export function getPersonByEmail(email: string): Person | undefined {
+    return getAllPersonnel().find((p) => p.email === email);
+}
+
+/**
  * Get personnel grouped by department
  */
 export function getPersonnelByDepartment(): Record<Department, Person[]> {

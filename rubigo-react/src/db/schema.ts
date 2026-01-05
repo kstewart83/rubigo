@@ -822,23 +822,45 @@ export const slideFiles = sqliteTable("slide_files", {
 // ============================================================================
 
 /**
- * Classification Guides - English-level descriptions for data classification
+ * Classification Guides - Human-readable documentation for ACO dimensions
+ * 
+ * Guide Types (aligned with ACO structure):
+ * - sensitivity: Public, Low, Moderate, High
+ * - compartment: Apple, Banana, Infrastructure, etc.
+ * - role: Executive, HR Manager, Engineer, etc.
+ * 
  * Supports version history: draft -> active -> superseded
  */
 export const classificationGuides = sqliteTable("classification_guides", {
-    id: text("id").primaryKey(), // e.g., "CG-HR-001"
+    id: text("id").primaryKey(), // e.g., "sensitivity-high", "compartment-apple"
     version: integer("version").notNull().default(1),
     title: text("title").notNull(),
-    sensitivityGuidance: text("sensitivity_guidance").notNull(), // JSON: {public, low, moderate, high}
-    compartmentGuidance: text("compartment_guidance"), // JSON: {compartment: description}
-    roleGuidance: text("role_guidance"), // JSON: {role: description}
-    effectiveDate: text("effective_date").notNull(), // ISO 8601
+    // Guide type aligned with ACO dimensions
+    guideType: text("guide_type", {
+        enum: ["sensitivity", "compartment", "role"]
+    }).notNull(),
+    // Level/identifier within type (e.g., "high", "apple", "executive")
+    level: text("level").notNull(),
+    // Full markdown content
+    contentMarkdown: text("content_markdown").notNull(),
+    // UI hints
+    icon: text("icon"),  // Lucide icon name
+    color: text("color"), // Tailwind color hint
+    // Draft system - single active draft per guide
+    draftTitle: text("draft_title"),           // Draft title (null if no draft)
+    draftContent: text("draft_content"),       // Draft markdown (null if no draft)
+    draftBy: text("draft_by"),                 // Personnel ID of draft owner
+    draftStartedAt: text("draft_started_at"),  // ISO timestamp when draft started
+    baseVersion: integer("base_version"),      // Version this draft is based on
+    // Lifecycle
     status: text("status", {
         enum: ["draft", "active", "superseded"]
     }).default("draft"),
+    effectiveDate: text("effective_date"), // ISO 8601
     supersededBy: text("superseded_by"), // ID of newer version
     createdAt: text("created_at").notNull(),
     createdBy: text("created_by").notNull(),
+    updatedAt: text("updated_at"),
 });
 
 // ============================================================================

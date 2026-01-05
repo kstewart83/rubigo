@@ -1308,6 +1308,38 @@ async function main() {
     }
     allStats.calendarParticipants = { created: participantCreated, skipped: participantSkipped, failed: participantFailed, updated: 0, deleted: 0 };
 
+    // =========================================================================
+    // Classification Guides
+    // =========================================================================
+
+    console.log(`\n📜 Syncing ${data.classificationGuides.length} classification guides...`);
+
+    let guideCreated = 0, guideSkipped = 0, guideFailed = 0;
+    for (const guide of data.classificationGuides) {
+        const result = await client.addClassificationGuide({
+            id: guide.id,
+            title: guide.title,
+            guideType: guide.guide_type,
+            level: guide.level,
+            contentMarkdown: guide.content_markdown,
+            icon: guide.icon,
+            color: guide.color,
+            status: guide.status ?? "active",
+        });
+
+        if (result.success) {
+            if (result.existed) {
+                guideSkipped++;
+            } else {
+                guideCreated++;
+            }
+        } else {
+            guideFailed++;
+            console.error(`   ❌ Guide ${guide.id}: ${result.error}`);
+        }
+    }
+    allStats.classificationGuides = { created: guideCreated, skipped: guideSkipped, failed: guideFailed, updated: 0, deleted: 0 };
+
     // Print summary
     console.log("\n" + "=".repeat(60));
     console.log("📊 Sync Summary");
