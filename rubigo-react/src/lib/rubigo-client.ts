@@ -909,8 +909,12 @@ export function createClient(options?: {
     baseUrl?: string;
     apiToken?: string;
 }): RubigoClient {
-    const baseUrl = options?.baseUrl || process.env.RUBIGO_API_URL || "http://localhost:3000";
+    const baseUrl = options?.baseUrl || process.env.RUBIGO_API_URL;
     const apiToken = options?.apiToken || process.env.RUBIGO_API_TOKEN || "";
+
+    if (!baseUrl) {
+        throw new Error("RUBIGO_API_URL environment variable or baseUrl option is required");
+    }
 
     if (!apiToken) {
         throw new Error("RUBIGO_API_TOKEN environment variable is required");

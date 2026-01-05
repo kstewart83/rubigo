@@ -901,9 +901,7 @@ export function CalendarPageContent() {
                 }}
                 editingEvent={editingEvent}
                 onSave={async (eventData, eventId) => {
-                    console.log("[Calendar] onSave called, eventId:", eventId, "currentPersona:", currentPersona?.id);
                     if (!currentPersona) {
-                        console.error("[Calendar] No currentPersona - cannot save event");
                         setShowEventModal(false);
                         setEditingEvent(null);
                         return;
@@ -919,7 +917,6 @@ export function CalendarPageContent() {
 
                             if (newDate && newDate !== originalDate) {
                                 // Date changed - this is a MOVE operation
-                                console.log("[Calendar] Moving instance from", originalDate, "to", newDate);
                                 const result = await moveEventInstance(
                                     eventId,
                                     originalDate,
@@ -933,7 +930,6 @@ export function CalendarPageContent() {
                                         timezone: eventData.timezone,
                                     }
                                 );
-                                console.log("[Calendar] Move instance result:", result);
                                 if (result.success) {
                                     setShowEventModal(false);
                                     setEditingEvent(null);
@@ -941,7 +937,6 @@ export function CalendarPageContent() {
                                 }
                             } else {
                                 // Same date - just modify this instance
-                                console.log("[Calendar] Modifying single instance:", editingEvent.instanceDate, eventData);
                                 const result = await modifyEventInstance(
                                     eventId,
                                     editingEvent.instanceDate,
@@ -954,7 +949,6 @@ export function CalendarPageContent() {
                                         timezone: eventData.timezone,
                                     }
                                 );
-                                console.log("[Calendar] Modify instance result:", result);
                                 if (result.success) {
                                     setShowEventModal(false);
                                     setEditingEvent(null);
@@ -963,9 +957,7 @@ export function CalendarPageContent() {
                             }
                         } else if (eventId) {
                             // Update entire series / existing event
-                            console.log("[Calendar] Updating event:", eventId, eventData);
                             const result = await updateCalendarEvent(eventId, eventData);
-                            console.log("[Calendar] Update result:", result);
                             if (result.success) {
                                 setShowEventModal(false);
                                 setEditingEvent(null);
@@ -973,9 +965,7 @@ export function CalendarPageContent() {
                             }
                         } else {
                             // Create new event
-                            console.log("[Calendar] Creating event:", eventData);
                             const result = await createCalendarEvent(eventData, currentPersona.id);
-                            console.log("[Calendar] Create result:", result);
                             if (result.success) {
                                 setShowEventModal(false);
                                 setEditingEvent(null);
