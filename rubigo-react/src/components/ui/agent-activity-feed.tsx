@@ -91,7 +91,7 @@ export function AgentActivityFeed({
                     <SecureTableWrapper
                         items={events}
                         getSensitivity={(event) => parseAco(event.aco).sensitivity}
-                        getTenants={(event) => parseAco(event.aco).tenants}
+                        getTenants={(event) => parseAco(event.aco).compartments}
                         defaultLevel="low"
                         className="border rounded-lg overflow-hidden"
                     >

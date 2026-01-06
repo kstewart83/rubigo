@@ -19,8 +19,8 @@ export function resolveSubjectFromPersona(persona: Person): Subject {
     // Parse clearance level with fallback
     const clearanceLevel = parseCleananceLevel(persona.clearanceLevel) ?? "low";
 
-    // Parse tenant clearances from JSON
-    const tenantClearances = parseTenantClearances(persona.tenantClearances);
+    // Parse compartment clearances from JSON
+    const compartmentClearances = parseCompartmentClearances(persona.compartmentClearances);
 
     // Parse roles from JSON
     const roles = parseRoles(persona.accessRoles, persona.isGlobalAdmin);
@@ -30,7 +30,7 @@ export function resolveSubjectFromPersona(persona: Person): Subject {
         name: persona.name,
         email: persona.email,
         clearanceLevel,
-        tenantClearances,
+        compartmentClearances,
         roles,
     };
 }
@@ -45,7 +45,7 @@ export function createDevSubject(): Subject {
         name: "Development Admin",
         email: "dev@rubigo.local",
         clearanceLevel: "high",
-        tenantClearances: [],
+        compartmentClearances: [],
         roles: ["global_admin", "employee"],
     };
 }
@@ -59,7 +59,7 @@ export function createTestSubject(overrides: Partial<Subject> = {}): Subject {
         name: "Test User",
         email: "test@rubigo.local",
         clearanceLevel: "low",
-        tenantClearances: [],
+        compartmentClearances: [],
         roles: ["employee"],
         ...overrides,
     };
@@ -78,7 +78,7 @@ function parseCleananceLevel(value: unknown): SensitivityLevel | null {
     return null;
 }
 
-function parseTenantClearances(value: unknown): string[] {
+function parseCompartmentClearances(value: unknown): string[] {
     if (!value) return [];
 
     // If it's already an array, return it

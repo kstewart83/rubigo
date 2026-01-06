@@ -63,11 +63,11 @@ const UNKNOWN_CONFIG = {
 
 interface ClassificationBannerProps {
     level: SensitivityLevel | null;
-    tenants?: string[];
+    compartments?: string[];
     position: "header" | "footer";
 }
 
-function ClassificationBanner({ level, tenants = [], position }: ClassificationBannerProps) {
+function ClassificationBanner({ level, compartments = [], position }: ClassificationBannerProps) {
     // Handle null level (no classification)
     if (level === null) {
         return (
@@ -88,22 +88,22 @@ function ClassificationBanner({ level, tenants = [], position }: ClassificationB
     const config = LEVEL_CONFIG[level];
     const Icon = config.icon;
 
-    // Parse tenants - format is "LEVEL:TENANT" or just "TENANT"
-    const tenantsAtBase: string[] = [];
-    const tenantsWithDifferentLevel: { tenant: string; tenantLevel: SensitivityLevel }[] = [];
+    // Parse compartments - format is "LEVEL:TENANT" or just "TENANT"
+    const compartmentsAtBase: string[] = [];
+    const compartmentsWithDifferentLevel: { tenant: string; tenantLevel: SensitivityLevel }[] = [];
 
-    for (const t of tenants) {
+    for (const t of compartments) {
         if (typeof t === "string" && t.includes(":")) {
             const [levelPart, name] = t.split(":");
             const tenantLevel = levelPart.toLowerCase() as SensitivityLevel;
             const isValid = ["public", "low", "moderate", "high"].includes(tenantLevel);
             if (isValid && tenantLevel !== level) {
-                tenantsWithDifferentLevel.push({ tenant: name || t, tenantLevel });
+                compartmentsWithDifferentLevel.push({ tenant: name || t, tenantLevel });
             } else {
-                tenantsAtBase.push(name || t);
+                compartmentsAtBase.push(name || t);
             }
         } else {
-            tenantsAtBase.push(t);
+            compartmentsAtBase.push(t);
         }
     }
 
@@ -120,17 +120,17 @@ function ClassificationBanner({ level, tenants = [], position }: ClassificationB
             <span className={config.textClass}>
                 {config.label}
             </span>
-            {/* Show tenants at base level normally */}
-            {tenantsAtBase.length > 0 && (
+            {/* Show compartments at base level normally */}
+            {compartmentsAtBase.length > 0 && (
                 <>
                     <span className="text-zinc-600">|</span>
                     <span className="text-sm">
-                        {tenantsAtBase.join(" ")}
+                        {compartmentsAtBase.join(" ")}
                     </span>
                 </>
             )}
-            {/* Show tenants with different levels in parentheses with color */}
-            {tenantsWithDifferentLevel.map(({ tenant, tenantLevel }) => {
+            {/* Show compartments with different levels in parentheses with color */}
+            {compartmentsWithDifferentLevel.map(({ tenant, tenantLevel }) => {
                 const tenantConfig = LEVEL_CONFIG[tenantLevel];
                 return (
                     <span key={tenant} className={`text-sm ${tenantConfig.textClass}`}>
@@ -153,7 +153,7 @@ interface SecureTableWrapperProps<T> {
     items: T[];
     /** Function to extract sensitivity level from each item */
     getSensitivity: (item: T) => SensitivityLevel;
-    /** Optional function to extract tenants from each item */
+    /** Optional function to extract compartments from each item */
     getTenants?: (item: T) => string[];
     /** Default level if no items (null = show 'NONE', defaults to null) */
     defaultLevel?: SensitivityLevel | null;
@@ -205,13 +205,13 @@ export function SecureTableWrapper<T>({
         <div className={cn("min-w-0", className)}>
             <ClassificationBanner
                 level={highestLevel}
-                tenants={allTenants}
+                compartments={allTenants}
                 position="header"
             />
             {children}
             <ClassificationBanner
                 level={highestLevel}
-                tenants={allTenants}
+                compartments={allTenants}
                 position="footer"
             />
         </div>
@@ -243,13 +243,13 @@ interface ClassificationCellProps {
 /**
  * A table cell that displays the classification of an individual row.
  * Styled to match the header/footer banners.
- * Supports tenants: single shown inline, multiple with Layers icon + tooltip.
+ * Supports compartments: single shown inline, multiple with Layers icon + tooltip.
  */
 export function ClassificationCell({ aco, level: directLevel, compact = false }: ClassificationCellProps) {
     const level = aco?.sensitivity ?? directLevel ?? "low";
     const config = LEVEL_CONFIG[level] ?? UNKNOWN_CONFIG;
     const Icon = config.icon;
-    const rawTenants = aco?.tenants ?? [];
+    const rawTenants = aco?.compartments ?? [];
 
     // Parse tenant names and levels from "LEVEL:TENANT" format
     const parsedTenants: Array<{ name: string; level: SensitivityLevel; isDifferent: boolean }> = rawTenants.map(t => {
@@ -296,7 +296,7 @@ export function ClassificationCell({ aco, level: directLevel, compact = false }:
             tenantIndicator = <span className="text-[10px] leading-none">{t.name}</span>;
         }
     } else if (parsedTenants.length > 1) {
-        // Multiple tenants - show stacked icon (details in tooltip)
+        // Multiple compartments - show stacked icon (details in tooltip)
         tenantIndicator = <Layers className="size-2.5" />;
     }
 
@@ -316,7 +316,7 @@ export function ClassificationCell({ aco, level: directLevel, compact = false }:
         </div>
     );
 
-    // Only show tooltip if there are MULTIPLE tenants
+    // Only show tooltip if there are MULTIPLE compartments
     if (parsedTenants.length <= 1) {
         return badge;
     }

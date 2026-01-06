@@ -32,6 +32,8 @@ export interface PersonnelInput {
     cellPhone?: string;
     bio?: string;
     isAgent?: boolean;
+    clearanceLevel?: string;
+    compartmentClearances?: string;
 }
 
 export interface PersonnelListParams {
@@ -213,6 +215,8 @@ export interface CalendarEventInput {
         role: "organizer" | "required" | "optional";
     }>;
     organizerId?: string;
+    aco?: string;
+    descriptionAco?: string;
 }
 
 export interface CalendarDeviationInput {
@@ -879,6 +883,23 @@ export class RubigoClient {
     async removeChildTeam(parentTeamId: string, childTeamId: string): Promise<ApiResult> {
         return this.request<ApiResult>("DELETE", `/api/teams/hierarchy?parentTeamId=${parentTeamId}&childTeamId=${childTeamId}`);
     }
+
+    // ========================================================================
+    // Security API
+    // ========================================================================
+
+    async addClassificationGuide(input: {
+        id?: string;
+        title: string;
+        guideType: "sensitivity" | "compartment" | "role";
+        level: string;
+        contentMarkdown: string;
+        icon?: string;
+        color?: string;
+        status?: "draft" | "active" | "superseded";
+    }): Promise<ApiResult & { existed?: boolean }> {
+        return this.request<ApiResult & { existed?: boolean }>("POST", "/api/security/guides", input);
+    }
 }
 
 /**
@@ -888,8 +909,12 @@ export function createClient(options?: {
     baseUrl?: string;
     apiToken?: string;
 }): RubigoClient {
-    const baseUrl = options?.baseUrl || process.env.RUBIGO_API_URL || "http://localhost:3000";
+    const baseUrl = options?.baseUrl || process.env.RUBIGO_API_URL;
     const apiToken = options?.apiToken || process.env.RUBIGO_API_TOKEN || "";
+
+    if (!baseUrl) {
+        throw new Error("RUBIGO_API_URL environment variable or baseUrl option is required");
+    }
 
     if (!apiToken) {
         throw new Error("RUBIGO_API_TOKEN environment variable is required");

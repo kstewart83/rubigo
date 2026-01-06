@@ -12,16 +12,16 @@ import { SecurePanelWrapper } from "./secure-panel-wrapper";
 import type { SensitivityLevel } from "@/lib/access-control/types";
 
 // Helper to parse ACO JSON
-function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
-    if (!aco) return { sensitivity: "low", tenants: [] };
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; compartments: string[] } {
+    if (!aco) return { sensitivity: "low", compartments: [] };
     try {
         const parsed = JSON.parse(aco);
         return {
             sensitivity: parsed.sensitivity || "low",
-            tenants: parsed.tenants || [],
+            compartments: parsed.compartments || [],
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", compartments: [] };
     }
 }
 
@@ -36,7 +36,7 @@ export interface EventDetails {
     createdAt: string;
     isReady: boolean;
     msUntilReady: number;
-    aco?: string; // JSON: {sensitivity, tenants[]}
+    aco?: string; // JSON: {sensitivity, compartments[]}
 }
 
 interface EventDetailsPanelProps {
@@ -75,7 +75,7 @@ export function EventDetailsPanel({ event, onClose }: EventDetailsPanelProps) {
     return (
         <SecurePanelWrapper
             level={aco.sensitivity}
-            tenants={aco.tenants}
+            compartments={aco.compartments}
             className="border rounded-lg overflow-hidden h-full"
         >
             <Card className="h-full border-0">

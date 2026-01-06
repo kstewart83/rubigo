@@ -42,7 +42,7 @@ describe("Global Admin Bypass", () => {
 
         const aco = makeACO({
             sensitivity: "high",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
             roles: ["secret_committee"],
         });
 
@@ -85,97 +85,97 @@ describe("Sensitivity Level", () => {
 });
 
 // ============================================================================
-// Tenant Access Tests
+// Compartment Access Tests
 // ============================================================================
 
-describe("Tenant Access", () => {
-    it("scen-tenant-single-access: can access with tenant clearance", () => {
+describe("Compartment Access", () => {
+    it("scen-compartment-single-access: can access with compartment clearance", () => {
         const subject = makeSubject({
             clearanceLevel: "moderate",
-            tenantClearances: ["moderate:🍎"],
+            compartmentClearances: ["moderate:🍎"],
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
         });
 
         expect(canAccess(subject, aco).permitted).toBe(true);
     });
 
-    it("scen-tenant-single-blocked: blocked without tenant access", () => {
+    it("scen-compartment-single-blocked: blocked without compartment access", () => {
         const subject = makeSubject({
             clearanceLevel: "moderate",
-            tenantClearances: [], // No tenant access
+            compartmentClearances: [], // No compartment access
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
         });
 
         const result = canAccess(subject, aco);
         expect(result.permitted).toBe(false);
-        expect(result.failedCheck).toBe("tenant");
-        expect(result.reason).toContain("No access to tenant '🍎'");
+        expect(result.failedCheck).toBe("compartment");
+        expect(result.reason).toContain("No access to compartment '🍎'");
     });
 
-    it("scen-tenant-insufficient-level: blocked with insufficient tenant level", () => {
+    it("scen-compartment-insufficient-level: blocked with insufficient compartment level", () => {
         const subject = makeSubject({
             clearanceLevel: "moderate",
-            tenantClearances: ["low:🍎"], // Only low clearance for 🍎
+            compartmentClearances: ["low:🍎"], // Only low clearance for 🍎
         });
 
         const aco = makeACO({
             sensitivity: "moderate", // Requires moderate
-            tenants: ["🍎"],
+            compartments: ["🍎"],
         });
 
         const result = canAccess(subject, aco);
         expect(result.permitted).toBe(false);
-        expect(result.failedCheck).toBe("tenant");
-        expect(result.reason).toContain("Insufficient tenant clearance");
+        expect(result.failedCheck).toBe("compartment");
+        expect(result.reason).toContain("Insufficient compartment clearance");
     });
 
-    it("scen-tenant-multi-all: access requires ALL tenants", () => {
+    it("scen-compartment-multi-all: access requires ALL compartments", () => {
         const subject = makeSubject({
             clearanceLevel: "moderate",
-            tenantClearances: ["moderate:🍎"], // Only 🍎, not 🍌
+            compartmentClearances: ["moderate:🍎"], // Only 🍎, not 🍌
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            tenants: ["🍎", "🍌"], // Requires both
+            compartments: ["🍎", "🍌"], // Requires both
         });
 
         const result = canAccess(subject, aco);
         expect(result.permitted).toBe(false);
-        expect(result.failedCheck).toBe("tenant");
+        expect(result.failedCheck).toBe("compartment");
     });
 
-    it("can access with all required tenants", () => {
+    it("can access with all required compartments", () => {
         const subject = makeSubject({
             clearanceLevel: "high",
-            tenantClearances: ["high:🍎", "high:🍌"],
+            compartmentClearances: ["high:🍎", "high:🍌"],
         });
 
         const aco = makeACO({
             sensitivity: "moderate",
-            tenants: ["🍎", "🍌"],
+            compartments: ["🍎", "🍌"],
         });
 
         expect(canAccess(subject, aco).permitted).toBe(true);
     });
 
-    it("null tenants means no tenant restriction", () => {
+    it("null compartments means no compartment restriction", () => {
         const subject = makeSubject({
             clearanceLevel: "moderate",
-            tenantClearances: [], // No tenant access
+            compartmentClearances: [], // No compartment access
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            // No tenants field - should be accessible
+            // No compartments field - should be accessible
         });
 
         expect(canAccess(subject, aco).permitted).toBe(true);
@@ -261,29 +261,29 @@ describe("Combined Access Checks", () => {
     it("passes all three dimensions", () => {
         const subject = makeSubject({
             clearanceLevel: "high",
-            tenantClearances: ["high:🍎"],
+            compartmentClearances: ["high:🍎"],
             roles: ["hr_viewer", "manager"],
         });
 
         const aco = makeACO({
             sensitivity: "moderate",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
             roles: ["hr_viewer"],
         });
 
         expect(canAccess(subject, aco).permitted).toBe(true);
     });
 
-    it("fails on sensitivity even with valid tenants and roles", () => {
+    it("fails on sensitivity even with valid compartments and roles", () => {
         const subject = makeSubject({
             clearanceLevel: "low", // Too low
-            tenantClearances: ["high:🍎"],
+            compartmentClearances: ["high:🍎"],
             roles: ["hr_viewer"],
         });
 
         const aco = makeACO({
             sensitivity: "high",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
             roles: ["hr_viewer"],
         });
 
@@ -292,34 +292,34 @@ describe("Combined Access Checks", () => {
         expect(result.failedCheck).toBe("sensitivity");
     });
 
-    it("fails on tenant even with valid sensitivity and roles", () => {
+    it("fails on compartment even with valid sensitivity and roles", () => {
         const subject = makeSubject({
             clearanceLevel: "high",
-            tenantClearances: [], // Missing tenant
+            compartmentClearances: [], // Missing compartment
             roles: ["hr_viewer"],
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
             roles: ["hr_viewer"],
         });
 
         const result = canAccess(subject, aco);
         expect(result.permitted).toBe(false);
-        expect(result.failedCheck).toBe("tenant");
+        expect(result.failedCheck).toBe("compartment");
     });
 
-    it("fails on role even with valid sensitivity and tenants", () => {
+    it("fails on role even with valid sensitivity and compartments", () => {
         const subject = makeSubject({
             clearanceLevel: "high",
-            tenantClearances: ["high:🍎"],
+            compartmentClearances: ["high:🍎"],
             roles: ["employee"], // Missing hr_viewer
         });
 
         const aco = makeACO({
             sensitivity: "low",
-            tenants: ["🍎"],
+            compartments: ["🍎"],
             roles: ["hr_viewer"],
         });
 

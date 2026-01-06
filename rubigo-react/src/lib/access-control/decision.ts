@@ -11,7 +11,7 @@ import type {
     Subject,
 } from "./types";
 import {
-    parseTenantClearance,
+    parseCompartmentClearance,
     sensitivityIndex,
 } from "./types";
 
@@ -21,7 +21,7 @@ import {
  * Access is granted if ALL of the following are true:
  * 1. Subject has global_admin role (bypasses all checks), OR
  * 2. Subject clearance >= object sensitivity AND
- * 3. Subject has access to ALL required tenants at >= object sensitivity AND
+ * 3. Subject has access to ALL required compartments at >= object sensitivity AND
  * 4. Subject has ALL required roles
  */
 export function canAccess(subject: Subject, aco: AccessControlObject): AccessDecision {
@@ -42,26 +42,26 @@ export function canAccess(subject: Subject, aco: AccessControlObject): AccessDec
         };
     }
 
-    // 2. Tenant Check (if tenants specified)
-    if (aco.tenants && aco.tenants.length > 0) {
-        for (const tenant of aco.tenants) {
-            const tenantAccess = getSubjectTenantLevel(subject, tenant);
+    // 2. Compartment Check (if compartments specified)
+    if (aco.compartments && aco.compartments.length > 0) {
+        for (const compartment of aco.compartments) {
+            const compartmentAccess = getSubjectCompartmentLevel(subject, compartment);
 
-            if (!tenantAccess) {
+            if (!compartmentAccess) {
                 return {
                     permitted: false,
-                    reason: `No access to tenant '${tenant}'`,
-                    failedCheck: "tenant",
+                    reason: `No access to compartment '${compartment}'`,
+                    failedCheck: "compartment",
                 };
             }
 
-            // Subject must have tenant access at or above object sensitivity
-            const tenantLevelIdx = sensitivityIndex(tenantAccess as import("./types").SensitivityLevel);
-            if (tenantLevelIdx < objectLevel) {
+            // Subject must have compartment access at or above object sensitivity
+            const compartmentLevelIdx = sensitivityIndex(compartmentAccess as import("./types").SensitivityLevel);
+            if (compartmentLevelIdx < objectLevel) {
                 return {
                     permitted: false,
-                    reason: `Insufficient tenant clearance for '${tenant}': requires '${aco.sensitivity}', have '${tenantAccess}'`,
-                    failedCheck: "tenant",
+                    reason: `Insufficient compartment clearance for '${compartment}': requires '${aco.sensitivity}', have '${compartmentAccess}'`,
+                    failedCheck: "compartment",
                 };
             }
         }
@@ -84,16 +84,16 @@ export function canAccess(subject: Subject, aco: AccessControlObject): AccessDec
 }
 
 /**
- * Get a subject's clearance level for a specific tenant.
- * Returns null if the subject has no access to that tenant.
+ * Get a subject's clearance level for a specific compartment.
+ * Returns null if the subject has no access to that compartment.
  */
-function getSubjectTenantLevel(
+function getSubjectCompartmentLevel(
     subject: Subject,
-    tenant: string
+    compartment: string
 ): string | null {
-    for (const clearance of subject.tenantClearances) {
-        const parsed = parseTenantClearance(clearance);
-        if (parsed && parsed.tenant === tenant) {
+    for (const clearance of subject.compartmentClearances) {
+        const parsed = parseCompartmentClearance(clearance);
+        if (parsed && parsed.compartment === compartment) {
             return parsed.level;
         }
     }

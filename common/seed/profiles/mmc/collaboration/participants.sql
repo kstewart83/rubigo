@@ -38,7 +38,7 @@ INSERT INTO calendar_participants (profile_id, id, event_title, personnel_email,
 INSERT INTO calendar_participants (profile_id, id, event_title, personnel_email, team_name, role, added_at) VALUES 
 ('mmc', 'cp-019', 'Engineering Sprint Review', 'dpark@mmc.com', NULL, 'organizer', '2024-12-01T00:00:00Z'),
 ('mmc', 'cp-020', 'Engineering Sprint Review', NULL, 'Engineering', 'required', '2024-12-01T00:00:00Z'),
-('mmc', 'cp-021', 'Engineering Sprint Review', 'rbrown@mmc.com', NULL, 'optional', '2024-12-01T00:00:00Z');
+('mmc', 'cp-021', 'Engineering Sprint Review', 'rthompson@mmc.com', NULL, 'optional', '2024-12-01T00:00:00Z');
 
 -- Project Phoenix kickoff (cross-functional)
 -- ERP System Upgrade Kickoff (evt-027) - Digital Task Force

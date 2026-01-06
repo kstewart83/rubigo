@@ -34,6 +34,8 @@ export interface PersonnelRecord {
     cell_phone?: string;
     bio?: string;
     is_agent?: number;
+    clearance_level?: string;
+    compartment_clearances?: string;
 }
 
 export interface SolutionRecord {
@@ -121,10 +123,12 @@ export interface CalendarEventRecord {
     recurrence_interval?: number;
     recurrence_days?: string;
     recurrence_until?: string;
-    organizer_id?: string;
+    organizer_email?: string;  // Business key: resolve to personnel_id
     location?: string;
     virtual_url?: string;
     timezone?: string;
+    aco?: string;
+    description_aco?: string;
 }
 
 export interface CalendarDeviationRecord {
@@ -289,6 +293,18 @@ export interface TeamOwnerRecord {
     added_at: string;
 }
 
+export interface ClassificationGuideRecord {
+    id: string;
+    profile_id: string;
+    title: string;
+    guide_type: "sensitivity" | "compartment" | "role";
+    level: string;
+    content_markdown: string;
+    icon?: string;
+    color?: string;
+    status?: "draft" | "active" | "superseded";
+}
+
 export interface ScenarioData {
     profileId: string;
     personnel: PersonnelRecord[];
@@ -317,6 +333,7 @@ export interface ScenarioData {
     teamTeams: TeamTeamRecord[];
     teamOwners: TeamOwnerRecord[];
     calendarParticipants: CalendarParticipantRecord[];
+    classificationGuides: ClassificationGuideRecord[];
 }
 
 // ============================================================================
@@ -387,6 +404,7 @@ export function loadScenarioData(scenarioDir: string, profileId: string = "mmc")
             teamTeams: q("team_teams") as TeamTeamRecord[],
             teamOwners: q("team_owners") as TeamOwnerRecord[],
             calendarParticipants: q("calendar_participants") as CalendarParticipantRecord[],
+            classificationGuides: q("classification_guides") as ClassificationGuideRecord[],
         };
     } finally {
         db.close();

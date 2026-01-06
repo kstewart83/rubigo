@@ -51,12 +51,12 @@ export interface AccessControlObject {
     sensitivity: SensitivityLevel;
 
     /**
-     * Tenant compartments (optional).
-     * If specified, subject must have access to ALL listed tenants
+     * Compartments (optional).
+     * If specified, subject must have access to ALL listed compartments
      * at or above the object's sensitivity level.
      * Uses fruit emojis: 🍎, 🍌, 🍊, 🍇, 🍓
      */
-    tenants?: string[];
+    compartments?: string[];
 
     /**
      * Required roles (optional).
@@ -130,10 +130,10 @@ export interface Subject {
     clearanceLevel: SensitivityLevel;
 
     /**
-     * Tenant clearances in format "level:tenant".
+     * Compartment clearances in format "level:compartment".
      * Examples: ["moderate:🍎", "high:🍌"]
      */
-    tenantClearances: string[];
+    compartmentClearances: string[];
 
     /**
      * Roles the subject possesses.
@@ -169,7 +169,7 @@ export interface SensitivityGuidance {
 
 /**
  * Classification Guide - provides English-level descriptions
- * of how to classify data by sensitivity, tenant, and role.
+ * of how to classify data by sensitivity, compartment, and role.
  */
 export interface ClassificationGuide {
     /** Unique identifier (e.g., "CG-HR-001") */
@@ -184,8 +184,8 @@ export interface ClassificationGuide {
     /** Guidance for each sensitivity level */
     sensitivityGuidance: SensitivityGuidance;
 
-    /** Per-tenant guidance (optional) */
-    tenantGuidance?: Record<string, string>;
+    /** Per-compartment guidance (optional) */
+    compartmentGuidance?: Record<string, string>;
 
     /** Per-role guidance (optional) */
     roleGuidance?: Record<string, string>;
@@ -221,7 +221,7 @@ export interface AccessDecision {
     reason?: string;
 
     /** Which check failed (for debugging) */
-    failedCheck?: "sensitivity" | "tenant" | "role";
+    failedCheck?: "sensitivity" | "compartment" | "role";
 }
 
 // ============================================================================
@@ -229,24 +229,24 @@ export interface AccessDecision {
 // ============================================================================
 
 /**
- * Parse tenant clearance string to level and tenant.
- * @example parseTenantClearance("moderate:🍎") => { level: "moderate", tenant: "🍎" }
+ * Parse compartment clearance string to level and compartment.
+ * @example parseCompartmentClearance("moderate:🍎") => { level: "moderate", compartment: "🍎" }
  */
-export function parseTenantClearance(
+export function parseCompartmentClearance(
     clearance: string
-): { level: SensitivityLevel; tenant: string } | null {
-    const [level, tenant] = clearance.split(":");
-    if (!level || !tenant) return null;
+): { level: SensitivityLevel; compartment: string } | null {
+    const [level, compartment] = clearance.split(":");
+    if (!level || !compartment) return null;
     if (!SENSITIVITY_ORDER.includes(level as SensitivityLevel)) return null;
-    return { level: level as SensitivityLevel, tenant };
+    return { level: level as SensitivityLevel, compartment };
 }
 
 /**
- * Format tenant clearance from level and tenant.
+ * Format compartment clearance from level and compartment.
  */
-export function formatTenantClearance(
+export function formatCompartmentClearance(
     level: SensitivityLevel,
-    tenant: string
+    compartment: string
 ): string {
-    return `${level}:${tenant}`;
+    return `${level}:${compartment}`;
 }

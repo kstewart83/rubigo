@@ -66,26 +66,26 @@ const LEVEL_CONFIG: Record<SensitivityLevel, {
 
 interface ClassificationBannerProps {
     level: SensitivityLevel | null;
-    tenants?: string[];
+    compartments?: string[];
     /** Optional map of tenant -> level when tenant has different level than base */
-    tenantLevels?: Record<string, SensitivityLevel>;
+    compartmentLevels?: Record<string, SensitivityLevel>;
     position: "header" | "footer";
 }
 
-function ClassificationBanner({ level, tenants = [], tenantLevels = {}, position }: ClassificationBannerProps) {
+function ClassificationBanner({ level, compartments = [], compartmentLevels = {}, position }: ClassificationBannerProps) {
     const config = level === null ? NONE_CONFIG : LEVEL_CONFIG[level];
     const Icon = config.icon;
 
-    // Separate tenants into those at base level and those with different levels
-    const tenantsAtBase: string[] = [];
-    const tenantsWithDifferentLevel: { tenant: string; level: SensitivityLevel }[] = [];
+    // Separate compartments into those at base level and those with different levels
+    const compartmentsAtBase: string[] = [];
+    const compartmentsWithDifferentLevel: { tenant: string; level: SensitivityLevel }[] = [];
 
-    for (const tenant of tenants) {
-        const tenantLevel = tenantLevels[tenant];
+    for (const tenant of compartments) {
+        const tenantLevel = compartmentLevels[tenant];
         if (tenantLevel && tenantLevel !== level) {
-            tenantsWithDifferentLevel.push({ tenant, level: tenantLevel });
+            compartmentsWithDifferentLevel.push({ tenant, level: tenantLevel });
         } else {
-            tenantsAtBase.push(tenant);
+            compartmentsAtBase.push(tenant);
         }
     }
 
@@ -102,17 +102,17 @@ function ClassificationBanner({ level, tenants = [], tenantLevels = {}, position
             <span className={config.textClass}>
                 {config.label}
             </span>
-            {/* Show tenants at base level normally */}
-            {tenantsAtBase.length > 0 && (
+            {/* Show compartments at base level normally */}
+            {compartmentsAtBase.length > 0 && (
                 <>
                     <span className="text-zinc-600">|</span>
                     <span className="text-sm">
-                        {tenantsAtBase.join(" ")}
+                        {compartmentsAtBase.join(" ")}
                     </span>
                 </>
             )}
-            {/* Show tenants with different levels in parentheses */}
-            {tenantsWithDifferentLevel.map(({ tenant, level: tenantLevel }) => {
+            {/* Show compartments with different levels in parentheses */}
+            {compartmentsWithDifferentLevel.map(({ tenant, level: tenantLevel }) => {
                 const tenantConfig = LEVEL_CONFIG[tenantLevel];
                 return (
                     <span key={tenant} className={`text-sm ${tenantConfig.textClass}`}>
@@ -133,10 +133,10 @@ interface SecurePanelWrapperProps {
     children: React.ReactNode;
     /** The sensitivity level of the data in this panel (null = unclassified/NONE) */
     level: SensitivityLevel | null;
-    /** Optional tenants associated with this data */
-    tenants?: string[];
+    /** Optional compartments associated with this data */
+    compartments?: string[];
     /** Optional map of tenant -> level when tenant has different level than base */
-    tenantLevels?: Record<string, SensitivityLevel>;
+    compartmentLevels?: Record<string, SensitivityLevel>;
     /** Additional className for the container */
     className?: string;
 }
@@ -144,23 +144,23 @@ interface SecurePanelWrapperProps {
 export function SecurePanelWrapper({
     children,
     level,
-    tenants = [],
-    tenantLevels = {},
+    compartments = [],
+    compartmentLevels = {},
     className,
 }: SecurePanelWrapperProps) {
     return (
         <div className={className}>
             <ClassificationBanner
                 level={level}
-                tenants={tenants}
-                tenantLevels={tenantLevels}
+                compartments={compartments}
+                compartmentLevels={compartmentLevels}
                 position="header"
             />
             {children}
             <ClassificationBanner
                 level={level}
-                tenants={tenants}
-                tenantLevels={tenantLevels}
+                compartments={compartments}
+                compartmentLevels={compartmentLevels}
                 position="footer"
             />
         </div>

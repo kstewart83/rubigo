@@ -17,16 +17,16 @@ import type { AgentStatus } from "@/db/schema";
 import type { SensitivityLevel } from "@/lib/access-control/types";
 
 // Helper to parse ACO JSON
-function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
-    if (!aco) return { sensitivity: "low", tenants: [] };
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; compartments: string[] } {
+    if (!aco) return { sensitivity: "low", compartments: [] };
     try {
         const parsed = JSON.parse(aco);
         return {
             sensitivity: parsed.sensitivity || "low",
-            tenants: parsed.tenants || [],
+            compartments: parsed.compartments || [],
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", compartments: [] };
     }
 }
 
@@ -37,7 +37,7 @@ export interface AgentInfo {
     status: AgentStatus;
     pendingActions: number;
     lastActivity: string;
-    aco?: string; // JSON: {sensitivity, tenants[]}
+    aco?: string; // JSON: {sensitivity, compartments?[]}
 }
 
 export interface AgentListPanelProps {
@@ -60,7 +60,7 @@ export function AgentListPanel({
         <SecureTableWrapper
             items={agents}
             getSensitivity={(agent) => parseAco(agent.aco).sensitivity}
-            getTenants={(agent) => parseAco(agent.aco).tenants}
+            getTenants={(agent) => parseAco(agent.aco).compartments}
             defaultLevel="low"
             className={cn("rounded-lg overflow-hidden", className)}
         >

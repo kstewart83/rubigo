@@ -107,7 +107,9 @@ export function expandRecurringEvents(
             // Recurring: iterate through date range and check each day
             const recurrenceEnd = event.recurrenceUntil ? new Date(event.recurrenceUntil) : end;
             const actualEnd = recurrenceEnd < end ? recurrenceEnd : end;
-            const currentDate = new Date(start);
+            // Use noon UTC to avoid timezone boundary issues (midnight UTC can be previous day in local time)
+            const startDateStr = startDate.includes("T") ? startDate.split("T")[0] : startDate;
+            const currentDate = new Date(startDateStr + "T12:00:00Z");
 
             while (currentDate <= actualEnd) {
                 const dateStr = currentDate.toISOString().split("T")[0];
@@ -211,16 +213,19 @@ function shouldOccurOn(
         }
 
         case "weekly": {
-            const daysDiff = Math.floor((date.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24));
+            // Use date-only math to avoid timezone issues
+            const eventStartDateOnly = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+            const checkDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const daysDiff = Math.round((checkDateOnly.getTime() - eventStartDateOnly.getTime()) / (1000 * 60 * 60 * 24));
             const weeksDiff = Math.floor(daysDiff / 7);
             const weekdayAbbr = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
 
             if (recurrenceDays.length === 0) {
                 // Same weekday as original
-                return date.getDay() === eventStart.getDay() && weeksDiff % interval === 0;
+                return date.getDay() === eventStart.getDay() && weeksDiff >= 0 && weeksDiff % interval === 0;
             } else {
-                // Specific days
-                return recurrenceDays.includes(weekdayAbbr) && weeksDiff % interval === 0;
+                // Specific days - check if today's weekday matches AND we're in a valid week
+                return recurrenceDays.includes(weekdayAbbr) && weeksDiff >= 0 && weeksDiff % interval === 0;
             }
         }
 
@@ -298,16 +303,19 @@ export function wouldOccurOn(
         }
 
         case "weekly": {
-            const daysDiff = Math.floor((date.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24));
+            // Use date-only math to avoid timezone issues
+            const eventStartDateOnly = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+            const checkDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const daysDiff = Math.round((checkDateOnly.getTime() - eventStartDateOnly.getTime()) / (1000 * 60 * 60 * 24));
             const weeksDiff = Math.floor(daysDiff / 7);
             const weekdayAbbr = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
 
             if (recurrenceDays.length === 0) {
                 // Same weekday as original
-                return date.getDay() === eventStart.getDay() && weeksDiff % interval === 0;
+                return date.getDay() === eventStart.getDay() && weeksDiff >= 0 && weeksDiff % interval === 0;
             } else {
                 // Specific days
-                return recurrenceDays.includes(weekdayAbbr) && weeksDiff % interval === 0;
+                return recurrenceDays.includes(weekdayAbbr) && weeksDiff >= 0 && weeksDiff % interval === 0;
             }
         }
 

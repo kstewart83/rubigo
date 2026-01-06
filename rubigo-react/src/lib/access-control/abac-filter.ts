@@ -2,7 +2,7 @@
  * ABAC Session Filtering
  *
  * Server-side filtering of objects based on session security context.
- * Implements sensitivity level and tenant compartment access control.
+ * Implements sensitivity level and compartment access control.
  */
 
 import { type SensitivityLevel, SENSITIVITY_ORDER } from "./types";
@@ -18,10 +18,10 @@ import { type SensitivityLevel, SENSITIVITY_ORDER } from "./types";
 export interface SessionContext {
     /** Current session sensitivity level (may be lower than user's max) */
     sessionLevel: SensitivityLevel;
-    /** Currently enabled tenant compartments */
-    activeTenants: string[];
-    /** Map of active tenant -> its current session level for tiered filtering */
-    activeTenantLevels?: Record<string, SensitivityLevel>;
+    /** Currently enabled compartments */
+    activeCompartments: string[];
+    /** Map of active compartment -> its current session level for tiered filtering */
+    activeCompartmentLevels?: Record<string, SensitivityLevel>;
 }
 
 /**
@@ -29,12 +29,12 @@ export interface SessionContext {
  */
 interface ParsedAco {
     sensitivity: SensitivityLevel;
-    /** Raw tenant strings (may include LEVEL:TENANT format) */
-    tenants: string[];
-    /** Extracted tenant names (emoji/short name only) */
-    tenantNames: string[];
-    /** Map of tenant name -> level (extracted from LEVEL:TENANT format) */
-    tenantLevels: Record<string, SensitivityLevel>;
+    /** Raw compartment strings (may include LEVEL:COMPARTMENT format) */
+    compartments: string[];
+    /** Extracted compartment names (emoji/short name only) */
+    compartmentNames: string[];
+    /** Map of compartment name -> level (extracted from LEVEL:COMPARTMENT format) */
+    compartmentLevels: Record<string, SensitivityLevel>;
 }
 
 // ============================================================================
@@ -44,50 +44,50 @@ interface ParsedAco {
 /**
  * Parse ACO JSON string into structured object.
  * Returns default LOW sensitivity if parsing fails.
- * Extracts tenant levels from "LEVEL:TENANT" format.
+ * Extracts compartment levels from "LEVEL:COMPARTMENT" format.
  */
 export function parseAco(acoJson: string | null | undefined): ParsedAco {
     if (!acoJson) {
-        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
+        return { sensitivity: "low", compartments: [], compartmentNames: [], compartmentLevels: {} };
     }
     try {
         const parsed = JSON.parse(acoJson);
         const sensitivity = (parsed.sensitivity as SensitivityLevel) || "low";
-        const rawTenants = Array.isArray(parsed.tenants) ? parsed.tenants : [];
+        const rawCompartments = Array.isArray(parsed.compartments) ? parsed.compartments : [];
 
-        // Extract tenant names and levels from "LEVEL:TENANT" format
-        const tenantNames: string[] = [];
-        const tenantLevels: Record<string, SensitivityLevel> = {};
+        // Extract compartment names and levels from "LEVEL:COMPARTMENT" format
+        const compartmentNames: string[] = [];
+        const compartmentLevels: Record<string, SensitivityLevel> = {};
 
-        for (const t of rawTenants) {
-            if (typeof t === "string" && t.includes(":")) {
-                const [level, name] = t.split(":");
+        for (const c of rawCompartments) {
+            if (typeof c === "string" && c.includes(":")) {
+                const [level, name] = c.split(":");
                 if (level && name) {
                     const normalizedLevel = level.toLowerCase() as SensitivityLevel;
                     if (SENSITIVITY_ORDER.includes(normalizedLevel)) {
-                        tenantNames.push(name);
-                        tenantLevels[name] = normalizedLevel;
+                        compartmentNames.push(name);
+                        compartmentLevels[name] = normalizedLevel;
                     } else {
-                        // Invalid level, treat as tenant name with base sensitivity
-                        tenantNames.push(t);
-                        tenantLevels[t] = sensitivity;
+                        // Invalid level, treat as compartment name with base sensitivity
+                        compartmentNames.push(c);
+                        compartmentLevels[c] = sensitivity;
                     }
                 }
-            } else if (typeof t === "string") {
-                // Plain tenant name without level - use base sensitivity
-                tenantNames.push(t);
-                tenantLevels[t] = sensitivity;
+            } else if (typeof c === "string") {
+                // Plain compartment name without level - use base sensitivity
+                compartmentNames.push(c);
+                compartmentLevels[c] = sensitivity;
             }
         }
 
         return {
             sensitivity,
-            tenants: rawTenants,
-            tenantNames,
-            tenantLevels,
+            compartments: rawCompartments,
+            compartmentNames,
+            compartmentLevels,
         };
     } catch {
-        return { sensitivity: "low", tenants: [], tenantNames: [], tenantLevels: {} };
+        return { sensitivity: "low", compartments: [], compartmentNames: [], compartmentLevels: {} };
     }
 }
 
@@ -95,42 +95,42 @@ export function parseAco(acoJson: string | null | undefined): ParsedAco {
  * Check if a session can access an object based on its ACO.
  *
  * Access is granted if:
- * 1. Session level >= object sensitivity level (for untenanted data)
- * 2. For each tenant the object requires:
- *    - Session has that tenant enabled
- *    - Session's level for that tenant >= object's level for that tenant
+ * 1. Session level >= object sensitivity level (for uncompartmented data)
+ * 2. For each compartment the object requires:
+ *    - Session has that compartment enabled
+ *    - Session's level for that compartment >= object's level for that compartment
  *
  * @param session - The active session context
  * @param aco - The parsed ACO of the object
  * @returns true if access is permitted
  */
 export function canAccessObject(session: SessionContext, aco: ParsedAco): boolean {
-    const activeTenantLevels = session.activeTenantLevels ?? {};
+    const activeCompartmentLevels = session.activeCompartmentLevels ?? {};
 
-    // If object has no tenants, check base level only
-    if (aco.tenantNames.length === 0) {
+    // If object has no compartments, check base level only
+    if (aco.compartmentNames.length === 0) {
         const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(session.sessionLevel);
         const objectLevelIndex = SENSITIVITY_ORDER.indexOf(aco.sensitivity);
         return sessionLevelIndex >= objectLevelIndex;
     }
 
-    // Object requires tenants - check each one
-    for (const tenantName of aco.tenantNames) {
-        // User must have this tenant in their active session
-        if (!session.activeTenants.includes(tenantName)) {
+    // Object requires compartments - check each one
+    for (const compartmentName of aco.compartmentNames) {
+        // User must have this compartment in their active session
+        if (!session.activeCompartments.includes(compartmentName)) {
             return false;
         }
 
-        // Get the required level for this tenant from the ACO
-        const requiredLevel = aco.tenantLevels[tenantName] ?? aco.sensitivity;
+        // Get the required level for this compartment from the ACO
+        const requiredLevel = aco.compartmentLevels[compartmentName] ?? aco.sensitivity;
         const requiredLevelIndex = SENSITIVITY_ORDER.indexOf(requiredLevel);
 
-        // Get user's session level for this tenant
-        const userTenantLevel = activeTenantLevels[tenantName] ?? session.sessionLevel;
-        const userTenantLevelIndex = SENSITIVITY_ORDER.indexOf(userTenantLevel);
+        // Get user's session level for this compartment
+        const userCompartmentLevel = activeCompartmentLevels[compartmentName] ?? session.sessionLevel;
+        const userCompartmentLevelIndex = SENSITIVITY_ORDER.indexOf(userCompartmentLevel);
 
-        // User's tenant level must be >= required level
-        if (userTenantLevelIndex < requiredLevelIndex) {
+        // User's compartment level must be >= required level
+        if (userCompartmentLevelIndex < requiredLevelIndex) {
             return false;
         }
     }

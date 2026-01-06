@@ -27,7 +27,7 @@ export interface SecuritySession {
     id: string;
     personnelId: string | null;
     sessionLevel: SensitivityLevel;
-    activeTenants: string[];
+    activeCompartments: string[];
     validatedAcoIds: number[];
     highestAcoId: number;
 }
@@ -43,7 +43,7 @@ export interface SecuritySession {
 export async function getOrCreateSession(
     personnelId: string | null,
     sessionLevel: SensitivityLevel,
-    activeTenants: string[]
+    activeCompartments: string[]
 ): Promise<SecuritySession> {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -62,14 +62,14 @@ export async function getOrCreateSession(
             if (
                 session.personnelId === personnelId &&
                 session.sessionLevel === sessionLevel &&
-                JSON.stringify(JSON.parse(session.activeTenants).sort()) ===
-                JSON.stringify([...activeTenants].sort())
+                JSON.stringify(JSON.parse(session.activeCompartments).sort()) ===
+                JSON.stringify([...activeCompartments].sort())
             ) {
                 return {
                     id: session.id,
                     personnelId: session.personnelId,
                     sessionLevel: session.sessionLevel as SensitivityLevel,
-                    activeTenants: JSON.parse(session.activeTenants),
+                    activeCompartments: JSON.parse(session.activeCompartments),
                     validatedAcoIds: JSON.parse(session.validatedAcoIds),
                     highestAcoId: session.highestAcoId,
                 };
@@ -86,14 +86,14 @@ export async function getOrCreateSession(
     // Pre-validate ACOs for this session
     const { validatedIds, highestId } = await validateAllAcos(
         sessionLevel,
-        activeTenants
+        activeCompartments
     );
 
     await db.insert(securitySessions).values({
         id: newSessionId,
         personnelId,
         sessionLevel,
-        activeTenants: JSON.stringify(activeTenants),
+        activeCompartments: JSON.stringify(activeCompartments),
         validatedAcoIds: JSON.stringify(validatedIds),
         highestAcoId: highestId,
         createdAt: now,
@@ -113,7 +113,7 @@ export async function getOrCreateSession(
         id: newSessionId,
         personnelId,
         sessionLevel,
-        activeTenants,
+        activeCompartments,
         validatedAcoIds: validatedIds,
         highestAcoId: highestId,
     };
@@ -129,7 +129,7 @@ export async function getOrCreateSession(
  */
 async function validateAllAcos(
     sessionLevel: SensitivityLevel,
-    activeTenants: string[]
+    activeCompartments: string[]
 ): Promise<{ validatedIds: number[]; highestId: number }> {
     const allAcos = await db.select().from(acoObjects);
 
@@ -148,12 +148,12 @@ async function validateAllAcos(
             continue; // ACO is higher than session level
         }
 
-        // Check tenant compartments
-        const acoTenants: string[] = JSON.parse(aco.tenants);
-        if (acoTenants.length > 0) {
-            const hasAllTenants = acoTenants.every((t) => activeTenants.includes(t));
-            if (!hasAllTenants) {
-                continue; // Missing required tenant
+        // Check compartments
+        const acoCompartments: string[] = JSON.parse(aco.compartments);
+        if (acoCompartments.length > 0) {
+            const hasAllCompartments = acoCompartments.every((c) => activeCompartments.includes(c));
+            if (!hasAllCompartments) {
+                continue; // Missing required compartment
             }
         }
 
@@ -219,13 +219,13 @@ export async function refreshSessionAcos(
             continue;
         }
 
-        // Check tenant compartments
-        const acoTenants: string[] = JSON.parse(aco.tenants);
-        if (acoTenants.length > 0) {
-            const hasAllTenants = acoTenants.every((t) =>
-                session.activeTenants.includes(t)
+        // Check compartments
+        const acoCompartments: string[] = JSON.parse(aco.compartments);
+        if (acoCompartments.length > 0) {
+            const hasAllCompartments = acoCompartments.every((c) =>
+                session.activeCompartments.includes(c)
             );
-            if (!hasAllTenants) {
+            if (!hasAllCompartments) {
                 continue;
             }
         }
