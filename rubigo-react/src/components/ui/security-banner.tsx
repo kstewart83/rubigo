@@ -81,10 +81,10 @@ export function SecurityBanner() {
         sessionLevel,
         maxClearanceLevel,
         setSessionLevel,
-        activeTenants,
-        tenantClearances,
-        toggleTenant,
-        setTenantLevel,
+        activeCompartments,
+        compartmentClearances,
+        toggleCompartment,
+        setCompartmentLevel,
         isGlobalAdmin,
         availableLevels
     } = useSecurity();
@@ -147,45 +147,45 @@ export function SecurityBanner() {
                     })}
 
                     {/* Tenant Section */}
-                    {tenantClearances.length > 0 && (
+                    {compartmentClearances.length > 0 && (
                         <>
                             <DropdownMenuSeparator />
                             <DropdownMenuLabel className="text-[10px] text-zinc-500 font-normal">
                                 Tenant Access
                             </DropdownMenuLabel>
                             <div className="px-2 py-3 space-y-4">
-                                {tenantClearances.map((tc) => {
+                                {compartmentClearances.map((tc) => {
                                     const maxLevelIndex = SENSITIVITY_ORDER.indexOf(tc.maxLevel);
                                     const isAboveSession = maxLevelIndex > sessionLevelIndex;
                                     const effectiveMaxLevel = isAboveSession ? sessionLevel : tc.maxLevel;
                                     const effectiveMaxIndex = SENSITIVITY_ORDER.indexOf(effectiveMaxLevel);
 
                                     // Available levels for this tenant (up to its effective max)
-                                    const tenantLevels = SENSITIVITY_ORDER.slice(0, effectiveMaxIndex + 1);
+                                    const compartmentLevels = SENSITIVITY_ORDER.slice(0, effectiveMaxIndex + 1);
 
                                     return (
                                         <div
-                                            key={tc.tenant}
+                                            key={tc.compartment}
                                             className={`flex items-center gap-2 h-6 ${isAboveSession ? "opacity-40" : ""}`}
                                         >
                                             <Checkbox
                                                 checked={tc.enabled}
-                                                onCheckedChange={() => toggleTenant(tc.tenant)}
+                                                onCheckedChange={() => toggleCompartment(tc.compartment)}
                                                 disabled={isAboveSession}
                                                 className="size-4"
                                             />
-                                            <span className="text-lg">{tc.tenant}</span>
+                                            <span className="text-lg">{tc.compartment}</span>
 
                                             {tc.enabled && !isAboveSession ? (
                                                 <Select
                                                     value={tc.sessionLevel}
-                                                    onValueChange={(v) => setTenantLevel(tc.tenant, v as SensitivityLevel)}
+                                                    onValueChange={(v) => setCompartmentLevel(tc.compartment, v as SensitivityLevel)}
                                                 >
                                                     <SelectTrigger className="h-6 w-[110px] text-[10px]">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {tenantLevels.map((level) => (
+                                                        {compartmentLevels.map((level) => (
                                                             <SelectItem
                                                                 key={level}
                                                                 value={level}
@@ -235,12 +235,12 @@ export function SecurityBanner() {
                     </span>
                 </div>
 
-                {activeTenants.length > 0 && (
+                {activeCompartments.length > 0 && (
                     <>
                         <span className="text-zinc-600">|</span>
                         <div className="flex items-center gap-1">
-                            {activeTenants.map((tenant) => {
-                                const tc = tenantClearances.find(t => t.tenant === tenant);
+                            {activeCompartments.map((tenant) => {
+                                const tc = compartmentClearances.find(t => t.compartment === tenant);
                                 // Check if tenant session level differs from base session level
                                 const tenantLevel = tc?.sessionLevel ?? sessionLevel;
                                 const isDifferentLevel = tenantLevel !== sessionLevel;

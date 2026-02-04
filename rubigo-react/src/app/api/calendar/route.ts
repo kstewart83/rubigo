@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // Extract optional session context from headers for ABAC filtering
     const sessionLevelHeader = request.headers.get("X-Session-Level");
-    const activeTenants = (() => {
+    const activeCompartments = (() => {
         try {
             const header = request.headers.get("X-Active-Tenants");
             return header ? JSON.parse(header) as string[] : [];
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const sessionContext = sessionLevelHeader
         ? {
             sessionLevel: sessionLevelHeader as SensitivityLevel,
-            activeTenants,
+            activeCompartments,
         }
         : undefined;
 
@@ -114,7 +114,9 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const result = await createCalendarEvent(input, auth.actorId!);
+    // Use organizerId from request if provided, otherwise use authenticated actor
+    const organizerId = input.organizerId ?? auth.actorId!;
+    const result = await createCalendarEvent(input, organizerId);
 
     if (result.success) {
         return NextResponse.json(result, { status: 201 });

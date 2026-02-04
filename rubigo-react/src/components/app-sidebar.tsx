@@ -40,6 +40,9 @@ import {
     BarChart3,
     Gauge,
     PieChart,
+
+    Shield,
+    BookOpen,
 } from "lucide-react";
 
 import {
@@ -167,6 +170,15 @@ const sidebarModules: SidebarModule[] = [
             { id: "overview", label: "Overview", href: "/analytics/overview", icon: BarChart3 },
             { id: "performance", label: "Performance", href: "/analytics/performance", icon: Gauge },
             { id: "usage", label: "Usage", href: "/analytics/usage", icon: PieChart },
+        ],
+    },
+    {
+        id: "security",
+        label: "Security",
+        href: "/security",
+        icon: Shield,
+        subPages: [
+            { id: "guides", label: "Guides", href: "/security/guides", icon: BookOpen },
         ],
     },
 ];

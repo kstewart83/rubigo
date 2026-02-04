@@ -40,7 +40,7 @@ export interface AgentEventData {
 
 interface ParsedAco {
     sensitivity: SensitivityLevel;
-    tenants: string[];
+    compartments: string[];
 }
 
 interface ParsedMetadata {
@@ -54,15 +54,15 @@ interface ParsedMetadata {
 // ============================================================================
 
 export function parseAco(aco?: string | null): ParsedAco {
-    if (!aco) return { sensitivity: "low", tenants: [] };
+    if (!aco) return { sensitivity: "low", compartments: [] };
     try {
         const parsed = JSON.parse(aco);
         return {
             sensitivity: parsed.sensitivity || "low",
-            tenants: parsed.tenants || [],
+            compartments: parsed.compartments || [],
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", compartments: [] };
     }
 }
 

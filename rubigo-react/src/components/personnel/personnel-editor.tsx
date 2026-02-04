@@ -57,7 +57,7 @@ interface FormData {
     isAgent: boolean;
     // Security
     clearanceLevel: SensitivityLevel;
-    tenantClearances: string[];
+    compartmentClearances: string[];
     accessRoles: string[];
 }
 
@@ -98,7 +98,7 @@ export function PersonnelEditor({ person, allPersonnel, mode }: PersonnelEditorP
     const [error, setError] = useState("");
 
     // Parse existing tenant clearances
-    const parseTenantClearances = (raw?: string): string[] => {
+    const parseCompartmentClearances = (raw?: string): string[] => {
         if (!raw) return [];
         try {
             return JSON.parse(raw);
@@ -133,7 +133,7 @@ export function PersonnelEditor({ person, allPersonnel, mode }: PersonnelEditorP
         photo: person?.photo ?? "",
         isAgent: person?.isAgent ?? false,
         clearanceLevel: (person?.clearanceLevel as SensitivityLevel) ?? "low",
-        tenantClearances: parseTenantClearances(person?.tenantClearances),
+        compartmentClearances: parseCompartmentClearances(person?.compartmentClearances),
         accessRoles: parseRoles(person?.accessRoles),
     });
 
@@ -157,7 +157,7 @@ export function PersonnelEditor({ person, allPersonnel, mode }: PersonnelEditorP
             photo: formData.photo || undefined,
             isAgent: formData.isAgent,
             clearanceLevel: formData.clearanceLevel,
-            tenantClearances: JSON.stringify(formData.tenantClearances),
+            compartmentClearances: JSON.stringify(formData.compartmentClearances),
             accessRoles: JSON.stringify(formData.accessRoles),
             // Record classification (not user clearance) - personnel data is LOW
             aco: JSON.stringify({ sensitivity: "low", tenants: [] }),
@@ -494,23 +494,23 @@ function SecurityTab({
     );
 
     // Add tenant clearance to list
-    const addTenantClearance = () => {
+    const addCompartmentClearance = () => {
         if (!newTenant) return;
         const entry = `${newTenantLevel}:${newTenant}`;
         // Don't add duplicates
-        if (formData.tenantClearances.includes(entry)) return;
+        if (formData.compartmentClearances.includes(entry)) return;
         setFormData({
             ...formData,
-            tenantClearances: [...formData.tenantClearances, entry],
+            compartmentClearances: [...formData.compartmentClearances, entry],
         });
         setNewTenant("");
     };
 
     // Remove tenant clearance from list
-    const removeTenantClearance = (entry: string) => {
+    const removeCompartmentClearance = (entry: string) => {
         setFormData({
             ...formData,
-            tenantClearances: formData.tenantClearances.filter((tc) => tc !== entry),
+            compartmentClearances: formData.compartmentClearances.filter((tc) => tc !== entry),
         });
     };
 
@@ -612,7 +612,7 @@ function SecurityTab({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={addTenantClearance}
+                            onClick={addCompartmentClearance}
                             disabled={!newTenant}
                         >
                             <Plus className="size-4" />
@@ -620,7 +620,7 @@ function SecurityTab({
                     </div>
 
                     {/* List of tenant clearances */}
-                    {formData.tenantClearances.length > 0 ? (
+                    {formData.compartmentClearances.length > 0 ? (
                         <div className="border border-zinc-700 rounded-lg overflow-hidden">
                             <table className="w-full text-sm">
                                 <thead className="bg-zinc-800/50">
@@ -631,7 +631,7 @@ function SecurityTab({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {formData.tenantClearances.map((tc, index) => {
+                                    {formData.compartmentClearances.map((tc, index) => {
                                         const [level, tenant] = tc.split(":");
                                         return (
                                             <tr key={index} className="border-t border-zinc-700">
@@ -644,7 +644,7 @@ function SecurityTab({
                                                 <td className="px-2 py-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => removeTenantClearance(tc)}
+                                                        onClick={() => removeCompartmentClearance(tc)}
                                                         className="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors"
                                                     >
                                                         <X className="size-4" />

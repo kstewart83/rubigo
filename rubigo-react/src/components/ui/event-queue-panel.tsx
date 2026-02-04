@@ -14,16 +14,16 @@ import { SecureTableWrapper } from "./secure-table-wrapper";
 import type { SensitivityLevel } from "@/lib/access-control/types";
 
 // Helper to parse ACO JSON
-function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; tenants: string[] } {
-    if (!aco) return { sensitivity: "low", tenants: [] };
+function parseAco(aco?: string | null): { sensitivity: SensitivityLevel; compartments: string[] } {
+    if (!aco) return { sensitivity: "low", compartments: [] };
     try {
         const parsed = JSON.parse(aco);
         return {
             sensitivity: parsed.sensitivity || "low",
-            tenants: parsed.tenants || [],
+            compartments: parsed.compartments || [],
         };
     } catch {
-        return { sensitivity: "low", tenants: [] };
+        return { sensitivity: "low", compartments: [] };
     }
 }
 
@@ -38,7 +38,7 @@ export interface ScheduledEvent {
     createdAt: string;
     isReady: boolean;
     msUntilReady: number;
-    aco?: string; // JSON: {sensitivity, tenants[]}
+    aco?: string; // JSON: {sensitivity, compartments?[]}
 }
 
 interface Pagination {
@@ -132,7 +132,7 @@ export function EventQueuePanel({ refreshTrigger, onSelectEvent, onEventsRefresh
         <SecureTableWrapper
             items={events}
             getSensitivity={(event) => parseAco(event.aco).sensitivity}
-            getTenants={(event) => parseAco(event.aco).tenants}
+            getTenants={(event) => parseAco(event.aco).compartments}
             defaultLevel="low"
             className="border rounded-lg overflow-hidden"
         >

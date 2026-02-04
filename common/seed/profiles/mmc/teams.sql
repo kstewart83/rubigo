@@ -6,11 +6,11 @@
 -- Core Department Teams
 -- created_by references personnel by email
 INSERT INTO teams (profile_id, id, name, description, created_by_email, aco) VALUES 
-('mmc', 'a1b2c3', 'Executive Leadership', 'C-suite executives and senior leadership', 'tanderson@mmc.com', '{"sensitivity":"high","tenants":["🍎"]}'),
+('mmc', 'a1b2c3', 'Executive Leadership', 'C-suite executives and senior leadership', 'tanderson@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'd4e5f6', 'IT Department', 'Information Technology team', 'mchen@mmc.com', '{"sensitivity":"low"}'),
-('mmc', 'g7h8i9', 'HR Department', 'Human Resources team', 'pmartinez@mmc.com', '{"sensitivity":"moderate"}'),
+('mmc', 'g7h8i9', 'HR Department', 'Human Resources team', 'pmartinez@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'j1k2l3', 'Engineering', 'Product engineering and CAD design', 'dpark@mmc.com', '{"sensitivity":"low"}'),
-('mmc', 'm4n5o6', 'Finance', 'Finance and accounting team', 'msullivan@mmc.com', '{"sensitivity":"high","tenants":["🍌"]}'),
+('mmc', 'm4n5o6', 'Finance', 'Finance and accounting team', 'msullivan@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'p7q8r9', 'Sales', 'Sales and business development', 'cmiller@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 's1t2u3', 'Operations', 'Warehouse and logistics operations', 'tanderson@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'v4w5x6', 'Manufacturing', 'Production and quality control', 'tanderson@mmc.com', '{"sensitivity":"low"}'),
@@ -18,17 +18,17 @@ INSERT INTO teams (profile_id, id, name, description, created_by_email, aco) VAL
 
 -- Nested Teams (sub-teams)
 INSERT INTO teams (profile_id, id, name, description, created_by_email, aco) VALUES 
-('mmc', 'b2c3d4', 'Network Operations', 'Network infrastructure and security', 'mchen@mmc.com', '{"sensitivity":"moderate"}'),
+('mmc', 'b2c3d4', 'Network Operations', 'Network infrastructure and security', 'mchen@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'e5f6g7', 'Help Desk', 'IT support and helpdesk', 'mchen@mmc.com', '{"sensitivity":"low"}'),
-('mmc', 'h8i9j0', 'Recruiting', 'Talent acquisition team', 'pmartinez@mmc.com', '{"sensitivity":"moderate"}'),
+('mmc', 'h8i9j0', 'Recruiting', 'Talent acquisition team', 'pmartinez@mmc.com', '{"sensitivity":"low"}'),
 -- CROSS-FUNCTIONAL TEAMS
-('mmc', 'xf001', 'Project Phoenix', 'Next-gen HVAC unit launch task force', 'tbrown@mmc.com', '{"sensitivity":"high","tenants":["🍎","🍇"]}'),
+('mmc', 'xf001', 'Project Phoenix', 'Next-gen HVAC unit launch task force', 'tbrown@mmc.com', '{"sensitivity":"high","compartments":["🍎","🍇"]}'),
 ('mmc', 'xf002', 'Safety Committee', 'Plant safety and compliance oversight', 'vhugo@mmc.com', '{"sensitivity":"low"}'),
-('mmc', 'xf003', 'Digital Task Force', 'ERP upgrade and digital transformation', 'mchen@mmc.com', '{"sensitivity":"moderate","tenants":["🍎"]}'),
+('mmc', 'xf003', 'Digital Task Force', 'ERP upgrade and digital transformation', 'mchen@mmc.com', '{"sensitivity":"low"}'),
 
 -- MORE NESTED TEAMS
-('mmc', 'nt001', 'R&D', 'Research and Development', 'dpark@mmc.com', '{"sensitivity":"high","tenants":["🍇"]}'),
-('mmc', 'nt002', 'Prototyping', 'Rapid prototyping lab', 'dpark@mmc.com', '{"sensitivity":"high","tenants":["🍇"]}'),
+('mmc', 'nt001', 'R&D', 'Research and Development', 'dpark@mmc.com', '{"sensitivity":"low"}'),
+('mmc', 'nt002', 'Prototyping', 'Rapid prototyping lab', 'dpark@mmc.com', '{"sensitivity":"moderate","compartments":["🍎"]}'),
 ('mmc', 'nt003', 'QA Engineering', 'Quality Assurance for Engineering', 'dpark@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'nt004', 'Day Shift', 'Manufacturing Day Shift (6AM-2PM)', 'jwalsh@mmc.com', '{"sensitivity":"low"}'),
 ('mmc', 'nt005', 'Night Shift', 'Manufacturing Night Shift (10PM-6AM)', 'jwalsh@mmc.com', '{"sensitivity":"low"}');
@@ -58,6 +58,7 @@ INSERT INTO team_members (profile_id, id, team_name, personnel_email, joined_at)
 ('mmc', 'tm032', 'Engineering', 'rthompson@mmc.com', '2024-01-01T00:00:00Z'),
 ('mmc', 'tm033', 'Engineering', 'lchen@mmc.com', '2024-01-01T00:00:00Z'),
 ('mmc', 'tm034', 'Engineering', 'mtorres@mmc.com', '2024-01-01T00:00:00Z'),
+('mmc', 'tm035', 'Engineering', 'kzhang@mmc.com', '2024-01-01T00:00:00Z'),
 -- Finance
 ('mmc', 'tm040', 'Finance', 'erodriguez@mmc.com', '2024-01-01T00:00:00Z'),
 ('mmc', 'tm041', 'Finance', 'dfoster@mmc.com', '2024-01-01T00:00:00Z'),
@@ -93,7 +94,6 @@ INSERT INTO team_members (profile_id, id, team_name, personnel_email, joined_at)
 ('mmc', 'tm111', 'Recruiting', 'ivance2@mmc.com', '2024-01-01T00:00:00Z'),
 -- R&D
 ('mmc', 'tm120', 'R&D', 'kzhang@mmc.com', '2024-01-01T00:00:00Z'),
-('mmc', 'tm121', 'R&D', 'pparker@mmc.com', '2024-01-01T00:00:00Z'),
 -- Prototyping
 ('mmc', 'tm130', 'Prototyping', 'kzhang@mmc.com', '2024-01-01T00:00:00Z'),
 -- QA Engineering

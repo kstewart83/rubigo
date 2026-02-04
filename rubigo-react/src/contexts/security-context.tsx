@@ -4,7 +4,7 @@
  * Security Context
  *
  * Provides security state derived from the current persona.
- * Exposes clearance level, tenant clearances, and roles.
+ * Exposes clearance level, compartment clearances, and roles.
  * Supports session-level overrides for testing at lower clearance levels.
  */
 
@@ -18,9 +18,9 @@ import { resolveSubjectFromPersona } from "@/lib/access-control/session-resolver
 // Types
 // ============================================================================
 
-/** Tenant clearance with its level */
-export interface TenantClearance {
-    tenant: string;
+/** Compartment clearance with its level */
+export interface CompartmentClearance {
+    compartment: string;
     maxLevel: SensitivityLevel;
     sessionLevel: SensitivityLevel;
     enabled: boolean;
@@ -37,16 +37,16 @@ interface SecurityContextType {
     setSessionLevel: (level: SensitivityLevel) => void;
     /** Available levels user can choose for session (up to their max) */
     availableLevels: SensitivityLevel[];
-    /** Detailed tenant clearances with per-tenant control */
-    tenantClearances: TenantClearance[];
-    /** Toggle a tenant on/off */
-    toggleTenant: (tenant: string) => void;
-    /** Set a tenant's session level */
-    setTenantLevel: (tenant: string, level: SensitivityLevel) => void;
-    /** Unique tenants the user has access to (enabled ones at session level) */
-    activeTenants: string[];
-    /** Map of active tenant -> its current session level (for filtering) */
-    activeTenantLevels: Record<string, SensitivityLevel>;
+    /** Detailed compartment clearances with per-compartment control */
+    compartmentClearances: CompartmentClearance[];
+    /** Toggle a compartment on/off */
+    toggleCompartment: (compartment: string) => void;
+    /** Set a compartment's session level */
+    setCompartmentLevel: (compartment: string, level: SensitivityLevel) => void;
+    /** Unique compartments the user has access to (enabled ones at session level) */
+    activeCompartments: string[];
+    /** Map of active compartment -> its current session level (for filtering) */
+    activeCompartmentLevels: Record<string, SensitivityLevel>;
     /** User roles */
     roles: string[];
     /** Whether user is a global admin */
@@ -66,30 +66,30 @@ interface SecurityProviderProps {
 
 export function SecurityProvider({ children, persona }: SecurityProviderProps) {
     const [sessionLevelOverride, setSessionLevelOverride] = useState<SensitivityLevel | null>(null);
-    // Map of tenant -> { enabled, sessionLevel }
-    const [tenantOverrides, setTenantOverrides] = useState<Record<string, { enabled: boolean; sessionLevel: SensitivityLevel }>>({});
+    // Map of compartment -> { enabled, sessionLevel }
+    const [compartmentOverrides, setCompartmentOverrides] = useState<Record<string, { enabled: boolean; sessionLevel: SensitivityLevel }>>({});
 
-    // Parse tenant clearances from persona
-    const parsedTenants = useMemo(() => {
+    // Parse compartment clearances from persona
+    const parsedCompartments = useMemo(() => {
         if (!persona) return [];
         const subject = resolveSubjectFromPersona(persona);
 
-        // Parse "level:tenant" format
-        const tenantMap = new Map<string, SensitivityLevel>();
-        for (const tc of subject.tenantClearances) {
-            const [level, tenant] = tc.split(":");
-            if (level && tenant) {
-                const currentMax = tenantMap.get(tenant);
+        // Parse "level:compartment" format
+        const compartmentMap = new Map<string, SensitivityLevel>();
+        for (const cc of subject.compartmentClearances) {
+            const [level, compartment] = cc.split(":");
+            if (level && compartment) {
+                const currentMax = compartmentMap.get(compartment);
                 const levelIndex = SENSITIVITY_ORDER.indexOf(level as SensitivityLevel);
                 const currentIndex = currentMax ? SENSITIVITY_ORDER.indexOf(currentMax) : -1;
                 if (levelIndex > currentIndex) {
-                    tenantMap.set(tenant, level as SensitivityLevel);
+                    compartmentMap.set(compartment, level as SensitivityLevel);
                 }
             }
         }
 
-        return Array.from(tenantMap.entries()).map(([tenant, maxLevel]) => ({
-            tenant,
+        return Array.from(compartmentMap.entries()).map(([compartment, maxLevel]) => ({
+            compartment,
             maxLevel,
         }));
     }, [persona]);
@@ -102,11 +102,11 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
                 sessionLevel: "public",
                 setSessionLevel: () => { },
                 availableLevels: ["public"],
-                tenantClearances: [],
-                toggleTenant: () => { },
-                setTenantLevel: () => { },
-                activeTenants: [],
-                activeTenantLevels: {},
+                compartmentClearances: [],
+                toggleCompartment: () => { },
+                setCompartmentLevel: () => { },
+                activeCompartments: [],
+                activeCompartmentLevels: {},
                 roles: [],
                 isGlobalAdmin: false,
             };
@@ -129,9 +129,9 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
         }
         const sessionLevelIndex = SENSITIVITY_ORDER.indexOf(sessionLevel);
 
-        // Build tenant clearances with overrides
-        const tenantClearances: TenantClearance[] = parsedTenants.map(({ tenant, maxLevel }) => {
-            const override = tenantOverrides[tenant];
+        // Build compartment clearances with overrides
+        const compartmentClearances: CompartmentClearance[] = parsedCompartments.map(({ compartment, maxLevel }) => {
+            const override = compartmentOverrides[compartment];
             const maxLevelIndex = SENSITIVITY_ORDER.indexOf(maxLevel);
 
             // Cap max level by session level
@@ -141,11 +141,11 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
             const effectiveMaxIndex = SENSITIVITY_ORDER.indexOf(effectiveMaxLevel);
 
             // Default session level is the effective max
-            let tenantSessionLevel = effectiveMaxLevel;
+            let compartmentSessionLevel = effectiveMaxLevel;
             if (override?.sessionLevel) {
                 const overrideIndex = SENSITIVITY_ORDER.indexOf(override.sessionLevel);
                 if (overrideIndex <= effectiveMaxIndex) {
-                    tenantSessionLevel = override.sessionLevel;
+                    compartmentSessionLevel = override.sessionLevel;
                 }
             }
 
@@ -154,17 +154,17 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
             const enabled = isAboveSessionLevel ? false : (override?.enabled ?? true);
 
             return {
-                tenant,
+                compartment,
                 maxLevel,
-                sessionLevel: tenantSessionLevel,
+                sessionLevel: compartmentSessionLevel,
                 enabled,
             };
         });
 
-        // Active tenants are enabled ones
-        const activeTenants = tenantClearances
-            .filter(tc => tc.enabled)
-            .map(tc => tc.tenant);
+        // Active compartments are enabled ones
+        const activeCompartments = compartmentClearances
+            .filter(cc => cc.enabled)
+            .map(cc => cc.compartment);
 
         return {
             subject,
@@ -177,35 +177,35 @@ export function SecurityProvider({ children, persona }: SecurityProviderProps) {
                 }
             },
             availableLevels,
-            tenantClearances,
-            toggleTenant: (tenant: string) => {
-                // Lookup this tenant's effective max level for proper default
-                const tc = tenantClearances.find(t => t.tenant === tenant);
-                const defaultLevel = tc?.sessionLevel ?? sessionLevel;
+            compartmentClearances,
+            toggleCompartment: (compartment: string) => {
+                // Lookup this compartment's effective max level for proper default
+                const cc = compartmentClearances.find(c => c.compartment === compartment);
+                const defaultLevel = cc?.sessionLevel ?? sessionLevel;
 
-                setTenantOverrides(prev => {
-                    const current = prev[tenant] ?? { enabled: false, sessionLevel: defaultLevel };
-                    return { ...prev, [tenant]: { ...current, enabled: !current.enabled } };
+                setCompartmentOverrides(prev => {
+                    const current = prev[compartment] ?? { enabled: false, sessionLevel: defaultLevel };
+                    return { ...prev, [compartment]: { ...current, enabled: !current.enabled } };
                 });
             },
-            setTenantLevel: (tenant: string, level: SensitivityLevel) => {
-                setTenantOverrides(prev => {
-                    const current = prev[tenant] ?? { enabled: true, sessionLevel: level };
-                    return { ...prev, [tenant]: { ...current, sessionLevel: level } };
+            setCompartmentLevel: (compartment: string, level: SensitivityLevel) => {
+                setCompartmentOverrides(prev => {
+                    const current = prev[compartment] ?? { enabled: true, sessionLevel: level };
+                    return { ...prev, [compartment]: { ...current, sessionLevel: level } };
                 });
             },
-            activeTenants,
-            // Map of active tenant -> its session level for filtering
-            activeTenantLevels: tenantClearances
-                .filter(tc => tc.enabled)
-                .reduce((acc, tc) => {
-                    acc[tc.tenant] = tc.sessionLevel;
+            activeCompartments,
+            // Map of active compartment -> its session level for filtering
+            activeCompartmentLevels: compartmentClearances
+                .filter(cc => cc.enabled)
+                .reduce((acc, cc) => {
+                    acc[cc.compartment] = cc.sessionLevel;
                     return acc;
                 }, {} as Record<string, SensitivityLevel>),
             roles: subject.roles,
             isGlobalAdmin: subject.roles.includes("global_admin"),
         };
-    }, [persona, sessionLevelOverride, tenantOverrides, parsedTenants]);
+    }, [persona, sessionLevelOverride, compartmentOverrides, parsedCompartments]);
 
     return (
         <SecurityContext.Provider value={value}>

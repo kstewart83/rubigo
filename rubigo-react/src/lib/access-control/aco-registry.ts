@@ -17,7 +17,7 @@ import { createHash } from "crypto";
 
 export interface AcoInput {
     sensitivity: SensitivityLevel;
-    tenants?: string[];
+    compartments?: string[];
     roles?: string[];
 }
 
@@ -32,7 +32,7 @@ export interface AcoInput {
 export function canonicalizeAco(aco: AcoInput): string {
     const canonical = {
         sensitivity: aco.sensitivity,
-        tenants: [...(aco.tenants || [])].sort(),
+        compartments: [...(aco.compartments || [])].sort(),
         roles: [...(aco.roles || [])].sort(),
     };
     return JSON.stringify(canonical);
@@ -78,7 +78,7 @@ export async function getOrCreateAcoId(aco: AcoInput): Promise<number> {
         .values({
             hash,
             sensitivity: aco.sensitivity,
-            tenants: JSON.stringify([...(aco.tenants || [])].sort()),
+            compartments: JSON.stringify([...(aco.compartments || [])].sort()),
             roles: JSON.stringify([...(aco.roles || [])].sort()),
             createdAt: now,
         })
@@ -102,7 +102,7 @@ export async function getAcoById(id: number): Promise<AcoInput | null> {
     const row = result[0];
     return {
         sensitivity: row.sensitivity as SensitivityLevel,
-        tenants: JSON.parse(row.tenants),
+        compartments: JSON.parse(row.compartments),
         roles: JSON.parse(row.roles),
     };
 }

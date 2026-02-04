@@ -213,7 +213,7 @@ async function seedAcoObjects(): Promise<void> {
     for (const level of sensitivityLevels) {
         await getOrCreateAcoId({
             sensitivity: level,
-            tenants: [],
+            compartments: [],
             roles: [],
         });
     }

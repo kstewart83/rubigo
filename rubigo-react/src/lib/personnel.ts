@@ -32,7 +32,7 @@ function mapDbToPerson(p: typeof schema.personnel.$inferSelect): Person {
         isGlobalAdmin: p.isGlobalAdmin ?? false,
         // Security/ABAC fields
         clearanceLevel: p.clearanceLevel ?? undefined,
-        tenantClearances: p.tenantClearances ?? undefined,
+        compartmentClearances: p.compartmentClearances ?? undefined,
         accessRoles: p.accessRoles ?? undefined,
     };
 }
@@ -71,6 +71,13 @@ export function getPersonById(id: string): Person | undefined {
  */
 export function getPersonByName(name: string): Person | undefined {
     return getAllPersonnel().find((p) => p.name === name);
+}
+
+/**
+ * Get person by email
+ */
+export function getPersonByEmail(email: string): Person | undefined {
+    return getAllPersonnel().find((p) => p.email === email);
 }
 
 /**

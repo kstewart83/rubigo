@@ -30,7 +30,7 @@ export interface Person {
     isAgent?: boolean;
     // Access control fields
     clearanceLevel?: string;      // "public" | "low" | "moderate" | "high"
-    tenantClearances?: string;    // JSON array: ["moderate:🍎", "high:🍌"]
+    compartmentClearances?: string;    // JSON array: ["moderate:🍎", "high:🍌"]
     accessRoles?: string;         // JSON array: ["employee", "manager"]
 }
 

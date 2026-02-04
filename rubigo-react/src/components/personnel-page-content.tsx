@@ -477,7 +477,7 @@ export function PersonnelPageContent({
                 <SecureTableWrapper
                     items={data}
                     getSensitivity={(person) => parseAco(person.aco).sensitivity}
-                    getTenants={(person) => parseAco(person.aco).tenants || []}
+                    getTenants={(person) => parseAco(person.aco).compartments || []}
                     className="border rounded-lg"
                 >
                     {/* Top Pagination with count and page size selector */}
@@ -539,7 +539,7 @@ export function PersonnelPageContent({
                 <SecureTableWrapper
                     items={data}
                     getSensitivity={(person) => parseAco(person.aco).sensitivity}
-                    getTenants={(person) => parseAco(person.aco).tenants || []}
+                    getTenants={(person) => parseAco(person.aco).compartments || []}
                     className="border rounded-lg"
                 >
                     <Table>

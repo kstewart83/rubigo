@@ -15,10 +15,13 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     recurrence_interval INTEGER DEFAULT 1,
     recurrence_days TEXT,
     recurrence_until TEXT,
-    organizer_id TEXT,
+    organizer_email TEXT,  -- Business key: resolve to personnel_id
     location TEXT,
     virtual_url TEXT,
     timezone TEXT DEFAULT 'America/New_York',
+    aco TEXT DEFAULT '{"sensitivity":"low"}',
+    description_aco TEXT DEFAULT '{"sensitivity":"low"}',
+    sco TEXT,
     PRIMARY KEY (id, profile_id)
 );
 

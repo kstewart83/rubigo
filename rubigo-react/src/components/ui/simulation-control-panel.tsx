@@ -66,7 +66,7 @@ export function SimulationControlPanel({
     return (
         <SecurePanelWrapper
             level="low"
-            tenants={[]}
+            compartments={[]}
             className={cn("rounded-lg overflow-hidden", className)}
         >
             <div className="p-2">
